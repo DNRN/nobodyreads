@@ -1,5 +1,5 @@
 ---
-import BlogLayout from "../layouts/BlogLayout.astro";
+import SiteLayout from "../layouts/SiteLayout.astro";
 import PostPreview from "../components/PostPreview.astro";
 import { listPosts, getPageByKind, getNavItems } from "../../src/content/db.js";
 import { resolveLinks, renderMarkdown } from "../../src/content/render.js";
@@ -11,7 +11,7 @@ const urlPrefix = process.env.URL_PREFIX || "";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
 const siteTagline =
   process.env.SITE_TAGLINE ||
-  "Another simple blog engine. For writing mostly to yourself.";
+  "Sovereign publishing, not a platform. For writing mostly to yourself.";
 
 const db = await getDbClient();
 const [page, posts, navItems] = await Promise.all([
@@ -57,7 +57,7 @@ const options = page
       siteTagline,
     };
 ---
-<BlogLayout options={options}>
+<SiteLayout options={options}>
   {page ? (
     <>
       {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
@@ -76,4 +76,4 @@ const options = page
       <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
     </>
   )}
-</BlogLayout>
+</SiteLayout>

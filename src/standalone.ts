@@ -151,7 +151,7 @@ async function start() {
       if (served) return;
 
       // Editor routes
-      if (pathname.startsWith("/editor")) {
+      if (pathname.startsWith("/admin")) {
         return editorHandler(req, res, pathname);
       }
 

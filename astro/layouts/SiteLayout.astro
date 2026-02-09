@@ -2,7 +2,10 @@
 import type { LayoutOptions } from "../../src/content/types.js";
 import { escapeHtml } from "../../src/shared/http.js";
 import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/seo.js";
-import Wordmark from "../components/Wordmark.astro";
+import { initDb } from "../../src/shared/db.js";
+import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
+import { getSiteBundle } from "../../src/shared/site-bundle.js";
+import { DEFAULT_SITE_TEMPLATE } from "../../src/shared/site-template.js";
 
 const { options, authLinksHtml } = Astro.props as {
   options: LayoutOptions;
@@ -28,6 +31,41 @@ const scriptTags = (options.scripts ?? [])
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
+
+const db = await initDb();
+const siteBundle = await getSiteBundle(db, DEFAULT_TENANT_ID);
+const slotHtml = await Astro.slots.render("default");
+const navHtml = navItems
+  .map((item) => {
+    const href = escapeHtml(navHref(item, options.urlPrefix));
+    const label = escapeHtml(item.label);
+    const active = item.id === activePageId ? ' class="active"' : "";
+    return `<a href="${href}"${active}>${label}</a>`;
+  })
+  .join("");
+const authLinksBlock = authLinksHtml
+  ? `<nav class="site-menu" id="site-menu" data-nav aria-label="Profile">
+      <span class="nav-auth nav-auth--menu">${authLinksHtml}</span>
+     </nav>`
+  : "";
+const navToggle = authLinksHtml
+  ? `<button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle menu" aria-controls="site-menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+     </button>`
+  : "";
+const templateHtml = siteBundle?.html?.trim() ? siteBundle.html : DEFAULT_SITE_TEMPLATE;
+let bodyHtml = templateHtml
+  .replaceAll("{{nav}}", navHtml)
+  .replaceAll("{{authLinksBlock}}", authLinksBlock)
+  .replaceAll("{{navToggle}}", navToggle)
+  .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
+  .replaceAll("{{homeHref}}", escapeHtml(homeHref))
+  .replaceAll("{{year}}", `${new Date().getFullYear()}`);
+bodyHtml = bodyHtml.includes("{{content}}")
+  ? bodyHtml.replaceAll("{{content}}", slotHtml)
+  : `${bodyHtml}\n${slotHtml}`;
+const bundleCss = siteBundle?.css?.trim() ? siteBundle.css : "";
+const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -60,69 +98,12 @@ const devReload = import.meta.env.DEV
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
     />
     <link rel="stylesheet" href="/style.css" />
+    {bundleCss ? <style set:html={bundleCss} /> : null}
     <Fragment set:html={scriptTags} />
     <Fragment set:html={devReload} />
   </head>
   <body>
-    <header class="site-header">
-      <div class="container">
-        <div class="nav-bar">
-          <a class="site-logo" href={homeHref}>
-            <Wordmark size="md" />
-          </a>
-          <nav class="site-nav-inline" aria-label="Main">
-            {navItems.map((item) => (
-              <a
-                href={navHref(item, options.urlPrefix)}
-                class={item.id === activePageId ? "active" : undefined}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          {authLinksHtml ? (
-            <nav class="site-menu" id="site-menu" data-nav aria-label="Profile">
-              <span class="nav-auth nav-auth--menu" set:html={authLinksHtml} />
-            </nav>
-          ) : null}
-          <div class="nav-actions">
-            {authLinksHtml ? (
-              <button
-                class="nav-toggle"
-                type="button"
-                data-nav-toggle
-                aria-label="Toggle menu"
-                aria-controls="site-menu"
-                aria-expanded="false"
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <div class="site-hero">
-          <h1 class="hero-title">
-            <Wordmark size="xl" />
-          </h1>
-          <p class="hero-tagline">{siteTagline}</p>
-        </div>
-      </div>
-    </header>
-
-    <main class="container">
-      <slot />
-    </main>
-
-    <footer class="site-footer">
-      <div class="container">
-        <p>
-          &copy; {new Date().getFullYear()} <Wordmark size="md" />
-        </p>
-      </div>
-    </footer>
-
-    <script src="/site.js" defer></script>
+    <Fragment set:html={bodyHtml} />
+    {bundleJs ? <script type="module" set:html={bundleJs} /> : null}
   </body>
 </html>

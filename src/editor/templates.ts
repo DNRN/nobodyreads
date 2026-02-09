@@ -1,4 +1,6 @@
 import type { Page } from "../content/types.js";
+import type { SiteBundle } from "../shared/site-bundle.js";
+import { DEFAULT_SITE_TEMPLATE } from "../shared/site-template.js";
 import { escapeHtml } from "../shared/http.js";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -14,8 +16,9 @@ function editorShell(
   content: string,
   opts?: { scripts?: string; editorBase?: string; siteBase?: string }
 ): string {
-  const editorBase = opts?.editorBase ?? "/editor";
+  const editorBase = opts?.editorBase ?? "/admin/editor";
   const siteBase = opts?.siteBase ?? "/";
+  const logoutBase = editorBase.replace(/\/editor$/, "");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -43,6 +46,10 @@ function editorShell(
     <div class="editor-header-inner">
       <a class="editor-logo" href="${escapeHtml(editorBase)}">Editor</a>
       <nav class="editor-nav">
+        <a href="${escapeHtml(logoutBase)}">Admin</a>
+        <form method="POST" action="${escapeHtml(logoutBase)}/logout" class="editor-nav-form">
+          <button type="submit" class="btn btn-ghost">Sign out</button>
+        </form>
         <a href="${escapeHtml(siteBase)}" target="_blank">View site</a>
       </nav>
     </div>
@@ -57,7 +64,8 @@ function editorShell(
 // --- Login page ---
 
 export function editorLoginPage(error?: string, urlPrefix: string = ""): string {
-  const editorBase = `${urlPrefix}/editor`;
+  const editorBase = `${urlPrefix}/admin/editor`;
+  const adminBase = `${urlPrefix}/admin`;
   const errorHtml = error
     ? `<ul class="form-errors"><li>${escapeHtml(error)}</li></ul>`
     : "";
@@ -68,13 +76,89 @@ export function editorLoginPage(error?: string, urlPrefix: string = ""): string 
       <h2>Editor Login</h2>
       <p>Enter the editor password to continue.</p>
       ${errorHtml}
-      <form method="POST" action="${escapeHtml(editorBase)}/login">
+      <form method="POST" action="${escapeHtml(adminBase)}/login">
         <label for="password">Password</label>
         <input type="password" id="password" name="password" required autofocus>
         <button type="submit">Sign in</button>
       </form>
     </div>
   </main>`, { editorBase, siteBase: urlPrefix || "/" });
+}
+
+// --- Admin overview page ---
+
+export function adminOverviewPage(urlPrefix: string = ""): string {
+  const editorBase = `${urlPrefix}/admin/editor`;
+  return editorShell("Admin — Overview", `
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <h2>Admin</h2>
+      </div>
+      <div class="editor-list-section">
+        <h3>Site</h3>
+        <p><a class="btn btn-primary" href="${escapeHtml(`${urlPrefix}/admin/site`)}">Edit site</a></p>
+      </div>
+      <div class="editor-list-section">
+        <h3>Content</h3>
+        <p><a class="btn btn-primary" href="${escapeHtml(editorBase)}">Open editor</a></p>
+      </div>
+    </div>
+  </main>`, { editorBase, siteBase: urlPrefix || "/" });
+}
+
+// --- Site editor (HTML/CSS/JS bundle) ---
+
+export function siteEditorPage(bundle: SiteBundle | null, urlPrefix: string = ""): string {
+  const adminBase = `${urlPrefix}/admin`;
+  const editorBase = `${adminBase}/editor`;
+  const htmlValue = bundle?.html?.trim() ? bundle.html : DEFAULT_SITE_TEMPLATE;
+  const cssValue = bundle?.css ?? "";
+  const jsValue = bundle?.js ?? "";
+
+  return editorShell("Site — Admin", `
+  <main class="editor-main editor-main--site">
+    <form method="POST" action="${escapeHtml(adminBase)}/site/save" class="editor-form editor-form--site" id="site-editor-form">
+      <div class="editor-list-header">
+        <h2>Site</h2>
+        <button type="submit" class="btn btn-primary">Save &amp; build</button>
+      </div>
+
+      <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
+        <button type="button" class="editor-tab active" data-tab="html">HTML</button>
+        <button type="button" class="editor-tab" data-tab="css">CSS</button>
+        <button type="button" class="editor-tab" data-tab="js">JS</button>
+        <button type="button" class="editor-tab" data-tab="preview">Preview</button>
+      </div>
+
+      <div class="site-editor">
+        <div class="site-editor-pane site-editor-pane--html" data-pane="html">
+          <label for="site-html">HTML template</label>
+          <p class="hint">Tokens: <code>{{content}}</code>, <code>{{nav}}</code>, <code>{{siteTagline}}</code>, <code>{{homeHref}}</code>, <code>{{year}}</code>, <code>{{authLinksBlock}}</code>, <code>{{navToggle}}</code>.</p>
+          <textarea id="site-html" name="html" rows="14" class="editor-textarea" spellcheck="false">${escapeHtml(htmlValue)}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--css hidden" data-pane="css">
+          <label for="site-css">CSS</label>
+          <textarea id="site-css" name="css" rows="14" class="editor-textarea" spellcheck="false">${escapeHtml(cssValue)}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--js hidden" data-pane="js">
+          <label for="site-js">JavaScript (module)</label>
+          <textarea id="site-js" name="js" rows="14" class="editor-textarea" spellcheck="false">${escapeHtml(jsValue)}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">
+          <div class="editor-preview-label">Preview</div>
+          <iframe id="site-preview" title="Site preview"></iframe>
+        </div>
+      </div>
+    </form>
+  </main>`, {
+    editorBase,
+    siteBase: urlPrefix || "/",
+    scripts: `<script src="/site-editor.js"></script>`,
+  });
 }
 
 // --- Page listing dashboard ---
@@ -101,7 +185,7 @@ function statusBadge(published: boolean): string {
 }
 
 export function editorListPage(pages: Page[], urlPrefix: string = ""): string {
-  const editorBase = `${urlPrefix}/editor`;
+  const editorBase = `${urlPrefix}/admin/editor`;
 
   // Group pages by kind
   const groups: Record<string, Page[]> = { home: [], page: [], post: [] };
@@ -158,7 +242,7 @@ export function editorListPage(pages: Page[], urlPrefix: string = ""): string {
 // --- Editor form (new + edit) ---
 
 export function editorPage(page?: Page, urlPrefix: string = ""): string {
-  const editorBase = `${urlPrefix}/editor`;
+  const editorBase = `${urlPrefix}/admin/editor`;
   const isNew = !page;
   const title = isNew ? "New Page" : `Edit: ${page.title}`;
 

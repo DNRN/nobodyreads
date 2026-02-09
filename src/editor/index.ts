@@ -15,8 +15,16 @@ import {
   editorRequiresAuth,
   verifyEditorPassword,
   createEditorSession,
+  clearEditorSession,
 } from "./auth.js";
-import { editorLoginPage, editorListPage, editorPage } from "./templates.js";
+import {
+  adminOverviewPage,
+  editorLoginPage,
+  editorListPage,
+  editorPage,
+  siteEditorPage,
+} from "./templates.js";
+import { getSiteBundle, upsertSiteBundle } from "../shared/site-bundle.js";
 
 // --- Public API ---
 
@@ -42,32 +50,33 @@ export interface EditorRouterOptions {
 
 /**
  * Create the editor request handler.
- * All routes live under /editor/* (relative to urlPrefix).
+ * Admin overview lives at /admin, editor lives at /admin/editor (relative to urlPrefix).
  *
  * Usage (single-user mode):
  *   createEditorRouter({ db })
- *   // editor at /editor, EDITOR_PASSWORD gate
+ *   // editor at /admin, EDITOR_PASSWORD gate
  *
  * Usage (platform mode — tenant-scoped):
  *   createEditorRouter({ db, tenantId: tenant.id, urlPrefix: "/dennis", skipAuth: true })
- *   // editor at /dennis/editor, platform session auth handled by caller
+ *   // editor at /dennis/admin, platform session auth handled by caller
  */
 export function createEditorRouter(options: EditorRouterOptions): RequestHandler {
   const { db, skipAuth = false } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
-  const editorBase = `${urlPrefix}/editor`;
+  const adminBase = `${urlPrefix}/admin`;
+  const editorBase = `${adminBase}/editor`;
 
   return async (req, res, pathname) => {
     // --- Login routes (only when using built-in auth) ---
 
     if (!skipAuth) {
-      if (pathname === "/editor/login" && req.method === "GET") {
-        if (!editorRequiresAuth()) return redirect(res, editorBase);
+      if (pathname === "/admin/login" && req.method === "GET") {
+        if (!editorRequiresAuth()) return redirect(res, adminBase);
         return html(res, editorLoginPage(undefined, urlPrefix));
       }
 
-      if (pathname === "/editor/login" && req.method === "POST") {
+      if (pathname === "/admin/login" && req.method === "POST") {
         const body = await parseFormBody(req);
         const password = body.password || "";
 
@@ -75,11 +84,11 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
           return html(res, editorLoginPage("Incorrect password.", urlPrefix));
         }
 
-        createEditorSession(res);
-        return redirect(res, editorBase);
+        createEditorSession(res, adminBase);
+        return redirect(res, adminBase);
       }
 
-      // --- Auth guard for all other /editor routes ---
+      // --- Auth guard for all other /admin routes ---
 
       if (!isAuthenticated(req)) {
         if (editorRequiresAuth()) {
@@ -90,20 +99,48 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
     // --- Page listing ---
 
-    if (pathname === "/editor" && req.method === "GET") {
+    if (pathname === "/admin" && req.method === "GET") {
+      return html(res, adminOverviewPage(urlPrefix));
+    }
+
+    if (pathname === "/admin/site" && req.method === "GET") {
+      const bundle = await getSiteBundle(db, tenantId);
+      return html(res, siteEditorPage(bundle, urlPrefix));
+    }
+
+    if (pathname === "/admin/site/save" && req.method === "POST") {
+      const body = await parseFormBody(req);
+      await upsertSiteBundle(
+        db,
+        {
+          html: body.html || "",
+          css: body.css || "",
+          js: body.js || "",
+        },
+        tenantId
+      );
+      return redirect(res, `${adminBase}/site`);
+    }
+
+    if (pathname === "/admin/logout" && req.method === "POST") {
+      clearEditorSession(res, adminBase);
+      return redirect(res, adminBase);
+    }
+
+    if (pathname === "/admin/editor" && req.method === "GET") {
       const pages = await listAllPages(db, tenantId);
       return html(res, editorListPage(pages, urlPrefix));
     }
 
     // --- New page form ---
 
-    if (pathname === "/editor/new" && req.method === "GET") {
+    if (pathname === "/admin/editor/new" && req.method === "GET") {
       return html(res, editorPage(undefined, urlPrefix));
     }
 
     // --- Edit page form ---
 
-    const editMatch = pathname.match(/^\/editor\/([a-zA-Z0-9_-]+)$/);
+    const editMatch = pathname.match(/^\/admin\/editor\/([a-zA-Z0-9_-]+)$/);
     if (editMatch && req.method === "GET") {
       const pageId = editMatch[1];
       // Don't match reserved sub-routes
@@ -120,7 +157,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
     // --- Save (create or update) ---
 
-    if (pathname === "/editor/save" && req.method === "POST") {
+    if (pathname === "/admin/editor/save" && req.method === "POST") {
       const body = await parseFormBody(req);
 
       const isNew = !body.id || body.id.trim() === "";
@@ -161,7 +198,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
     // --- Delete ---
 
-    const deleteMatch = pathname.match(/^\/editor\/delete\/([a-zA-Z0-9_-]+)$/);
+    const deleteMatch = pathname.match(/^\/admin\/editor\/delete\/([a-zA-Z0-9_-]+)$/);
     if (deleteMatch && req.method === "POST") {
       const pageId = deleteMatch[1];
       await deletePage(db, pageId, tenantId);
@@ -169,6 +206,6 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
     }
 
     // --- 404 fallback ---
-    return redirect(res, editorBase);
+    return redirect(res, adminBase);
   };
 }

@@ -37,7 +37,7 @@ npm install
 npm run dev
 ```
 
-The blog starts at `http://localhost:3000`. The editor is at `http://localhost:3000/editor`.
+The blog starts at `http://localhost:3000`. The admin overview is at `http://localhost:3000/admin` and the editor is at `http://localhost:3000/admin/editor`.
 
 If you're editing HTML with Astro, run the dev server in a second terminal:
 
@@ -183,8 +183,8 @@ const server = createServer(async (req, res) => {
   const served = await serveStatic(res, pathname, getPublicDir());
   if (served) return;
 
-  // Editor routes
-  if (pathname.startsWith("/editor")) {
+  // Admin routes
+  if (pathname.startsWith("/admin")) {
     return editorHandler(req, res, pathname);
   }
 

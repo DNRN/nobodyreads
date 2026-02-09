@@ -1,5 +1,5 @@
 ---
-import BlogLayout from "../layouts/BlogLayout.astro";
+import SiteLayout from "../layouts/SiteLayout.astro";
 import { getNavItems } from "../../src/content/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getDbClient } from "../lib/db.js";
@@ -25,10 +25,10 @@ const options = {
   siteTagline,
 };
 ---
-<BlogLayout options={options}>
+<SiteLayout options={options}>
   <div class="post-header">
     <h2 class="post-title">Not found</h2>
   </div>
   <p>There's nothing here.</p>
   <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
-</BlogLayout>
+</SiteLayout>

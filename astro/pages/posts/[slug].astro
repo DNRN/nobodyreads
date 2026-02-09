@@ -1,5 +1,5 @@
 ---
-import BlogLayout from "../../layouts/BlogLayout.astro";
+import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
 import { resolveLinks, renderMarkdown } from "../../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
@@ -57,7 +57,7 @@ const options = page
       siteTagline,
     };
 ---
-<BlogLayout options={options}>
+<SiteLayout options={options}>
   {page ? (
     <>
       <div class="post-header">
@@ -76,4 +76,4 @@ const options = page
       <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
     </>
   )}
-</BlogLayout>
+</SiteLayout>

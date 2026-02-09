@@ -47,12 +47,27 @@ export function isAuthenticated(req: IncomingMessage): boolean {
 }
 
 /** Set the editor session cookie after successful login. */
-export function createEditorSession(res: ServerResponse): void {
+export function createEditorSession(
+  res: ServerResponse,
+  cookiePath: string = "/admin"
+): void {
   const token = sign(`editor:${Date.now()}`);
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/editor; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`
+    `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=${cookiePath}; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`
+  );
+}
+
+/** Clear the editor session cookie. */
+export function clearEditorSession(
+  res: ServerResponse,
+  cookiePath: string = "/admin"
+): void {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `${COOKIE_NAME}=; HttpOnly; Path=${cookiePath}; Max-Age=0; SameSite=Lax${secure}`
   );
 }
 

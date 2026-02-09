@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS page (
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
+
+-- Site bundle (admin-managed HTML/CSS/JS)
+CREATE TABLE IF NOT EXISTS site_bundle (
+  tenant_id  TEXT PRIMARY KEY DEFAULT '_default',
+  html       TEXT NOT NULL DEFAULT '',
+  css        TEXT NOT NULL DEFAULT '',
+  js         TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

@@ -1,0 +1,79 @@
+---
+import BlogLayout from "../layouts/BlogLayout.astro";
+import PostPreview from "../components/PostPreview.astro";
+import { listPosts, getPageByKind, getNavItems } from "../../src/content/db.js";
+import { resolveLinks, renderMarkdown } from "../../src/content/render.js";
+import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
+import { getDbClient } from "../lib/db.js";
+
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const urlPrefix = process.env.URL_PREFIX || "";
+const siteName = process.env.SITE_NAME || "nobodyreads.me";
+const siteTagline =
+  process.env.SITE_TAGLINE ||
+  "Another simple blog engine. For writing mostly to yourself.";
+
+const db = await getDbClient();
+const [page, posts, navItems] = await Promise.all([
+  getPageByKind(db, "home", tenantId),
+  listPosts(db, tenantId),
+  getNavItems(db, tenantId),
+]);
+
+let htmlBody = "";
+if (page?.content?.trim()) {
+  const resolved = await resolveLinks(db, page.content, tenantId, urlPrefix);
+  htmlBody = renderMarkdown(resolved);
+}
+
+if (page?.seo?.noAiTraining) {
+  Astro.response.headers.set("X-Robots-Tag", "noai, noimageai");
+}
+
+if (!page) {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      title: page.title || siteName,
+      navItems,
+      activePageId: page.id,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: urlPrefix || "/",
+      ogType: "website",
+      seo: page.seo,
+      page,
+      urlPrefix,
+      siteName,
+      siteTagline,
+    }
+  : {
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix,
+      siteName,
+      siteTagline,
+    };
+---
+<BlogLayout options={options}>
+  {page ? (
+    <>
+      {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
+      {posts.length > 0 ? (
+        posts.map((post) => <PostPreview post={post} urlPrefix={urlPrefix} />)
+      ) : (
+        <p>No posts yet.</p>
+      )}
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h2 class="post-title">Not found</h2>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
+    </>
+  )}
+</BlogLayout>

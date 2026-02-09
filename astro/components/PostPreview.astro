@@ -1,0 +1,19 @@
+---
+import type { PageSummary } from "../../src/content/types.js";
+import { formatDate } from "../lib/format.js";
+
+const { post, urlPrefix = "" } = Astro.props as {
+  post: PageSummary;
+  urlPrefix?: string;
+};
+
+const href = `${urlPrefix}/posts/${post.slug}`;
+---
+<article class="post-preview">
+  <time class="post-date" datetime={post.date}>{formatDate(post.date)}</time>
+  <h2 class="post-title">
+    <a href={href}>{post.title}</a>
+  </h2>
+  <p class="post-excerpt">{post.excerpt}</p>
+  <a href={href} class="read-more">read more &rarr;</a>
+</article>

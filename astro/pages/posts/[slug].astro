@@ -1,0 +1,79 @@
+---
+import BlogLayout from "../../layouts/BlogLayout.astro";
+import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
+import { resolveLinks, renderMarkdown } from "../../../src/content/render.js";
+import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
+import { getDbClient } from "../../lib/db.js";
+import { formatDate } from "../../lib/format.js";
+
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const urlPrefix = process.env.URL_PREFIX || "";
+const siteName = process.env.SITE_NAME || "nobodyreads.me";
+const siteTagline =
+  process.env.SITE_TAGLINE ||
+  "Another simple blog engine. For writing mostly to yourself.";
+
+const db = await getDbClient();
+const slug = Astro.params.slug || "";
+
+const [page, navItems] = await Promise.all([
+  getPageBySlug(db, slug, "post", tenantId),
+  getNavItems(db, tenantId),
+]);
+
+if (page?.seo?.noAiTraining) {
+  Astro.response.headers.set("X-Robots-Tag", "noai, noimageai");
+}
+
+let htmlBody = "";
+if (page) {
+  const resolved = await resolveLinks(db, page.content, tenantId, urlPrefix);
+  htmlBody = renderMarkdown(resolved);
+} else {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      title: `${page.title} — ${siteName}`,
+      navItems,
+      activePageId: page.id,
+      scripts: page.scripts,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: `${urlPrefix}/posts/${page.slug}`,
+      ogType: "article",
+      seo: page.seo,
+      page,
+      urlPrefix,
+      siteName,
+      siteTagline,
+    }
+  : {
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix,
+      siteName,
+      siteTagline,
+    };
+---
+<BlogLayout options={options}>
+  {page ? (
+    <>
+      <div class="post-header">
+        <time class="post-date" datetime={page.date}>{formatDate(page.date)}</time>
+        <h2 class="post-title">{page.title}</h2>
+      </div>
+      <div class="post-body" set:html={htmlBody} />
+      <a href={urlPrefix || "/"} class="back-link">&larr; back to all posts</a>
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h2 class="post-title">Not found</h2>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
+    </>
+  )}
+</BlogLayout>

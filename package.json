@@ -1,0 +1,54 @@
+{
+  "name": "nobodyreads",
+  "version": "0.1.0",
+  "description": "A simple, self-hosted blog engine. Markdown-first, server-rendered, zero client-side JS.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "nobodyreads": "./dist/standalone.js"
+  },
+  "files": [
+    "dist",
+    "public",
+    "schema.sql",
+    "robots.txt"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/standalone.ts",
+    "dev:astro": "astro dev",
+    "start": "NODE_ENV=production tsx src/standalone.ts",
+    "build": "astro build && tsc",
+    "typecheck": "tsc --noEmit",
+    "post": "tsx scripts/publish.ts"
+  },
+  "keywords": [
+    "blog",
+    "markdown",
+    "self-hosted",
+    "blogging",
+    "seo",
+    "sqlite"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nobodyreads/nobodyreads"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.2",
+    "@libsql/client": "^0.14.0",
+    "astro": "^5.17.1",
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

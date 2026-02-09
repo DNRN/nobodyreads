@@ -1,0 +1,50 @@
+User-agent: *
+Allow: /
+
+# Per-page AI training opt-out is handled via meta robots tags and
+# X-Robots-Tag headers. Set noAiTraining: true in a post's seo frontmatter
+# to block AI training crawlers from that specific page.
+#
+# To block AI training crawlers site-wide, uncomment the directives below:
+#
+# User-agent: GPTBot
+# Disallow: /
+#
+# User-agent: ChatGPT-User
+# Disallow: /
+#
+# User-agent: Google-Extended
+# Disallow: /
+#
+# User-agent: CCBot
+# Disallow: /
+#
+# User-agent: anthropic-ai
+# Disallow: /
+#
+# User-agent: ClaudeBot
+# Disallow: /
+#
+# User-agent: Bytespider
+# Disallow: /
+#
+# User-agent: PerplexityBot
+# Disallow: /
+#
+# User-agent: Amazonbot
+# Disallow: /
+#
+# User-agent: FacebookBot
+# Disallow: /
+#
+# User-agent: Applebot-Extended
+# Disallow: /
+#
+# User-agent: cohere-ai
+# Disallow: /
+#
+# User-agent: Diffbot
+# Disallow: /
+#
+# User-agent: OAI-SearchBot
+# Disallow: /

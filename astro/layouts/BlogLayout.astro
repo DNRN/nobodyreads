@@ -1,0 +1,128 @@
+---
+import type { LayoutOptions } from "../../src/content/types.js";
+import { escapeHtml } from "../../src/shared/http.js";
+import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/seo.js";
+import Wordmark from "../components/Wordmark.astro";
+
+const { options, authLinksHtml } = Astro.props as {
+  options: LayoutOptions;
+  authLinksHtml?: string;
+};
+
+const siteName = options.siteName ?? (process.env.SITE_NAME || "nobodyreads.me");
+const siteTagline =
+  options.siteTagline ??
+  (process.env.SITE_TAGLINE ||
+    "Another simple blog engine. For writing mostly to yourself.");
+const homeHref = options.urlPrefix || "/";
+const navItems = options.navItems ?? [];
+const activePageId = options.activePageId;
+
+const metaTags = buildMetaTags({ ...options, siteName, siteTagline });
+const structuredData = buildStructuredData({ ...options, siteName, siteTagline });
+
+const scriptTags = (options.scripts ?? [])
+  .map((s) => `  <script type="module" src="${escapeHtml(s)}"></script>`)
+  .join("\n");
+
+const devReload = import.meta.env.DEV
+  ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
+  : "";
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{options.title}</title>
+    <script is:inline>
+      (function () {
+        try {
+          const stored = localStorage.getItem("theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = (stored === "system" || !stored)
+            ? (prefersDark ? "dark" : "light")
+            : (stored === "dark" || stored === "light"
+                ? stored
+                : (prefersDark ? "dark" : "light"));
+          document.documentElement.dataset.theme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <Fragment set:html={metaTags} />
+    <Fragment set:html={structuredData} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <Fragment set:html={scriptTags} />
+    <Fragment set:html={devReload} />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <div class="nav-bar">
+          <a class="site-logo" href={homeHref}>
+            <Wordmark size="md" />
+          </a>
+          <nav class="site-nav-inline" aria-label="Main">
+            {navItems.map((item) => (
+              <a
+                href={navHref(item, options.urlPrefix)}
+                class={item.id === activePageId ? "active" : undefined}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          {authLinksHtml ? (
+            <nav class="site-menu" id="site-menu" data-nav aria-label="Profile">
+              <span class="nav-auth nav-auth--menu" set:html={authLinksHtml} />
+            </nav>
+          ) : null}
+          <div class="nav-actions">
+            {authLinksHtml ? (
+              <button
+                class="nav-toggle"
+                type="button"
+                data-nav-toggle
+                aria-label="Toggle menu"
+                aria-controls="site-menu"
+                aria-expanded="false"
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <div class="site-hero">
+          <h1 class="hero-title">
+            <Wordmark size="xl" />
+          </h1>
+          <p class="hero-tagline">{siteTagline}</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>
+          &copy; {new Date().getFullYear()} <Wordmark size="md" />
+        </p>
+      </div>
+    </footer>
+
+    <script src="/site.js" defer></script>
+  </body>
+</html>

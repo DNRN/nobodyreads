@@ -1,0 +1,7 @@
+---
+const { size = "md" } = Astro.props;
+const sizeClass = size === "xl" ? "wordmark--xl" : "wordmark--md";
+---
+<span class={`wordmark ${sizeClass}`}>
+  nobody_reads<span class="dot" aria-hidden="true">.</span><span class="me">me</span>
+</span>

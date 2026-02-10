@@ -65,10 +65,13 @@ export function clearEditorSession(
   cookiePath: string = "/admin"
 ): void {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  res.setHeader(
-    "Set-Cookie",
-    `${COOKIE_NAME}=; HttpOnly; Path=${cookiePath}; Max-Age=0; SameSite=Lax${secure}`
+  const expires = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  const paths = new Set([cookiePath, "/admin", "/admin/editor", "/editor", "/"]);
+  const cookies = Array.from(paths).map(
+    (path) =>
+      `${COOKIE_NAME}=; HttpOnly; Path=${path}; Max-Age=0${expires}; SameSite=Lax${secure}`
   );
+  res.setHeader("Set-Cookie", cookies);
 }
 
 /** Verify the provided password against EDITOR_PASSWORD. */

@@ -34,6 +34,7 @@ nobodyreads
 git clone https://github.com/yourusername/nobodyreads.git
 cd nobodyreads
 npm install
+npm run site:bootstrap
 npm run dev
 ```
 

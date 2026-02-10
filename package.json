@@ -23,6 +23,9 @@
     "dev:astro": "astro dev",
     "start": "NODE_ENV=production tsx src/standalone.ts",
     "build": "astro build && tsc",
+    "build:site-editor": "esbuild src/editor/site-editor.ts --bundle --format=iife --target=es2018 --outfile=public/site-editor.js",
+    "site:use-minimal-css": "tsx scripts/use-minimal-css.ts",
+    "site:bootstrap": "tsx scripts/bootstrap-site.ts",
     "typecheck": "tsc --noEmit",
     "post": "tsx scripts/publish.ts"
   },
@@ -43,11 +46,19 @@
     "@astrojs/node": "^9.5.2",
     "@libsql/client": "^0.14.0",
     "astro": "^5.17.1",
+    "dotenv": "^17.2.4",
     "gray-matter": "^4.0.3",
     "marked": "^15.0.7"
   },
   "devDependencies": {
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.9",
+    "@codemirror/lang-javascript": "^6.2.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.0",
     "@types/node": "^25.2.1",
+    "codemirror": "^6.0.1",
+    "esbuild": "^0.25.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

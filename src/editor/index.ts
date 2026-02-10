@@ -24,7 +24,15 @@ import {
   editorPage,
   siteEditorPage,
 } from "./templates.js";
-import { getSiteBundle, upsertSiteBundle } from "../shared/site-bundle.js";
+import {
+  addSiteBundleRevision,
+  deleteSiteBundleRevision,
+  getCurrentSiteBundleRevisionId,
+  getSiteBundle,
+  listSiteBundleRevisions,
+  setCurrentSiteBundleRevision,
+} from "../shared/site-bundle.js";
+import { DEFAULT_SITE_CSS } from "../shared/site-style.js";
 
 // --- Public API ---
 
@@ -68,6 +76,12 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
   const editorBase = `${adminBase}/editor`;
 
   return async (req, res, pathname) => {
+    // --- Logout (allow even if not authenticated) ---
+    if (pathname === "/admin/logout" && (req.method === "POST" || req.method === "GET")) {
+      clearEditorSession(res, adminBase);
+      return redirect(res, adminBase);
+    }
+
     // --- Login routes (only when using built-in auth) ---
 
     if (!skipAuth) {
@@ -92,7 +106,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
       if (!isAuthenticated(req)) {
         if (editorRequiresAuth()) {
-          return redirect(res, `${editorBase}/login`);
+          return redirect(res, `${adminBase}/login`);
         }
       }
     }
@@ -105,12 +119,14 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
     if (pathname === "/admin/site" && req.method === "GET") {
       const bundle = await getSiteBundle(db, tenantId);
-      return html(res, siteEditorPage(bundle, urlPrefix));
+      const revisions = await listSiteBundleRevisions(db, tenantId);
+      const currentRevisionId = await getCurrentSiteBundleRevisionId(db, tenantId);
+      return html(res, siteEditorPage(bundle, revisions, currentRevisionId, urlPrefix));
     }
 
     if (pathname === "/admin/site/save" && req.method === "POST") {
       const body = await parseFormBody(req);
-      await upsertSiteBundle(
+      await addSiteBundleRevision(
         db,
         {
           html: body.html || "",
@@ -122,9 +138,32 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       return redirect(res, `${adminBase}/site`);
     }
 
-    if (pathname === "/admin/logout" && req.method === "POST") {
-      clearEditorSession(res, adminBase);
-      return redirect(res, adminBase);
+    if (pathname === "/admin/site/use-minimal" && req.method === "POST") {
+      const bundle = await getSiteBundle(db, tenantId);
+      await addSiteBundleRevision(
+        db,
+        {
+          html: bundle?.html ?? "",
+          css: DEFAULT_SITE_CSS,
+          js: bundle?.js ?? "",
+        },
+        tenantId
+      );
+      return redirect(res, `${adminBase}/site`);
+    }
+
+    const useRevisionMatch = pathname.match(/^\/admin\/site\/revision\/use\/(\d+)$/);
+    if (useRevisionMatch && req.method === "POST") {
+      const revisionId = parseInt(useRevisionMatch[1], 10);
+      await setCurrentSiteBundleRevision(db, revisionId, tenantId);
+      return redirect(res, `${adminBase}/site`);
+    }
+
+    const deleteRevisionMatch = pathname.match(/^\/admin\/site\/revision\/delete\/(\d+)$/);
+    if (deleteRevisionMatch && req.method === "POST") {
+      const revisionId = parseInt(deleteRevisionMatch[1], 10);
+      await deleteSiteBundleRevision(db, revisionId, tenantId);
+      return redirect(res, `${adminBase}/site`);
     }
 
     if (pathname === "/admin/editor" && req.method === "GET") {

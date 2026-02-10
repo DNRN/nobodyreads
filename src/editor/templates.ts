@@ -1,6 +1,7 @@
 import type { Page } from "../content/types.js";
-import type { SiteBundle } from "../shared/site-bundle.js";
+import type { SiteBundle, SiteBundleRevision } from "../shared/site-bundle.js";
 import { DEFAULT_SITE_TEMPLATE } from "../shared/site-template.js";
+import { DEFAULT_SITE_CSS } from "../shared/site-style.js";
 import { escapeHtml } from "../shared/http.js";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -109,19 +110,30 @@ export function adminOverviewPage(urlPrefix: string = ""): string {
 
 // --- Site editor (HTML/CSS/JS bundle) ---
 
-export function siteEditorPage(bundle: SiteBundle | null, urlPrefix: string = ""): string {
+export function siteEditorPage(
+  bundle: SiteBundle | null,
+  revisions: SiteBundleRevision[],
+  currentRevisionId: number | null,
+  urlPrefix: string = ""
+): string {
   const adminBase = `${urlPrefix}/admin`;
   const editorBase = `${adminBase}/editor`;
   const htmlValue = bundle?.html?.trim() ? bundle.html : DEFAULT_SITE_TEMPLATE;
-  const cssValue = bundle?.css ?? "";
+  const cssValue = bundle?.css?.trim() ? bundle.css : getDefaultSiteCss();
   const jsValue = bundle?.js ?? "";
+  const revisionsHtml = renderSiteRevisions(revisions, currentRevisionId, adminBase);
 
   return editorShell("Site — Admin", `
   <main class="editor-main editor-main--site">
     <form method="POST" action="${escapeHtml(adminBase)}/site/save" class="editor-form editor-form--site" id="site-editor-form">
       <div class="editor-list-header">
         <h2>Site</h2>
-        <button type="submit" class="btn btn-primary">Save &amp; build</button>
+        <div class="editor-actions">
+          <form method="POST" action="${escapeHtml(adminBase)}/site/use-minimal" class="editor-inline-form">
+            <button type="submit" class="btn btn-ghost">Use minimal CSS</button>
+          </form>
+          <button type="submit" class="btn btn-primary">Save &amp; build</button>
+        </div>
       </div>
 
       <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
@@ -134,7 +146,21 @@ export function siteEditorPage(bundle: SiteBundle | null, urlPrefix: string = ""
       <div class="site-editor">
         <div class="site-editor-pane site-editor-pane--html" data-pane="html">
           <label for="site-html">HTML template</label>
-          <p class="hint">Tokens: <code>{{content}}</code>, <code>{{nav}}</code>, <code>{{siteTagline}}</code>, <code>{{homeHref}}</code>, <code>{{year}}</code>, <code>{{authLinksBlock}}</code>, <code>{{navToggle}}</code>.</p>
+          <details class="editor-tokens">
+            <summary>Template tokens</summary>
+            <div class="editor-tokens-body">
+              <p class="hint">Use these placeholders in your HTML template:</p>
+              <ul class="editor-token-list">
+                <li><code>{{content}}</code> — the rendered page body.</li>
+                <li><code>{{nav}}</code> — the main navigation links.</li>
+                <li><code>{{siteTagline}}</code> — the site tagline text.</li>
+                <li><code>{{homeHref}}</code> — the home URL.</li>
+                <li><code>{{year}}</code> — current year.</li>
+                <li><code>{{authLinksBlock}}</code> — auth/profile links (if enabled).</li>
+                <li><code>{{navToggle}}</code> — mobile nav toggle button.</li>
+              </ul>
+            </div>
+          </details>
           <textarea id="site-html" name="html" rows="14" class="editor-textarea" spellcheck="false">${escapeHtml(htmlValue)}</textarea>
         </div>
 
@@ -153,12 +179,74 @@ export function siteEditorPage(bundle: SiteBundle | null, urlPrefix: string = ""
           <iframe id="site-preview" title="Site preview"></iframe>
         </div>
       </div>
+
+      <div class="editor-list-section">
+        <h3>Revisions</h3>
+        ${revisionsHtml}
+      </div>
     </form>
   </main>`, {
     editorBase,
     siteBase: urlPrefix || "/",
     scripts: `<script src="/site-editor.js"></script>`,
   });
+}
+
+function renderSiteRevisions(
+  revisions: SiteBundleRevision[],
+  currentRevisionId: number | null,
+  adminBase: string
+): string {
+  if (revisions.length === 0) {
+    return `<p class="editor-empty">No revisions yet. Save your first change.</p>`;
+  }
+
+  const rows = revisions
+    .map((rev) => {
+      const isCurrent = currentRevisionId === rev.revisionId;
+      const badge = isCurrent
+        ? `<span class="badge badge-published">active</span>`
+        : `<span class="badge badge-draft">saved</span>`;
+      const useButton = isCurrent
+        ? ""
+        : `<form method="POST" action="${escapeHtml(`${adminBase}/site/revision/use/${rev.revisionId}`)}" class="editor-inline-form">
+             <button type="submit" class="btn btn-ghost">Use</button>
+           </form>`;
+      const deleteButton = `<form method="POST" action="${escapeHtml(`${adminBase}/site/revision/delete/${rev.revisionId}`)}" class="editor-inline-form" onsubmit="return confirm('Delete this revision?')">
+             <button type="submit" class="btn btn-danger">Delete</button>
+           </form>`;
+      return `
+        <tr>
+          <td>#${rev.revisionId}</td>
+          <td>${escapeHtml(formatDateTime(rev.createdAt))}</td>
+          <td>${badge}</td>
+          <td class="cell-actions">${useButton}${deleteButton}</td>
+        </tr>`;
+    })
+    .join("");
+
+  return `
+    <table class="editor-table">
+      <thead>
+        <tr><th>ID</th><th>Saved</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getDefaultSiteCss(): string {
+  return DEFAULT_SITE_CSS;
 }
 
 // --- Page listing dashboard ---

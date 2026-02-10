@@ -97,7 +97,7 @@ const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
     />
-    <link rel="stylesheet" href="/style.css" />
+    {!bundleCss ? <link rel="stylesheet" href="/style.css" /> : null}
     {bundleCss ? <style set:html={bundleCss} /> : null}
     <Fragment set:html={scriptTags} />
     <Fragment set:html={devReload} />

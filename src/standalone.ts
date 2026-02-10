@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile as readFileAsync } from "node:fs/promises";
 import { watch } from "node:fs";

@@ -39,5 +39,16 @@ CREATE TABLE IF NOT EXISTS site_bundle (
   html       TEXT NOT NULL DEFAULT '',
   css        TEXT NOT NULL DEFAULT '',
   js         TEXT NOT NULL DEFAULT '',
+  current_revision_id INTEGER,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Site bundle revisions (append-only history)
+CREATE TABLE IF NOT EXISTS site_bundle_revision (
+  revision_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant_id   TEXT NOT NULL DEFAULT '_default',
+  html        TEXT NOT NULL DEFAULT '',
+  css         TEXT NOT NULL DEFAULT '',
+  js          TEXT NOT NULL DEFAULT '',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );

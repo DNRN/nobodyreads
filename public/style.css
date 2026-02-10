@@ -1404,6 +1404,66 @@ main {
   background: var(--card);
 }
 
+.site-editor .cm-editor {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  min-height: 520px;
+}
+
+.site-editor .cm-scroller {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.site-editor .cm-gutters {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.editor-tokens {
+  margin: 0.5rem 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  background: var(--card);
+}
+
+.editor-tokens summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.editor-tokens-body {
+  margin-top: 0.5rem;
+}
+
+.editor-token-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.editor-token-list code {
+  color: var(--text);
+}
+
+.editor-inline-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .hidden {
   display: none !important;
 }

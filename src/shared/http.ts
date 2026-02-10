@@ -57,7 +57,8 @@ export function json(res: ServerResponse, data: unknown, status = 200): void {
 }
 
 export function redirect(res: ServerResponse, location: string, status = 302): void {
-  res.writeHead(status, { Location: location });
+  res.statusCode = status;
+  res.setHeader("Location", location);
   res.end();
 }
 

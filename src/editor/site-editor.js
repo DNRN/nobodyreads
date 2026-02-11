@@ -5,15 +5,7 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 
-type EditorHandle = {
-  view: EditorView;
-  textarea: HTMLTextAreaElement;
-};
-
-function createEditor(
-  textarea: HTMLTextAreaElement,
-  extensions: unknown[]
-): EditorHandle {
+function createEditor(textarea, extensions) {
   textarea.style.display = "none";
   const parent = textarea.parentElement;
   if (!parent) {
@@ -33,31 +25,23 @@ function createEditor(
   return { view, textarea };
 }
 
-function getEditorValue(editor: EditorHandle | null): string {
+function getEditorValue(editor) {
   if (!editor) return "";
   return editor.view.state.doc.toString();
 }
 
-function setEditorValue(editor: EditorHandle | null, value: string): void {
-  if (!editor) return;
-  const transaction = editor.view.state.update({
-    changes: { from: 0, to: editor.view.state.doc.length, insert: value },
-  });
-  editor.view.dispatch(transaction);
-}
-
-function initSiteEditor(): void {
-  const form = document.getElementById("site-editor-form") as HTMLFormElement | null;
+function initSiteEditor() {
+  const form = document.getElementById("site-editor-form");
   const tabs = document.getElementById("site-editor-tabs");
   const panes = document.querySelectorAll(".site-editor-pane");
-  const htmlInput = document.getElementById("site-html") as HTMLTextAreaElement | null;
-  const cssInput = document.getElementById("site-css") as HTMLTextAreaElement | null;
-  const jsInput = document.getElementById("site-js") as HTMLTextAreaElement | null;
-  const preview = document.getElementById("site-preview") as HTMLIFrameElement | null;
+  const htmlInput = document.getElementById("site-html");
+  const cssInput = document.getElementById("site-css");
+  const jsInput = document.getElementById("site-js");
+  const preview = document.getElementById("site-preview");
 
   if (!form || !tabs || !htmlInput || !cssInput || !jsInput || !preview) return;
 
-  let previewTimer: number | null = null;
+  let previewTimer = null;
 
   const changeListener = EditorView.updateListener.of((update) => {
     if (update.docChanged) schedulePreview();
@@ -67,7 +51,7 @@ function initSiteEditor(): void {
   const cssEditor = createEditor(cssInput, [css(), changeListener]);
   const jsEditor = createEditor(jsInput, [javascript(), changeListener]);
 
-  function buildPreviewHtml(): string {
+  function buildPreviewHtml() {
     const htmlValue = getEditorValue(htmlEditor) || "";
     const cssValue = getEditorValue(cssEditor) || "";
     const jsValue = getEditorValue(jsEditor) || "";
@@ -99,16 +83,16 @@ function initSiteEditor(): void {
 </html>`;
   }
 
-  function updatePreview(): void {
+  function updatePreview() {
     preview.setAttribute("srcdoc", buildPreviewHtml());
   }
 
-  function schedulePreview(): void {
+  function schedulePreview() {
     if (previewTimer) window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(updatePreview, 150);
   }
 
-  function activateTab(target: string): void {
+  function activateTab(target) {
     tabs.querySelectorAll(".editor-tab").forEach((t) => t.classList.remove("active"));
     tabs.querySelector(`.editor-tab[data-tab="${target}"]`)?.classList.add("active");
     panes.forEach((pane) => {
@@ -119,7 +103,7 @@ function initSiteEditor(): void {
   }
 
   tabs.addEventListener("click", (e) => {
-    const tab = (e.target as HTMLElement | null)?.closest(".editor-tab") as HTMLElement | null;
+    const tab = e.target?.closest(".editor-tab");
     if (!tab) return;
     const target = tab.dataset.tab;
     if (target) activateTab(target);

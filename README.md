@@ -59,12 +59,21 @@ Workflow for quick edits:
 2. Change `.astro` files for HTML structure and `public/style.css` for styling.
 3. Refresh (or let Astro HMR update the page).
 
-For production SSR builds:
+### Production build and serve
+
+Build the production SSR bundle:
 
 ```bash
 npm run build
+```
+
+Start the production server:
+
+```bash
 npm run start
 ```
+
+The Node app serves the built Astro SSR output from `dist/astro/`.
 
 ## Configuration
 
@@ -155,7 +164,7 @@ docker run -p 3000:3000 \
 
 ## Using as a library
 
-`nobodyreads` can also be used as an npm package to build your own blog platform:
+`nobodyreads` can also be used as an npm package to build your own blog:
 
 ```bash
 npm install nobodyreads
@@ -196,28 +205,6 @@ const server = createServer(async (req, res) => {
 server.listen(3000);
 ```
 
-### Multi-tenant usage
-
-The blog engine supports multi-tenancy via `tenantId`:
-
-```typescript
-import { createBlogRouter, createEditorRouter } from "nobodyreads";
-
-// Each tenant gets their own blog with isolated content
-const tenantBlog = createBlogRouter({
-  db,
-  tenantId: "tenant-uuid-here",
-  urlPrefix: "/username",
-});
-
-const tenantEditor = createEditorRouter({
-  db,
-  tenantId: "tenant-uuid-here",
-  urlPrefix: "/username",
-  skipAuth: true, // handle auth yourself
-});
-```
-
 ### Available exports
 
 **Routers**: `createBlogRouter`, `createEditorRouter`
@@ -234,7 +221,7 @@ const tenantEditor = createEditorRouter({
 
 **Paths**: `getPublicDir`, `getSchemaPath`, `getRobotsTxtPath`
 
-**Types**: `Page`, `PageSummary`, `NavItem`, `Tenant`, `LayoutFn`, `LayoutOptions`, etc.
+**Types**: `Page`, `PageSummary`, `NavItem`, `LayoutFn`, `LayoutOptions`, etc.
 
 ## Project structure
 

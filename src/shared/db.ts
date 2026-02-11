@@ -1,11 +1,23 @@
 import { createClient, type Client } from "@libsql/client";
-import { readFileSync, mkdirSync } from "node:fs";
+import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 
 // --- Database connection ---
 
 let db: Client | undefined;
 let dbPromise: Promise<Client> | null = null;
+
+function resolveSchemaPath(): string {
+  const candidates = [
+    join(process.cwd(), "schema.sql"),
+    join(import.meta.dirname, "..", "..", "schema.sql"),
+    join(import.meta.dirname, "..", "..", "..", "..", "schema.sql"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
 
 export async function initDb(): Promise<Client> {
   if (dbPromise) return dbPromise;
@@ -25,7 +37,7 @@ export async function initDb(): Promise<Client> {
     });
 
     // Run schema migration
-    const schema = readFileSync(join(import.meta.dirname, "..", "..", "schema.sql"), "utf-8");
+    const schema = readFileSync(resolveSchemaPath(), "utf-8");
     await db.executeMultiple(schema);
 
     // Run column migrations (safe to re-run — ALTER TABLE is a no-op if column exists)

@@ -2,9 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Client } from "@libsql/client";
 import { randomUUID } from "node:crypto";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
-import { html, redirect, parseFormBody } from "../shared/http.js";
+import { redirect, parseFormBody } from "../shared/http.js";
 import {
-  listAllPages,
   getPageById,
   deletePage,
   upsertPage,
@@ -18,18 +17,8 @@ import {
   clearEditorSession,
 } from "./auth.js";
 import {
-  adminOverviewPage,
-  editorLoginPage,
-  editorListPage,
-  editorPage,
-  siteEditorPage,
-} from "./templates.js";
-import {
   addSiteBundleRevision,
   deleteSiteBundleRevision,
-  getCurrentSiteBundleRevisionId,
-  getSiteBundle,
-  listSiteBundleRevisions,
   setCurrentSiteBundleRevision,
 } from "../shared/site-bundle.js";
 
@@ -85,8 +74,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
     if (!skipAuth) {
       if (pathname === "/admin/login" && req.method === "GET") {
-        if (!editorRequiresAuth()) return redirect(res, adminBase);
-        return html(res, editorLoginPage(undefined, urlPrefix));
+        return redirect(res, `${adminBase}/login`);
       }
 
       if (pathname === "/admin/login" && req.method === "POST") {
@@ -110,17 +98,9 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       }
     }
 
-    // --- Page listing ---
-
-    if (pathname === "/admin" && req.method === "GET") {
-      return html(res, adminOverviewPage(urlPrefix));
-    }
-
-    if (pathname === "/admin/site" && req.method === "GET") {
-      const bundle = await getSiteBundle(db, tenantId);
-      const revisions = await listSiteBundleRevisions(db, tenantId);
-      const currentRevisionId = await getCurrentSiteBundleRevisionId(db, tenantId);
-      return html(res, siteEditorPage(bundle, revisions, currentRevisionId, urlPrefix));
+    // --- GET admin routes are rendered by Astro ---
+    if (req.method === "GET" && pathname.startsWith("/admin")) {
+      return redirect(res, pathname);
     }
 
     if (
@@ -156,34 +136,6 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       const revisionId = parseInt(deleteRevisionMatch[1], 10);
       await deleteSiteBundleRevision(db, revisionId, tenantId);
       return redirect(res, `${adminBase}/layout`);
-    }
-
-    if (pathname === "/admin/editor" && req.method === "GET") {
-      const pages = await listAllPages(db, tenantId);
-      return html(res, editorListPage(pages, urlPrefix));
-    }
-
-    // --- New page form ---
-
-    if (pathname === "/admin/editor/new" && req.method === "GET") {
-      return html(res, editorPage(undefined, urlPrefix));
-    }
-
-    // --- Edit page form ---
-
-    const editMatch = pathname.match(/^\/admin\/editor\/([a-zA-Z0-9_-]+)$/);
-    if (editMatch && req.method === "GET") {
-      const pageId = editMatch[1];
-      // Don't match reserved sub-routes
-      if (pageId === "new" || pageId === "save" || pageId === "login" || pageId === "delete") {
-        // fall through
-      } else {
-        const page = await getPageById(db, pageId, tenantId);
-        if (!page) {
-          return redirect(res, editorBase);
-        }
-        return html(res, editorPage(page, urlPrefix));
-      }
     }
 
     // --- Save (create or update) ---

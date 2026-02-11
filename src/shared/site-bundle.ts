@@ -32,6 +32,55 @@ function rowToRevision(row: Row): SiteBundleRevision {
   };
 }
 
+function rowToRevisionBundle(row: Row): SiteBundle {
+  return {
+    html: (row.html as string) ?? "",
+    css: (row.css as string) ?? "",
+    js: (row.js as string) ?? "",
+    updatedAt: row.created_at as string,
+  };
+}
+
+export async function getLatestSiteBundleRevision(
+  db: Client,
+  tenantId: string
+): Promise<SiteBundle | null> {
+  const result = await db.execute({
+    sql: `SELECT html, css, js, created_at
+          FROM site_bundle_revision
+          WHERE tenant_id = ?
+          ORDER BY revision_id DESC
+          LIMIT 1`,
+    args: [tenantId],
+  });
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return rowToRevisionBundle(result.rows[0]);
+}
+
+export async function getLatestSiteBundleRevisionId(
+  db: Client,
+  tenantId: string
+): Promise<number | null> {
+  const result = await db.execute({
+    sql: `SELECT revision_id
+          FROM site_bundle_revision
+          WHERE tenant_id = ?
+          ORDER BY revision_id DESC
+          LIMIT 1`,
+    args: [tenantId],
+  });
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].revision_id as number;
+}
+
 export async function getSiteBundle(
   db: Client,
   tenantId: string
@@ -73,22 +122,7 @@ export async function getSiteBundle(
   }
 
   // If no current pointer, use the latest revision if any
-  const result = await db.execute({
-    sql: `SELECT html, css, js, created_at
-          FROM site_bundle_revision
-          WHERE tenant_id = ?
-          ORDER BY revision_id DESC
-          LIMIT 1`,
-    args: [tenantId],
-  });
-  return result.rows.length > 0
-    ? {
-        html: (result.rows[0].html as string) ?? "",
-        css: (result.rows[0].css as string) ?? "",
-        js: (result.rows[0].js as string) ?? "",
-        updatedAt: result.rows[0].created_at as string,
-      }
-    : null;
+  return getLatestSiteBundleRevision(db, tenantId);
 }
 
 export async function listSiteBundleRevisions(

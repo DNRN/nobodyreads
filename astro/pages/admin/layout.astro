@@ -45,6 +45,7 @@ function formatDateTime(iso: string): string {
         <h2>Layout Editor</h2>
         <div class="editor-actions">
           <button type="submit" class="btn btn-primary">Save &amp; build</button>
+          <span id="site-save-status" class="editor-save-status" aria-live="polite">Ready</span>
         </div>
       </div>
 
@@ -87,8 +88,11 @@ function formatDateTime(iso: string): string {
         </div>
 
         <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">
-          <div class="editor-preview-label">Preview</div>
-          <iframe id="site-preview" title="Site preview"></iframe>
+          <div class="editor-preview-label">
+            Preview
+            <a href="/preview" target="_blank" rel="noreferrer" class="btn btn-ghost">Open in new tab</a>
+          </div>
+          <iframe id="site-preview" title="Site preview" src="/preview" data-preview-url="/preview"></iframe>
         </div>
       </div>
 

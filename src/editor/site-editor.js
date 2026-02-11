@@ -38,58 +38,57 @@ function initSiteEditor() {
   const cssInput = document.getElementById("site-css");
   const jsInput = document.getElementById("site-js");
   const preview = document.getElementById("site-preview");
+  const saveStatus = document.getElementById("site-save-status");
 
   if (!form || !tabs || !htmlInput || !cssInput || !jsInput || !preview) return;
 
-  let previewTimer = null;
+  let isDirty = false;
+
+  function setSaveStatus(state) {
+    if (!saveStatus) return;
+    saveStatus.dataset.state = state;
+    if (state === "dirty") saveStatus.textContent = "Unsaved changes";
+    else if (state === "saving") saveStatus.textContent = "Saving...";
+    else if (state === "saved") saveStatus.textContent = "Saved";
+    else if (state === "error") saveStatus.textContent = "Save failed";
+    else saveStatus.textContent = "Ready";
+  }
+
+  function markDirty() {
+    if (isDirty) return;
+    isDirty = true;
+    setSaveStatus("dirty");
+  }
 
   const changeListener = EditorView.updateListener.of((update) => {
-    if (update.docChanged) schedulePreview();
+    if (update.docChanged) {
+      markDirty();
+    }
   });
 
   const htmlEditor = createEditor(htmlInput, [html(), changeListener]);
   const cssEditor = createEditor(cssInput, [css(), changeListener]);
   const jsEditor = createEditor(jsInput, [javascript(), changeListener]);
+  const previewUrl = preview.getAttribute("data-preview-url") || "/preview";
 
-  function buildPreviewHtml() {
-    const htmlValue = getEditorValue(htmlEditor) || "";
-    const cssValue = getEditorValue(cssEditor) || "";
-    const jsValue = getEditorValue(jsEditor) || "";
-    const contentHtml = "<main><h1>Preview</h1><p>Your page content renders here.</p></main>";
-    const navHtml = '<a href="#">Home</a><a href="#">About</a><a href="#">Posts</a>';
-    const nowYear = new Date().getFullYear();
-    const bodyHtml = htmlValue
-      .replaceAll("{{nav}}", navHtml)
-      .replaceAll("{{siteTagline}}", "Edit your site layout")
-      .replaceAll("{{homeHref}}", "/")
-      .replaceAll("{{year}}", String(nowYear))
-      .replaceAll("{{authLinksBlock}}", "")
-      .replaceAll("{{navToggle}}", "");
-    const resolvedBody = bodyHtml.includes("{{content}}")
-      ? bodyHtml.replaceAll("{{content}}", contentHtml)
-      : `${bodyHtml}\n${contentHtml}`;
-
-    return `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>${cssValue}</style>
-  </head>
-  <body>
-    ${resolvedBody}
-    <script type="module">${jsValue}</script>
-  </body>
-</html>`;
+  function buildPreviewUrl(forceRefresh = false) {
+    const url = new URL(previewUrl, window.location.origin);
+    if (forceRefresh) {
+      url.searchParams.set("t", String(Date.now()));
+    } else {
+      url.searchParams.delete("t");
+    }
+    return `${url.pathname}${url.search}`;
   }
 
-  function updatePreview() {
-    preview.setAttribute("srcdoc", buildPreviewHtml());
+  function refreshPreview(forceRefresh = false) {
+    preview.setAttribute("src", buildPreviewUrl(forceRefresh));
   }
 
-  function schedulePreview() {
-    if (previewTimer) window.clearTimeout(previewTimer);
-    previewTimer = window.setTimeout(updatePreview, 150);
+  function syncEditorsToInputs() {
+    htmlInput.value = getEditorValue(htmlEditor);
+    cssInput.value = getEditorValue(cssEditor);
+    jsInput.value = getEditorValue(jsEditor);
   }
 
   function activateTab(target) {
@@ -99,7 +98,7 @@ function initSiteEditor() {
       const isTarget = pane.getAttribute("data-pane") === target;
       pane.classList.toggle("hidden", !isTarget);
     });
-    if (target === "preview") updatePreview();
+    if (target === "preview") refreshPreview();
   }
 
   tabs.addEventListener("click", (e) => {
@@ -109,13 +108,50 @@ function initSiteEditor() {
     if (target) activateTab(target);
   });
 
-  form.addEventListener("submit", () => {
-    htmlInput.value = getEditorValue(htmlEditor);
-    cssInput.value = getEditorValue(cssEditor);
-    jsInput.value = getEditorValue(jsEditor);
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    syncEditorsToInputs();
+    setSaveStatus("saving");
+
+    const formData = new FormData(form);
+    const body = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string") {
+        body.append(key, value);
+      }
+    }
+
+    try {
+      const response = await fetch(form.action, {
+        method: form.method || "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        credentials: "same-origin",
+        body,
+      });
+
+      if (response.redirected && response.url.includes("/admin/login")) {
+        window.location.assign(response.url);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Save failed: ${response.status}`);
+      }
+
+      isDirty = false;
+      setSaveStatus("saved");
+      refreshPreview(true);
+    } catch (error) {
+      setSaveStatus("error");
+      console.error(error);
+      form.submit();
+    }
   });
 
-  updatePreview();
+  setSaveStatus("ready");
+  refreshPreview();
   activateTab("html");
 }
 

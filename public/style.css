@@ -1265,6 +1265,37 @@ main {
   gap: 0.5rem;
 }
 
+.editor-save-status {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  min-height: 1.1rem;
+}
+
+.editor-save-status[data-state="dirty"] {
+  color: #a87600;
+}
+
+:root[data-theme="dark"] .editor-save-status[data-state="dirty"] {
+  color: #deb65d;
+}
+
+.editor-save-status[data-state="saving"] {
+  color: var(--text);
+}
+
+.editor-save-status[data-state="saved"] {
+  color: #2a8a46;
+}
+
+:root[data-theme="dark"] .editor-save-status[data-state="saved"] {
+  color: #5dce7a;
+}
+
+.editor-save-status[data-state="error"] {
+  color: #b44;
+}
+
 .editor-delete-form {
   display: contents;
 }

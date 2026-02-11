@@ -4,12 +4,14 @@ import { escapeHtml } from "../../src/shared/http.js";
 import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/seo.js";
 import { initDb } from "../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
+import type { SiteBundle } from "../../src/shared/site-bundle.js";
 import { getSiteBundle } from "../../src/shared/site-bundle.js";
 import { DEFAULT_SITE_TEMPLATE } from "../../src/shared/site-template.js";
 
-const { options, authLinksHtml } = Astro.props as {
+const { options, authLinksHtml, siteBundleOverride } = Astro.props as {
   options: LayoutOptions;
   authLinksHtml?: string;
+  siteBundleOverride?: SiteBundle | null;
 };
 
 const siteName = options.siteName ?? (process.env.SITE_NAME || "nobodyreads.me");
@@ -32,8 +34,7 @@ const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
 
-const db = await initDb();
-const siteBundle = await getSiteBundle(db, DEFAULT_TENANT_ID);
+const siteBundle = siteBundleOverride ?? (await getSiteBundle(await initDb(), DEFAULT_TENANT_ID));
 const slotHtml = await Astro.slots.render("default");
 const navHtml = navItems
   .map((item) => {

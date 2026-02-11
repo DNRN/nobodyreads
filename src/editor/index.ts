@@ -85,7 +85,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
           return redirect(res, `${adminBase}/login?error=1`);
         }
 
-        createEditorSession(res, adminBase);
+        createEditorSession(res, urlPrefix || "/");
         return redirect(res, adminBase);
       }
 

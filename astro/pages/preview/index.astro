@@ -1,0 +1,130 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import PostPreview from "../../components/PostPreview.astro";
+import { listPosts, getPageByKind, getNavItems } from "../../../src/content/db.js";
+import { resolveLinks, renderMarkdown } from "../../../src/content/render.js";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
+import {
+  getLatestSiteBundleRevision,
+  getLatestSiteBundleRevisionId,
+} from "../../../src/shared/site-bundle.js";
+import { getDbClient } from "../../lib/db.js";
+
+if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin/login");
+}
+
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
+
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const previewUrlPrefix = "/preview";
+const siteName = process.env.SITE_NAME || "nobodyreads.me";
+const siteTagline =
+  process.env.SITE_TAGLINE ||
+  "Sovereign publishing, not a platform. For writing mostly to yourself.";
+
+const db = await getDbClient();
+const [siteBundle, latestRevisionId, page, posts, navItems] = await Promise.all([
+  getLatestSiteBundleRevision(db, tenantId),
+  getLatestSiteBundleRevisionId(db, tenantId),
+  getPageByKind(db, "home", tenantId),
+  listPosts(db, tenantId),
+  getNavItems(db, tenantId),
+]);
+
+const autoReloadScript = `(() => {
+  let currentRevisionId = ${latestRevisionId ?? "null"};
+  const pollIntervalMs = 1500;
+  const endpoint = "/preview/revision.json";
+
+  const schedule = () => window.setTimeout(check, pollIntervalMs);
+
+  async function check() {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/admin/login");
+        return;
+      }
+
+      if (!response.ok) {
+        schedule();
+        return;
+      }
+
+      const data = await response.json();
+      const nextRevisionId = typeof data.revisionId === "number" ? data.revisionId : null;
+      if (nextRevisionId !== currentRevisionId) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Keep polling even on transient network/runtime errors.
+    }
+
+    schedule();
+  }
+
+  schedule();
+})();`;
+
+let htmlBody = "";
+if (page?.content?.trim()) {
+  const resolved = await resolveLinks(db, page.content, tenantId, previewUrlPrefix);
+  htmlBody = renderMarkdown(resolved);
+}
+
+if (!page) {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      title: page.title || siteName,
+      navItems,
+      activePageId: page.id,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: previewUrlPrefix,
+      ogType: "website",
+      seo: page.seo,
+      page,
+      urlPrefix: previewUrlPrefix,
+      siteName,
+      siteTagline,
+    }
+  : {
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix: previewUrlPrefix,
+      siteName,
+      siteTagline,
+    };
+---
+<SiteLayout options={options} siteBundleOverride={siteBundle}>
+  {page ? (
+    <>
+      {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
+      {posts.length > 0 ? (
+        posts.map((post) => <PostPreview post={post} urlPrefix={previewUrlPrefix} />)
+      ) : (
+        <p>No posts yet.</p>
+      )}
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h2 class="post-title">Not found</h2>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+    </>
+  )}
+  <script is:inline set:html={autoReloadScript}></script>
+</SiteLayout>

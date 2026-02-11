@@ -1,0 +1,25 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+
+if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin/login");
+}
+---
+<AdminLayout title="Admin">
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <h2>Admin</h2>
+      </div>
+      <div class="editor-list-section">
+        <h3>Layout</h3>
+        <p><a class="btn btn-primary" href="/admin/layout">Layout editor</a></p>
+      </div>
+      <div class="editor-list-section">
+        <h3>Content</h3>
+        <p><a class="btn btn-primary" href="/admin/editor">Content editor</a></p>
+      </div>
+    </div>
+  </main>
+</AdminLayout>

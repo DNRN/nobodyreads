@@ -151,9 +151,14 @@ async function start() {
       const served = await serveStatic(res, pathname, PUBLIC_DIR);
       if (served) return;
 
-      // Editor routes
+      // Admin routes: POST/DELETE handled by editor router, GET served by Astro
       if (pathname.startsWith("/admin")) {
-        return editorHandler(req, res, pathname);
+        if (pathname === "/admin/logout") {
+          return editorHandler(req, res, pathname);
+        }
+        if (req.method && req.method !== "GET") {
+          return editorHandler(req, res, pathname);
+        }
       }
 
       // Blog API routes (keep existing handler)

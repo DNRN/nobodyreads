@@ -97,8 +97,8 @@ export function adminOverviewPage(urlPrefix: string = ""): string {
         <h2>Admin</h2>
       </div>
       <div class="editor-list-section">
-        <h3>Site</h3>
-        <p><a class="btn btn-primary" href="${escapeHtml(`${urlPrefix}/admin/site`)}">Edit site</a></p>
+        <h3>Layout</h3>
+        <p><a class="btn btn-primary" href="${escapeHtml(`${urlPrefix}/admin/site`)}">Layout editor</a></p>
       </div>
       <div class="editor-list-section">
         <h3>Content</h3>
@@ -123,15 +123,12 @@ export function siteEditorPage(
   const jsValue = bundle?.js ?? "";
   const revisionsHtml = renderSiteRevisions(revisions, currentRevisionId, adminBase);
 
-  return editorShell("Site — Admin", `
+  return editorShell("Layout Editor — Admin", `
   <main class="editor-main editor-main--site">
     <form method="POST" action="${escapeHtml(adminBase)}/site/save" class="editor-form editor-form--site" id="site-editor-form">
       <div class="editor-list-header">
-        <h2>Site</h2>
+        <h2>Layout Editor</h2>
         <div class="editor-actions">
-          <form method="POST" action="${escapeHtml(adminBase)}/site/use-minimal" class="editor-inline-form">
-            <button type="submit" class="btn btn-ghost">Use minimal CSS</button>
-          </form>
           <button type="submit" class="btn btn-primary">Save &amp; build</button>
         </div>
       </div>

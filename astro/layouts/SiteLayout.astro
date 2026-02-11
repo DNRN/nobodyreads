@@ -105,5 +105,6 @@ const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
   <body>
     <Fragment set:html={bodyHtml} />
     {bundleJs ? <script type="module" set:html={bundleJs} /> : null}
+    <script src="/site.js" defer></script>
   </body>
 </html>

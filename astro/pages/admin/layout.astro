@@ -1,0 +1,144 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+import { initDb } from "../../../src/shared/db.js";
+import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
+import { DEFAULT_SITE_TEMPLATE } from "../../../src/shared/site-template.js";
+import { DEFAULT_SITE_CSS } from "../../../src/shared/site-style.js";
+import {
+  getSiteBundle,
+  listSiteBundleRevisions,
+  getCurrentSiteBundleRevisionId,
+} from "../../../src/shared/site-bundle.js";
+
+if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin/login");
+}
+
+const db = await initDb();
+const bundle = await getSiteBundle(db, DEFAULT_TENANT_ID);
+const revisions = await listSiteBundleRevisions(db, DEFAULT_TENANT_ID);
+const currentRevisionId = await getCurrentSiteBundleRevisionId(db, DEFAULT_TENANT_ID);
+
+const htmlValue = bundle?.html?.trim() ? bundle.html : DEFAULT_SITE_TEMPLATE;
+const cssValue = bundle?.css?.trim() ? bundle.css : DEFAULT_SITE_CSS;
+const jsValue = bundle?.js ?? "";
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+---
+<AdminLayout
+  title="Layout Editor — Admin"
+  scripts={`<script src="/site-editor.js"></script>`}
+>
+  <main class="editor-main editor-main--site">
+    <form method="POST" action="/admin/layout/save" class="editor-form editor-form--site" id="site-editor-form">
+      <div class="editor-list-header">
+        <h2>Layout Editor</h2>
+        <div class="editor-actions">
+          <button type="submit" class="btn btn-primary">Save &amp; build</button>
+        </div>
+      </div>
+
+      <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
+        <button type="button" class="editor-tab active" data-tab="html">HTML</button>
+        <button type="button" class="editor-tab" data-tab="css">CSS</button>
+        <button type="button" class="editor-tab" data-tab="js">JS</button>
+        <button type="button" class="editor-tab" data-tab="preview">Preview</button>
+      </div>
+
+      <div class="site-editor">
+        <div class="site-editor-pane site-editor-pane--html" data-pane="html">
+          <label for="site-html">HTML template</label>
+          <details class="editor-tokens">
+            <summary>Template tokens</summary>
+            <div class="editor-tokens-body">
+              <p class="hint">Use these placeholders in your HTML template:</p>
+              <ul class="editor-token-list">
+                <li><code>{"{{content}}"}</code> — the rendered page body.</li>
+                <li><code>{"{{nav}}"}</code> — the main navigation links.</li>
+                <li><code>{"{{siteTagline}}"}</code> — the site tagline text.</li>
+                <li><code>{"{{homeHref}}"}</code> — the home URL.</li>
+                <li><code>{"{{year}}"}</code> — current year.</li>
+                <li><code>{"{{authLinksBlock}}"}</code> — auth/profile links (if enabled).</li>
+                <li><code>{"{{navToggle}}"}</code> — mobile nav toggle button.</li>
+              </ul>
+            </div>
+          </details>
+          <textarea id="site-html" name="html" rows="14" class="editor-textarea" spellcheck="false">{htmlValue}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--css hidden" data-pane="css">
+          <label for="site-css">CSS</label>
+          <textarea id="site-css" name="css" rows="14" class="editor-textarea" spellcheck="false">{cssValue}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--js hidden" data-pane="js">
+          <label for="site-js">JavaScript (module)</label>
+          <textarea id="site-js" name="js" rows="14" class="editor-textarea" spellcheck="false">{jsValue}</textarea>
+        </div>
+
+        <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">
+          <div class="editor-preview-label">Preview</div>
+          <iframe id="site-preview" title="Site preview"></iframe>
+        </div>
+      </div>
+
+      <div class="editor-list-section">
+        <h3>Revisions</h3>
+        {revisions.length === 0 ? (
+          <p class="editor-empty">No revisions yet. Save your first change.</p>
+        ) : (
+          <table class="editor-table">
+            <thead>
+              <tr><th>ID</th><th>Saved</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {revisions.map((rev) => {
+                const isCurrent = currentRevisionId === rev.revisionId;
+                return (
+                  <tr>
+                    <td>#{rev.revisionId}</td>
+                    <td>{formatDateTime(rev.createdAt)}</td>
+                    <td>
+                      {isCurrent
+                        ? <span class="badge badge-published">active</span>
+                        : <span class="badge badge-draft">saved</span>}
+                    </td>
+                    <td class="cell-actions">
+                      {!isCurrent ? (
+                        <form
+                          method="POST"
+                          action={`/admin/layout/revision/use/${rev.revisionId}`}
+                          class="editor-inline-form"
+                        >
+                          <button type="submit" class="btn btn-ghost">Use</button>
+                        </form>
+                      ) : null}
+                      <form
+                        method="POST"
+                        action={`/admin/layout/revision/delete/${rev.revisionId}`}
+                        class="editor-inline-form"
+                        onsubmit="return confirm('Delete this revision?')"
+                      >
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </form>
+  </main>
+</AdminLayout>

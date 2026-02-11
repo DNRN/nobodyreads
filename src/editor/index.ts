@@ -32,7 +32,6 @@ import {
   listSiteBundleRevisions,
   setCurrentSiteBundleRevision,
 } from "../shared/site-bundle.js";
-import { DEFAULT_SITE_CSS } from "../shared/site-style.js";
 
 // --- Public API ---
 
@@ -95,7 +94,7 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
         const password = body.password || "";
 
         if (!verifyEditorPassword(password)) {
-          return html(res, editorLoginPage("Incorrect password.", urlPrefix));
+          return redirect(res, `${adminBase}/login?error=1`);
         }
 
         createEditorSession(res, adminBase);
@@ -124,7 +123,10 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       return html(res, siteEditorPage(bundle, revisions, currentRevisionId, urlPrefix));
     }
 
-    if (pathname === "/admin/site/save" && req.method === "POST") {
+    if (
+      (pathname === "/admin/site/save" || pathname === "/admin/layout/save") &&
+      req.method === "POST"
+    ) {
       const body = await parseFormBody(req);
       await addSiteBundleRevision(
         db,
@@ -135,35 +137,25 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
         },
         tenantId
       );
-      return redirect(res, `${adminBase}/site`);
+      return redirect(res, `${adminBase}/layout`);
     }
 
-    if (pathname === "/admin/site/use-minimal" && req.method === "POST") {
-      const bundle = await getSiteBundle(db, tenantId);
-      await addSiteBundleRevision(
-        db,
-        {
-          html: bundle?.html ?? "",
-          css: DEFAULT_SITE_CSS,
-          js: bundle?.js ?? "",
-        },
-        tenantId
-      );
-      return redirect(res, `${adminBase}/site`);
-    }
-
-    const useRevisionMatch = pathname.match(/^\/admin\/site\/revision\/use\/(\d+)$/);
+    const useRevisionMatch =
+      pathname.match(/^\/admin\/site\/revision\/use\/(\d+)$/) ||
+      pathname.match(/^\/admin\/layout\/revision\/use\/(\d+)$/);
     if (useRevisionMatch && req.method === "POST") {
       const revisionId = parseInt(useRevisionMatch[1], 10);
       await setCurrentSiteBundleRevision(db, revisionId, tenantId);
-      return redirect(res, `${adminBase}/site`);
+      return redirect(res, `${adminBase}/layout`);
     }
 
-    const deleteRevisionMatch = pathname.match(/^\/admin\/site\/revision\/delete\/(\d+)$/);
+    const deleteRevisionMatch =
+      pathname.match(/^\/admin\/site\/revision\/delete\/(\d+)$/) ||
+      pathname.match(/^\/admin\/layout\/revision\/delete\/(\d+)$/);
     if (deleteRevisionMatch && req.method === "POST") {
       const revisionId = parseInt(deleteRevisionMatch[1], 10);
       await deleteSiteBundleRevision(db, revisionId, tenantId);
-      return redirect(res, `${adminBase}/site`);
+      return redirect(res, `${adminBase}/layout`);
     }
 
     if (pathname === "/admin/editor" && req.method === "GET") {

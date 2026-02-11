@@ -1,0 +1,140 @@
+---
+import type { Page } from "../../../src/content/types.js";
+
+const { page, editorBase = "/admin/editor" } = Astro.props as {
+  page?: Page;
+  editorBase?: string;
+};
+
+const isNew = !page;
+const title = isNew ? "New Page" : `Edit: ${page?.title ?? ""}`;
+
+const p = page ?? {
+  id: "",
+  slug: "",
+  title: "",
+  content: "",
+  excerpt: "",
+  tags: [] as string[],
+  date: new Date().toISOString().slice(0, 10),
+  published: false,
+  kind: "post" as const,
+  nav: undefined,
+};
+---
+<main class="editor-main">
+  <form method="POST" action={`${editorBase}/save`} class="editor-form" id="editor-form">
+    <input type="hidden" name="id" value={p.id} />
+    <input type="hidden" name="content" id="content-field" value="" />
+
+    <!-- Split pane: editable content (textarea has no name; value synced to #content-field on submit) -->
+    <div class="editor-split">
+      <div class="editor-pane editor-pane-write">
+        <div class="editor-toolbar" id="editor-toolbar">
+          <button type="button" data-action="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+          <button type="button" data-action="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+          <button type="button" data-action="heading" title="Heading">H</button>
+          <button type="button" data-action="link" title="Link">Link</button>
+          <button type="button" data-action="code" title="Inline code">Code</button>
+          <button type="button" data-action="codeblock" title="Code block">Block</button>
+          <button type="button" data-action="ul" title="Bullet list">List</button>
+          <button type="button" data-action="quote" title="Blockquote">Quote</button>
+        </div>
+        <textarea
+          id="content"
+          class="editor-textarea"
+          placeholder="Write your markdown here..."
+          spellcheck="true"
+        >{p.content}</textarea>
+      </div>
+      <div class="editor-pane editor-pane-preview">
+        <div class="editor-preview-label">Preview</div>
+        <div id="preview" class="editor-preview post-body"></div>
+      </div>
+    </div>
+
+    <!-- Sidebar: metadata (order: 1 so it still appears first visually) -->
+    <aside class="editor-sidebar">
+      <div class="field">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value={p.title} required />
+      </div>
+
+      <div class="field">
+        <label for="slug">Slug</label>
+        <input
+          type="text"
+          id="slug"
+          name="slug"
+          value={p.slug}
+          required
+          pattern="[a-z0-9-]+"
+          title="Lowercase letters, numbers, and hyphens only"
+        />
+      </div>
+
+      <div class="field">
+        <label for="kind">Kind</label>
+        <select id="kind" name="kind">
+          <option value="post" selected={p.kind === "post"}>Post</option>
+          <option value="page" selected={p.kind === "page"}>Page</option>
+          <option value="home" selected={p.kind === "home"}>Home</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="excerpt">Excerpt</label>
+        <textarea id="excerpt" name="excerpt" rows="3">{p.excerpt}</textarea>
+      </div>
+
+      <div class="field">
+        <label for="tags">Tags <span class="hint">(comma-separated)</span></label>
+        <input type="text" id="tags" name="tags" value={p.tags.join(", ")} />
+      </div>
+
+      <div class="field">
+        <label for="date">Date</label>
+        <input type="date" id="date" name="date" value={p.date.slice(0, 10)} />
+      </div>
+
+      <div class="field field-row">
+        <label for="published">
+          <input type="checkbox" id="published" name="published" checked={p.published} />
+          Published
+        </label>
+      </div>
+
+      <details class="field">
+        <summary>Navigation</summary>
+        <div class="field">
+          <label for="nav_label">Nav label</label>
+          <input type="text" id="nav_label" name="nav_label" value={p.nav?.label ?? ""} />
+        </div>
+        <div class="field">
+          <label for="nav_order">Nav order</label>
+          <input type="number" id="nav_order" name="nav_order" value={p.nav?.order ?? ""} />
+        </div>
+      </details>
+
+      <div class="editor-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        {!isNew && (
+          <form
+            method="POST"
+            action={`${editorBase}/delete/${p.id}`}
+            class="editor-delete-form"
+            onsubmit="return confirm('Delete this page permanently?')"
+          >
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        )}
+      </div>
+    </aside>
+
+    <!-- Mobile: tab switcher -->
+    <div class="editor-tabs" id="editor-tabs">
+      <button type="button" class="editor-tab active" data-tab="write">Write</button>
+      <button type="button" class="editor-tab" data-tab="preview">Preview</button>
+    </div>
+  </form>
+</main>

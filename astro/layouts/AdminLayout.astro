@@ -1,0 +1,59 @@
+---
+const {
+  title = "Admin",
+  adminBase = "/admin",
+  siteBase = "/",
+  scripts = "",
+} = Astro.props as {
+  title?: string;
+  adminBase?: string;
+  siteBase?: string;
+  scripts?: string;
+};
+
+const devReload = import.meta.env.DEV
+  ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
+  : "";
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <script is:inline>
+      (function () {
+        try {
+          const stored = localStorage.getItem("theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = (stored === "system" || !stored)
+            ? (prefersDark ? "dark" : "light")
+            : (stored === "dark" || stored === "light"
+                ? stored
+                : (prefersDark ? "dark" : "light"));
+          document.documentElement.dataset.theme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/style.css" />
+    <Fragment set:html={devReload} />
+  </head>
+  <body>
+    <header class="editor-header">
+      <div class="editor-header-inner">
+        <a class="editor-logo" href={adminBase}>Admin</a>
+        <nav class="editor-nav">
+          <form method="POST" action={`${adminBase}/logout`} class="editor-nav-form">
+            <button type="submit" class="btn btn-ghost">Sign out</button>
+          </form>
+          <a href={siteBase} target="_blank">View site</a>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <script src="/site.js" defer></script>
+    <Fragment set:html={scripts} />
+  </body>
+</html>

@@ -41,5 +41,4 @@ export const DEFAULT_SITE_TEMPLATE = `
   </div>
 </footer>
 
-<script src="/site.js" defer></script>
 `;

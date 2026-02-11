@@ -1,0 +1,30 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+
+if (!editorRequiresAuth()) {
+  return Astro.redirect("/admin");
+}
+
+if (isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin");
+}
+
+const error = Astro.url.searchParams.get("error");
+---
+<AdminLayout title="Login — Admin">
+  <main class="container">
+    <div class="auth-form">
+      <h2>Admin Login</h2>
+      <p>Enter the editor password to continue.</p>
+      {error ? (
+        <ul class="form-errors"><li>Incorrect password.</li></ul>
+      ) : null}
+      <form method="POST" action="/admin/login">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autofocus />
+        <button type="submit">Sign in</button>
+      </form>
+    </div>
+  </main>
+</AdminLayout>

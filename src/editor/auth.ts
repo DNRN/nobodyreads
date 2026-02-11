@@ -33,17 +33,31 @@ export function editorRequiresAuth(): boolean {
   return EDITOR_PASSWORD.length > 0;
 }
 
-/** Check if the request has a valid editor session. */
-export function isAuthenticated(req: IncomingMessage): boolean {
+function extractCookieHeader(req: IncomingMessage | Request): string | undefined {
+  const anyReq = req as Request;
+  if (typeof anyReq.headers?.get === "function") {
+    return anyReq.headers.get("cookie") ?? undefined;
+  }
+  const nodeReq = req as IncomingMessage;
+  return nodeReq.headers.cookie;
+}
+
+function isAuthenticatedWithCookie(cookie?: string): boolean {
   if (!editorRequiresAuth()) return true; // No password = open access
-
-  const cookie = req.headers.cookie;
   if (!cookie) return false;
-
   const match = cookie.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
   if (!match) return false;
-
   return verify(decodeURIComponent(match[1]));
+}
+
+/** Check if the request has a valid editor session. */
+export function isAuthenticated(req: IncomingMessage): boolean {
+  return isAuthenticatedWithCookie(extractCookieHeader(req));
+}
+
+/** Check if a Fetch Request has a valid editor session. */
+export function isAuthenticatedRequest(req: Request): boolean {
+  return isAuthenticatedWithCookie(extractCookieHeader(req));
 }
 
 /** Set the editor session cookie after successful login. */

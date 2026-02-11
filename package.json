@@ -26,6 +26,7 @@
     "build:site-editor": "esbuild src/editor/site-editor.ts --bundle --format=iife --target=es2018 --outfile=public/site-editor.js",
     "site:use-minimal-css": "tsx scripts/use-minimal-css.ts",
     "site:bootstrap": "tsx scripts/bootstrap-site.ts",
+    "site:remove-site-script": "tsx scripts/remove-site-script.ts",
     "typecheck": "tsc --noEmit",
     "post": "tsx scripts/publish.ts"
   },

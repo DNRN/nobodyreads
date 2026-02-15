@@ -1,7 +1,7 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import { getPageByKind, getNavItems } from "../../src/content/db.js";
-import { resolveLinks, resolveViews, renderMarkdown } from "../../src/content/render.js";
+import { renderContent } from "../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getDbClient } from "../lib/db.js";
 
@@ -20,9 +20,7 @@ const [page, navItems] = await Promise.all([
 
 let htmlBody = "";
 if (page?.content?.trim()) {
-  const resolvedLinks = await resolveLinks(db, page.content, tenantId, urlPrefix);
-  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, urlPrefix);
-  htmlBody = renderMarkdown(resolvedViews);
+  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix);
 }
 
 if (page?.seo?.noAiTraining) {

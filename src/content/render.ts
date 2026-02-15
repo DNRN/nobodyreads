@@ -201,3 +201,112 @@ export function renderMarkdown(content: string): string {
   }
   return html;
 }
+
+// --- Full content rendering pipeline ---
+
+/**
+ * Render a page's markdown content to HTML, resolving [[id]] links and
+ * {{view:slug}} content views.
+ *
+ * Views are resolved *after* markdown rendering to prevent the markdown
+ * parser from mangling view HTML (e.g. treating indented HTML as code blocks).
+ * Internally, view tokens are replaced with HTML-comment placeholders before
+ * markdown processing, then the placeholders are swapped for real view HTML
+ * in the final output.
+ */
+export async function renderContent(
+  db: Client,
+  markdown: string,
+  tenantId: string,
+  urlPrefix: string = "",
+  viewOptions: ResolveViewsOptions = {}
+): Promise<string> {
+  // 1. Resolve [[id]] wiki-links → standard markdown links
+  const withLinks = await resolveLinks(db, markdown, tenantId, urlPrefix);
+
+  // 2. Replace {{view:slug}} tokens with comment placeholders and build a
+  //    map of placeholder → rendered HTML for each view.
+  const { text: withPlaceholders, viewHtml } = await resolveViewPlaceholders(
+    db,
+    withLinks,
+    tenantId,
+    urlPrefix,
+    viewOptions
+  );
+
+  // 3. Render markdown → HTML (placeholders survive as HTML comments)
+  let html = renderMarkdown(withPlaceholders);
+
+  // 4. Swap placeholders for actual view HTML
+  if (viewHtml.size > 0) {
+    html = html.replace(VIEW_PLACEHOLDER_RE, (_match, slug: string) => viewHtml.get(slug) ?? "");
+  }
+
+  return html;
+}
+
+// --- View placeholder helpers (internal) ---
+
+/** Prefix/suffix used for view placeholders that survive markdown rendering. */
+const VIEW_PLACEHOLDER_TAG = "nbr-view";
+const VIEW_PLACEHOLDER_RE = new RegExp(
+  `<!--${VIEW_PLACEHOLDER_TAG}:([a-z0-9-]+)-->`,
+  "g"
+);
+
+/**
+ * Replace all {{view:slug}} tokens with HTML-comment placeholders and return
+ * the modified text together with a map of slug → rendered HTML.
+ */
+async function resolveViewPlaceholders(
+  db: Client,
+  markdown: string,
+  tenantId: string,
+  urlPrefix: string,
+  options: ResolveViewsOptions
+): Promise<{ text: string; viewHtml: Map<string, string> }> {
+  const matches = [...markdown.matchAll(VIEW_PATTERN)];
+  if (matches.length === 0) {
+    return { text: markdown, viewHtml: new Map() };
+  }
+
+  const slugs = [...new Set(matches.map((m) => m[1]))];
+  const viewHtml = new Map<string, string>();
+
+  for (const slug of slugs) {
+    const view = await getContentViewBySlug(db, slug, tenantId, {
+      publishedOnly: !options.includeDrafts,
+    });
+
+    if (!view) {
+      const fallback = options.showMissingPlaceholders
+        ? `<div class="content-view content-view-missing"><p>Missing view: ${slug}</p></div>`
+        : "";
+      viewHtml.set(slug, fallback);
+      continue;
+    }
+
+    if (view.kind === "post_list") {
+      const config = view.config as { limit?: number };
+      const posts = await listPostsForView(db, tenantId, { limit: config.limit });
+      viewHtml.set(slug, renderPostListView(posts, urlPrefix));
+      continue;
+    }
+
+    if (view.kind === "custom") {
+      const html = await renderCustomView(db, view.config as CustomViewConfig, tenantId, urlPrefix);
+      viewHtml.set(slug, html);
+      continue;
+    }
+
+    viewHtml.set(slug, "");
+  }
+
+  // Replace view tokens with comment placeholders
+  const text = markdown.replace(
+    VIEW_PATTERN,
+    (_match, slug: string) => `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
+  );
+
+  return { text, viewHtml };
+}

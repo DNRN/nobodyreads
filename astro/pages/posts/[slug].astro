@@ -1,7 +1,7 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
-import { resolveLinks, resolveViews, renderMarkdown } from "../../../src/content/render.js";
+import { renderContent } from "../../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import { getDbClient } from "../../lib/db.js";
 import { formatDate } from "../../lib/format.js";
@@ -27,9 +27,7 @@ if (page?.seo?.noAiTraining) {
 
 let htmlBody = "";
 if (page) {
-  const resolvedLinks = await resolveLinks(db, page.content, tenantId, urlPrefix);
-  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, urlPrefix);
-  htmlBody = renderMarkdown(resolvedViews);
+  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix);
 } else {
   Astro.response.status = 404;
 }

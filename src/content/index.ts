@@ -9,7 +9,7 @@ import {
   getPageByKind,
   getNavItems,
 } from "./db.js";
-import { resolveLinks, resolveViews, renderMarkdown } from "./render.js";
+import { renderContent } from "./render.js";
 import {
   defaultLayout,
   homePage,
@@ -37,7 +37,7 @@ export interface BlogRouterOptions {
   layout?: LayoutFn;
 }
 
-/** Resolve [[id]] links in markdown and render to HTML. */
+/** Resolve [[id]] links and {{view:slug}} views, then render markdown to HTML. */
 async function renderPageContent(
   db: Client,
   markdown: string,
@@ -45,12 +45,10 @@ async function renderPageContent(
   urlPrefix: string,
   options: { includeDraftViews?: boolean; showMissingViewPlaceholders?: boolean } = {}
 ): Promise<string> {
-  const resolvedLinks = await resolveLinks(db, markdown, tenantId, urlPrefix);
-  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, urlPrefix, {
+  return renderContent(db, markdown, tenantId, urlPrefix, {
     includeDrafts: options.includeDraftViews,
     showMissingPlaceholders: options.showMissingViewPlaceholders,
   });
-  return renderMarkdown(resolvedViews);
 }
 
 /**

@@ -44,7 +44,7 @@ export {
   contentPage,
   notFoundPage,
 } from "./content/templates.js";
-export { renderMarkdown, resolveLinks, resolveViews } from "./content/render.js";
+export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
 
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";

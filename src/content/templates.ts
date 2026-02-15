@@ -167,20 +167,18 @@ ${content}
 
 function renderPostPreview(post: PageSummary, urlPrefix: string = ""): string {
   const href = `${urlPrefix}/posts/${escapeHtml(post.slug)}`;
-  return `
-    <article class="post-preview">
-      <time class="post-date" datetime="${escapeHtml(post.date)}">${formatDate(post.date)}</time>
-      <h2 class="post-title"><a href="${href}">${escapeHtml(post.title)}</a></h2>
-      <p class="post-excerpt">${escapeHtml(post.excerpt)}</p>
-      <a href="${href}" class="read-more">read more &rarr;</a>
-    </article>`;
+  return `<article class="post-preview">
+<time class="post-date" datetime="${escapeHtml(post.date)}">${formatDate(post.date)}</time>
+<h2 class="post-title"><a href="${href}">${escapeHtml(post.title)}</a></h2>
+<p class="post-excerpt">${escapeHtml(post.excerpt)}</p>
+<a href="${href}" class="read-more">read more &rarr;</a>
+</article>`;
 }
 
 export function renderPostListView(posts: PageSummary[], urlPrefix: string = ""): string {
   if (posts.length === 0) return "";
   const items = posts.map((post) => renderPostPreview(post, urlPrefix)).join("\n");
-  return `
-<section class="content-view content-view-post-list">
+  return `<section class="content-view content-view-post-list">
 ${items}
 </section>`;
 }

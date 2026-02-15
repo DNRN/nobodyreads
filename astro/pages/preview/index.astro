@@ -1,7 +1,7 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageByKind, getNavItems } from "../../../src/content/db.js";
-import { resolveLinks, resolveViews, renderMarkdown } from "../../../src/content/render.js";
+import { renderContent } from "../../../src/content/render.js";
 import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
@@ -74,12 +74,10 @@ const autoReloadScript = `(() => {
 
 let htmlBody = "";
 if (page?.content?.trim()) {
-  const resolvedLinks = await resolveLinks(db, page.content, tenantId, previewUrlPrefix);
-  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, previewUrlPrefix, {
+  htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
     includeDrafts: true,
     showMissingPlaceholders: true,
   });
-  htmlBody = renderMarkdown(resolvedViews);
 }
 
 if (!page) {

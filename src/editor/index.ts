@@ -2,16 +2,22 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Client } from "@libsql/client";
 import { randomUUID } from "node:crypto";
 import { transform } from "esbuild";
+import { extname } from "node:path";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
-import { redirect, parseFormBody } from "../shared/http.js";
+import { redirect, parseFormBody, parseMultipartBody, json } from "../shared/http.js";
 import {
   getPageById,
   deletePage,
   upsertPage,
   deleteContentView,
   upsertContentView,
+  insertMedia,
+  listMedia,
+  getMediaById,
+  deleteMediaRecord,
 } from "../content/db.js";
 import type { Page, PageKind, ContentView, ContentViewKind } from "../content/types.js";
+import type { MediaStorage } from "../media/storage.js";
 import {
   isAuthenticated,
   editorRequiresAuth,
@@ -24,6 +30,7 @@ import {
   deleteSiteBundleRevision,
   setCurrentSiteBundleRevision,
 } from "../shared/site-bundle.js";
+import { notifySubscribers } from "../subscription/index.js";
 
 // --- Public API ---
 
@@ -36,6 +43,8 @@ export type RequestHandler = (
 export interface EditorRouterOptions {
   /** Database client. */
   db: Client;
+  /** Media storage backend (local filesystem, GCS, etc.). */
+  storage?: MediaStorage;
   /** Tenant ID to scope all queries to. Defaults to "_default". */
   tenantId?: string;
   /** URL prefix for all links, e.g. "/dennis". Defaults to "". */
@@ -60,7 +69,7 @@ export interface EditorRouterOptions {
  *   // editor at /dennis/admin, platform session auth handled by caller
  */
 export function createEditorRouter(options: EditorRouterOptions): RequestHandler {
-  const { db, skipAuth = false } = options;
+  const { db, storage, skipAuth = false } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
   const adminBase = `${urlPrefix}/admin`;
@@ -99,6 +108,12 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
           return redirect(res, `${adminBase}/login`);
         }
       }
+    }
+
+    // --- Media: list (JSON API for the media picker) ---
+    if (pathname === "/admin/media/list" && req.method === "GET" && storage) {
+      const items = await listMedia(db, tenantId, (key) => storage.url(key));
+      return json(res, items);
     }
 
     // --- GET admin routes are rendered by Astro ---
@@ -173,12 +188,15 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       const pageId = isNew ? randomUUID() : body.id.trim();
       const now = new Date().toISOString();
 
-      // When updating: preserve existing content if request has no content (missing or empty),
-      // so we never overwrite with empty due to truncation or client bugs.
+      // Check if this is a draft→published transition (for subscriber notifications)
+      let wasPreviouslyPublished = false;
       let content = body.content ?? "";
-      if (!isNew && !content) {
+      if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
-        if (existing?.content) content = existing.content;
+        wasPreviouslyPublished = existing?.published ?? false;
+        // When updating: preserve existing content if request has no content (missing or empty),
+        // so we never overwrite with empty due to truncation or client bugs.
+        if (!content && existing?.content) content = existing.content;
       }
 
       const page: Page = {
@@ -202,6 +220,16 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       };
 
       await upsertPage(db, page, tenantId);
+
+      // Notify subscribers when a post is newly published (draft → published)
+      if (page.kind === "post" && page.published && !wasPreviouslyPublished) {
+        notifySubscribers(db, tenantId, {
+          title: page.title,
+          slug: page.slug,
+          excerpt: page.excerpt,
+        }).catch((err) => console.error("Subscriber notification error:", err));
+      }
+
       return redirect(res, `${editorBase}/${pageId}`);
     }
 
@@ -261,6 +289,58 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       const viewId = deleteViewMatch[1];
       await deleteContentView(db, viewId, tenantId);
       return redirect(res, `${adminBase}/views`);
+    }
+
+    // --- Media: upload ---
+
+    if (pathname === "/admin/media/upload" && req.method === "POST" && storage) {
+      const { files } = await parseMultipartBody(req);
+      const file = files[0];
+      if (!file) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "No file uploaded" }));
+        return;
+      }
+
+      const mediaId = randomUUID();
+      const ext = extname(file.filename).toLowerCase() || "";
+      const storageKey = `${mediaId}${ext}`;
+
+      const stored = await storage.put(storageKey, file.data, file.mimeType);
+
+      await insertMedia(
+        db,
+        {
+          id: mediaId,
+          storageKey,
+          originalName: file.filename,
+          mimeType: file.mimeType,
+          size: file.data.length,
+        },
+        tenantId
+      );
+
+      // If the request accepts JSON (editor AJAX), return JSON; otherwise redirect
+      const accept = req.headers.accept || "";
+      if (accept.includes("application/json")) {
+        return json(res, { id: mediaId, url: stored.url, filename: file.filename });
+      }
+      return redirect(res, `${adminBase}/media`);
+    }
+
+    // --- Media: delete ---
+
+    const deleteMediaMatch = pathname.match(/^\/admin\/media\/delete\/([a-zA-Z0-9_-]+)$/);
+    if (deleteMediaMatch && req.method === "POST" && storage) {
+      const mediaId = deleteMediaMatch[1];
+      const media = await getMediaById(db, mediaId, tenantId, (k) =>
+        storage.url(k)
+      );
+      if (media) {
+        await storage.delete(media.storageKey);
+        await deleteMediaRecord(db, mediaId, tenantId);
+      }
+      return redirect(res, `${adminBase}/media`);
     }
 
     // --- 404 fallback ---

@@ -9,6 +9,8 @@ import { initDb } from "./shared/db.js";
 import { serveStatic } from "./shared/http.js";
 import { createBlogRouter, type RequestHandler } from "./content/index.js";
 import { createEditorRouter } from "./editor/index.js";
+import { createSubscriptionRouter } from "./subscription/index.js";
+import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -122,8 +124,14 @@ async function start() {
   const db = await initDb();
   initLiveReload();
 
-  const editorHandler = createEditorRouter({ db });
+  const storage = createMediaStorage();
+  if ("init" in storage && typeof (storage as LocalMediaStorage).init === "function") {
+    await (storage as LocalMediaStorage).init();
+  }
+
+  const editorHandler = createEditorRouter({ db, storage });
   const blogHandler: RequestHandler = createBlogRouter({ db });
+  const subscriptionHandler = createSubscriptionRouter({ db });
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -151,12 +159,39 @@ async function start() {
       const served = await serveStatic(res, pathname, PUBLIC_DIR);
       if (served) return;
 
-      // Admin routes: POST/DELETE handled by editor router, GET served by Astro
+      // Media files (uploaded images, video, audio)
+      const mediaMatch = pathname.match(/^\/media\/(.+)$/);
+      if (mediaMatch && req.method === "GET") {
+        const key = decodeURIComponent(mediaMatch[1]);
+        const mediaServed = await storage.serve(key, res);
+        if (mediaServed) return;
+        res.writeHead(404);
+        return res.end("Not found");
+      }
+
+      // Public subscription routes
+      if (
+        pathname === "/api/subscribe" ||
+        pathname === "/api/subscribe/verify" ||
+        pathname === "/api/unsubscribe"
+      ) {
+        return subscriptionHandler(req, res, pathname);
+      }
+
+      // Admin routes: POST/DELETE handled by editor/subscription routers, GET served by Astro
       if (pathname.startsWith("/admin")) {
         if (pathname === "/admin/logout") {
           return editorHandler(req, res, pathname);
         }
+        // JSON API endpoints served by the editor router (even on GET)
+        if (pathname === "/admin/media/list") {
+          return editorHandler(req, res, pathname);
+        }
         if (req.method && req.method !== "GET") {
+          // Subscription-related admin routes
+          if (pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/subscribers")) {
+            return subscriptionHandler(req, res, pathname);
+          }
           return editorHandler(req, res, pathname);
         }
       }

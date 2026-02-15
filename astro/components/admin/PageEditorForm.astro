@@ -30,7 +30,7 @@ const p = page ?? {
     <!-- Split pane: editable content (textarea has no name; value synced to #content-field on submit) -->
     <div class="editor-split">
       <div class="editor-pane editor-pane-write">
-        <p class="hint">Embed reusable views with tokens like <code>{"{{view:latest-posts}}"}</code>.</p>
+        <p class="hint">Standard markdown plus extended image sizes and special tokens. See <em>Markdown reference</em> in the sidebar.</p>
         <div class="editor-toolbar" id="editor-toolbar">
           <button type="button" data-action="bold" title="Bold (Ctrl+B)"><b>B</b></button>
           <button type="button" data-action="italic" title="Italic (Ctrl+I)"><i>I</i></button>
@@ -40,6 +40,8 @@ const p = page ?? {
           <button type="button" data-action="codeblock" title="Code block">Block</button>
           <button type="button" data-action="ul" title="Bullet list">List</button>
           <button type="button" data-action="quote" title="Blockquote">Quote</button>
+          <button type="button" data-action="image" title="Upload image">Upload</button>
+          <button type="button" data-action="media" title="Pick from media library">Media</button>
         </div>
         <textarea
           id="content"
@@ -114,6 +116,41 @@ const p = page ?? {
         <div class="field">
           <label for="nav_order">Nav order</label>
           <input type="number" id="nav_order" name="nav_order" value={p.nav?.order ?? ""} />
+        </div>
+      </details>
+
+      <details class="field">
+        <summary>Markdown reference</summary>
+        <div class="editor-help">
+          <table class="editor-help-table">
+            <tbody>
+              <tr><td><code>**bold**</code></td><td><b>bold</b></td></tr>
+              <tr><td><code>_italic_</code></td><td><i>italic</i></td></tr>
+              <tr><td><code>## Heading</code></td><td>Heading</td></tr>
+              <tr><td><code>[text](url)</code></td><td>Link</td></tr>
+              <tr><td><code>`code`</code></td><td>Inline code</td></tr>
+              <tr><td><code>```code```</code></td><td>Code block</td></tr>
+              <tr><td><code>- item</code></td><td>Bullet list</td></tr>
+              <tr><td><code>&gt; quote</code></td><td>Blockquote</td></tr>
+            </tbody>
+          </table>
+          <p class="editor-help-heading">Images</p>
+          <table class="editor-help-table">
+            <tbody>
+              <tr><td><code>![alt](/media/img.jpg)</code></td><td>Full width (default)</td></tr>
+              <tr><td><code>![alt|50%](/media/img.jpg)</code></td><td>50% width</td></tr>
+              <tr><td><code>![alt|400px](/media/img.jpg)</code></td><td>Max 400px</td></tr>
+              <tr><td><code>![alt|300x200](/media/img.jpg)</code></td><td>Fixed 300&times;200</td></tr>
+            </tbody>
+          </table>
+          <p class="editor-help-heading">Special tokens</p>
+          <table class="editor-help-table">
+            <tbody>
+              <tr><td><code>[[page-id]]</code></td><td>Internal link (by page ID)</td></tr>
+              <tr><td><code>[[page-id|text]]</code></td><td>Internal link with custom text</td></tr>
+              <tr><td><code>{"{{view:slug}}"}</code></td><td>Embed a content view</td></tr>
+            </tbody>
+          </table>
         </div>
       </details>
 

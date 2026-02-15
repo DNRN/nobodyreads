@@ -83,6 +83,18 @@ export interface Page {
   nav?: PageNav; // If present, page appears in the top bar
 }
 
+/** An uploaded media file (image, video, audio, etc.). */
+export interface Media {
+  id: string;
+  storageKey: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  /** Public URL to access the file (computed, not stored). */
+  url: string;
+}
+
 /** Lightweight summary for post listings on the home page. */
 export interface PageSummary {
   id: string;

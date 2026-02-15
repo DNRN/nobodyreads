@@ -10,6 +10,7 @@ import type {
   ContentViewConfig,
   PostListViewConfig,
   CustomViewConfig,
+  Media,
 } from "./types.js";
 
 // --- Row mappers ---
@@ -432,5 +433,77 @@ export async function upsertPage(
       page.nav?.label ?? null,
       page.nav?.order ?? null,
     ],
+  });
+}
+
+// --- Media queries ---
+
+function rowToMedia(row: Row, urlFn: (key: string) => string): Media {
+  return {
+    id: row.media_id as string,
+    storageKey: row.storage_key as string,
+    originalName: row.original_name as string,
+    mimeType: row.mime_type as string,
+    size: row.size as number,
+    createdAt: row.created_at as string,
+    url: urlFn(row.storage_key as string),
+  };
+}
+
+/** Insert a new media record. */
+export async function insertMedia(
+  db: Client,
+  media: { id: string; storageKey: string; originalName: string; mimeType: string; size: number },
+  tenantId: string
+): Promise<void> {
+  await db.execute({
+    sql: `INSERT INTO media (media_id, tenant_id, storage_key, original_name, mime_type, size)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [media.id, tenantId, media.storageKey, media.originalName, media.mimeType, media.size],
+  });
+}
+
+/** List all media for a tenant, newest first. */
+export async function listMedia(
+  db: Client,
+  tenantId: string,
+  urlFn: (key: string) => string
+): Promise<Media[]> {
+  const result = await db.execute({
+    sql: `SELECT media_id, storage_key, original_name, mime_type, size, created_at
+          FROM media
+          WHERE tenant_id = ?
+          ORDER BY created_at DESC`,
+    args: [tenantId],
+  });
+  return result.rows.map((row) => rowToMedia(row, urlFn));
+}
+
+/** Fetch a single media item by id. */
+export async function getMediaById(
+  db: Client,
+  mediaId: string,
+  tenantId: string,
+  urlFn: (key: string) => string
+): Promise<Media | null> {
+  const result = await db.execute({
+    sql: `SELECT media_id, storage_key, original_name, mime_type, size, created_at
+          FROM media
+          WHERE media_id = ? AND tenant_id = ?
+          LIMIT 1`,
+    args: [mediaId, tenantId],
+  });
+  return result.rows.length > 0 ? rowToMedia(result.rows[0], urlFn) : null;
+}
+
+/** Delete a media record by id. */
+export async function deleteMediaRecord(
+  db: Client,
+  mediaId: string,
+  tenantId: string
+): Promise<void> {
+  await db.execute({
+    sql: `DELETE FROM media WHERE media_id = ? AND tenant_id = ?`,
+    args: [mediaId, tenantId],
   });
 }

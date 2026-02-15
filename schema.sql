@@ -68,3 +68,38 @@ CREATE TABLE IF NOT EXISTS site_bundle_revision (
   ts          TEXT NOT NULL DEFAULT '',
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Key-value settings per tenant
+CREATE TABLE IF NOT EXISTS site_settings (
+  tenant_id TEXT NOT NULL DEFAULT '_default',
+  key       TEXT NOT NULL,
+  value     TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (tenant_id, key)
+);
+
+-- Media uploads
+CREATE TABLE IF NOT EXISTS media (
+  media_id      TEXT NOT NULL,
+  tenant_id     TEXT NOT NULL DEFAULT '_default',
+  storage_key   TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  mime_type     TEXT NOT NULL,
+  size          INTEGER NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (media_id, tenant_id)
+);
+
+-- Email subscribers
+CREATE TABLE IF NOT EXISTS subscriber (
+  subscriber_id   TEXT NOT NULL,
+  tenant_id       TEXT NOT NULL DEFAULT '_default',
+  email           TEXT NOT NULL,
+  verified        INTEGER NOT NULL DEFAULT 0,
+  verify_token    TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  verified_at     TEXT,
+  unsubscribed    INTEGER NOT NULL DEFAULT 0,
+  unsubscribed_at TEXT,
+  PRIMARY KEY (subscriber_id, tenant_id),
+  UNIQUE (email, tenant_id)
+);

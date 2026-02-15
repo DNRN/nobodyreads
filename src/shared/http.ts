@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFile as readFileAsync, stat as statAsync } from "node:fs/promises";
 import { join, extname } from "node:path";
+import Busboy from "busboy";
 
 // --- MIME types ---
 
@@ -13,8 +14,17 @@ const MIME: Record<string, string> = {
   ".wasm": "application/wasm",
   ".png": "image/png",
   ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".ogg": "audio/ogg",
+  ".pdf": "application/pdf",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
@@ -107,5 +117,65 @@ export function parseFormBody(
       resolve(result);
     });
     req.on("error", reject);
+  });
+}
+
+// --- Multipart form body parsing ---
+
+export interface UploadedFile {
+  fieldname: string;
+  filename: string;
+  mimeType: string;
+  data: Buffer;
+}
+
+export interface MultipartBody {
+  fields: Record<string, string>;
+  files: UploadedFile[];
+}
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
+export function parseMultipartBody(
+  req: IncomingMessage
+): Promise<MultipartBody> {
+  return new Promise((resolve, reject) => {
+    const fields: Record<string, string> = {};
+    const files: UploadedFile[] = [];
+
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: { fileSize: MAX_FILE_SIZE },
+    });
+
+    busboy.on("field", (name: string, value: string) => {
+      fields[name] = value;
+    });
+
+    busboy.on(
+      "file",
+      (
+        fieldname: string,
+        stream: NodeJS.ReadableStream,
+        info: { filename: string; mimeType: string }
+      ) => {
+        const chunks: Buffer[] = [];
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", () => {
+          if (info.filename) {
+            files.push({
+              fieldname,
+              filename: info.filename,
+              mimeType: info.mimeType,
+              data: Buffer.concat(chunks),
+            });
+          }
+        });
+      }
+    );
+
+    busboy.on("close", () => resolve({ fields, files }));
+    busboy.on("error", reject);
+    req.pipe(busboy);
   });
 }

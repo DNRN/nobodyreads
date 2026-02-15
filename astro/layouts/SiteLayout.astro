@@ -7,6 +7,7 @@ import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import type { SiteBundle } from "../../src/shared/site-bundle.js";
 import { getSiteBundle } from "../../src/shared/site-bundle.js";
 import { DEFAULT_SITE_TEMPLATE } from "../../src/shared/site-template.js";
+import { getSubscriptionSettings } from "../../src/subscription/db.js";
 
 const { options, authLinksHtml, siteBundleOverride } = Astro.props as {
   options: LayoutOptions;
@@ -34,7 +35,17 @@ const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
 
-const siteBundle = siteBundleOverride ?? (await getSiteBundle(await initDb(), DEFAULT_TENANT_ID));
+const db = await initDb();
+const siteBundle = siteBundleOverride ?? (await getSiteBundle(db, DEFAULT_TENANT_ID));
+const subscriptionSettings = await getSubscriptionSettings(db, DEFAULT_TENANT_ID);
+
+const subscribeFormHtml = subscriptionSettings.enabled
+  ? `<form class="nb-subscribe" method="POST" action="/api/subscribe">
+      <input type="email" name="email" placeholder="Your email" required />
+      <button type="submit">Subscribe</button>
+     </form>`
+  : "";
+
 const slotHtml = await Astro.slots.render("default");
 const navHtml = navItems
   .map((item) => {
@@ -55,16 +66,24 @@ const navToggle = authLinksHtml
      </button>`
   : "";
 const templateHtml = siteBundle?.html?.trim() ? siteBundle.html : DEFAULT_SITE_TEMPLATE;
+const hasSubscribeToken = templateHtml.includes("{{subscribe}}");
 let bodyHtml = templateHtml
   .replaceAll("{{nav}}", navHtml)
   .replaceAll("{{authLinksBlock}}", authLinksBlock)
   .replaceAll("{{navToggle}}", navToggle)
   .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))
-  .replaceAll("{{year}}", `${new Date().getFullYear()}`);
+  .replaceAll("{{year}}", `${new Date().getFullYear()}`)
+  .replaceAll("{{subscribe}}", subscribeFormHtml);
+
+// Auto-inject subscribe form after post content when no {{subscribe}} token in layout
+const autoInjectSubscribe =
+  subscriptionSettings.enabled && !hasSubscribeToken && options.page?.kind === "post";
+const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : slotHtml;
+
 bodyHtml = bodyHtml.includes("{{content}}")
-  ? bodyHtml.replaceAll("{{content}}", slotHtml)
-  : `${bodyHtml}\n${slotHtml}`;
+  ? bodyHtml.replaceAll("{{content}}", contentHtml)
+  : `${bodyHtml}\n${contentHtml}`;
 const bundleCss = siteBundle?.css?.trim() ? siteBundle.css : "";
 const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
 ---
@@ -98,6 +117,16 @@ const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
     />
+    <style is:global>
+      /* Base image constraints — always applied regardless of custom CSS bundle.
+         Must be is:global because images are injected via set:html and lack Astro scoping attributes. */
+      .post-body img,
+      .page-body img,
+      .home-intro img {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
     {!bundleCss ? <link rel="stylesheet" href="/style.css" /> : null}
     {bundleCss ? <style set:html={bundleCss} /> : null}
     <Fragment set:html={scriptTags} />

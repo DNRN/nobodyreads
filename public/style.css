@@ -389,6 +389,16 @@ main {
   padding: 0;
 }
 
+.post-body img,
+.page-body img,
+.home-intro img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+  margin: 0 auto 1.2rem;
+}
+
 .post-body blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1rem;
@@ -1242,6 +1252,38 @@ main {
   color: var(--muted);
   cursor: pointer;
   margin-bottom: 0.25rem;
+}
+
+.editor-help {
+  margin-top: 0.5rem;
+}
+
+.editor-help-heading {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.editor-help-table {
+  width: 100%;
+  font-size: 0.72rem;
+  border-collapse: collapse;
+}
+
+.editor-help-table td {
+  padding: 0.2rem 0.3rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-help-table td:first-child {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--muted);
 }
 
 .field-row label {

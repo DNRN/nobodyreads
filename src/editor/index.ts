@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Client } from "@libsql/client";
 import { randomUUID } from "node:crypto";
+import { transform } from "esbuild";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import { redirect, parseFormBody } from "../shared/http.js";
 import {
@@ -10,7 +11,7 @@ import {
   deleteContentView,
   upsertContentView,
 } from "../content/db.js";
-import type { Page, PageKind, ContentView } from "../content/types.js";
+import type { Page, PageKind, ContentView, ContentViewKind } from "../content/types.js";
 import {
   isAuthenticated,
   editorRequiresAuth,
@@ -110,12 +111,35 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       req.method === "POST"
     ) {
       const body = await parseFormBody(req);
+      const tsSource = body.ts || "";
+
+      // Transpile TypeScript → JavaScript using esbuild
+      let compiledJs = "";
+      if (tsSource.trim()) {
+        try {
+          const result = await transform(tsSource, {
+            loader: "ts",
+            target: "es2020",
+            format: "esm",
+          });
+          compiledJs = result.code;
+        } catch (err: unknown) {
+          // Return the error to the client so the user can fix it
+          const message =
+            err instanceof Error ? err.message : "TypeScript compilation failed";
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: message }));
+          return;
+        }
+      }
+
       await addSiteBundleRevision(
         db,
         {
           html: body.html || "",
           css: body.css || "",
-          js: body.js || "",
+          js: compiledJs,
+          ts: tsSource,
         },
         tenantId
       );
@@ -189,21 +213,30 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       const viewId = isNew ? randomUUID() : body.id.trim();
       const now = new Date().toISOString().slice(0, 10);
 
-      const parsedLimit = parseInt(body.limit || "", 10);
-      const limit =
-        Number.isFinite(parsedLimit) && parsedLimit > 0
-          ? Math.max(1, Math.min(200, parsedLimit))
-          : undefined;
+      const kind: ContentViewKind =
+        body.kind === "custom" ? "custom" : "post_list";
+
+      let config: ContentView["config"];
+      if (kind === "custom") {
+        config = {
+          query: body.query || "",
+          template: body.template || "",
+        };
+      } else {
+        const parsedLimit = parseInt(body.limit || "", 10);
+        const limit =
+          Number.isFinite(parsedLimit) && parsedLimit > 0
+            ? Math.max(1, Math.min(200, parsedLimit))
+            : undefined;
+        config = { order: "newest" as const, limit };
+      }
 
       const view: ContentView = {
         id: viewId,
         slug: (body.slug || "").trim().toLowerCase(),
         title: (body.title || "").trim(),
-        kind: "post_list",
-        config: {
-          order: "newest",
-          limit,
-        },
+        kind,
+        config,
         published: body.published === "on",
         updated: isNew ? undefined : now,
       };

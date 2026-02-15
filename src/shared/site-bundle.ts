@@ -4,6 +4,7 @@ export interface SiteBundle {
   html: string;
   css: string;
   js: string;
+  ts: string;
   updatedAt: string;
 }
 
@@ -17,6 +18,7 @@ function rowToBundle(row: Row): SiteBundle {
     html: (row.html as string) ?? "",
     css: (row.css as string) ?? "",
     js: (row.js as string) ?? "",
+    ts: (row.ts as string) ?? "",
     updatedAt: row.updated_at as string,
   };
 }
@@ -27,6 +29,7 @@ function rowToRevision(row: Row): SiteBundleRevision {
     html: (row.html as string) ?? "",
     css: (row.css as string) ?? "",
     js: (row.js as string) ?? "",
+    ts: (row.ts as string) ?? "",
     updatedAt: row.created_at as string,
     createdAt: row.created_at as string,
   };
@@ -37,6 +40,7 @@ function rowToRevisionBundle(row: Row): SiteBundle {
     html: (row.html as string) ?? "",
     css: (row.css as string) ?? "",
     js: (row.js as string) ?? "",
+    ts: (row.ts as string) ?? "",
     updatedAt: row.created_at as string,
   };
 }
@@ -46,7 +50,7 @@ export async function getLatestSiteBundleRevision(
   tenantId: string
 ): Promise<SiteBundle | null> {
   const result = await db.execute({
-    sql: `SELECT html, css, js, created_at
+    sql: `SELECT html, css, js, ts, created_at
           FROM site_bundle_revision
           WHERE tenant_id = ?
           ORDER BY revision_id DESC
@@ -86,7 +90,7 @@ export async function getSiteBundle(
   tenantId: string
 ): Promise<SiteBundle | null> {
   const current = await db.execute({
-    sql: `SELECT current_revision_id, html, css, js, updated_at
+    sql: `SELECT current_revision_id, html, css, js, ts, updated_at
           FROM site_bundle
           WHERE tenant_id = ?
           LIMIT 1`,
@@ -98,7 +102,7 @@ export async function getSiteBundle(
     const currentRevisionId = row.current_revision_id as number | null;
     if (currentRevisionId != null) {
       const revision = await db.execute({
-        sql: `SELECT html, css, js, created_at
+        sql: `SELECT html, css, js, ts, created_at
               FROM site_bundle_revision
               WHERE revision_id = ? AND tenant_id = ?
               LIMIT 1`,
@@ -110,6 +114,7 @@ export async function getSiteBundle(
           html: (r.html as string) ?? "",
           css: (r.css as string) ?? "",
           js: (r.js as string) ?? "",
+          ts: (r.ts as string) ?? "",
           updatedAt: r.created_at as string,
         };
       }
@@ -130,7 +135,7 @@ export async function listSiteBundleRevisions(
   tenantId: string
 ): Promise<SiteBundleRevision[]> {
   const result = await db.execute({
-    sql: `SELECT revision_id, html, css, js, created_at
+    sql: `SELECT revision_id, html, css, js, ts, created_at
           FROM site_bundle_revision
           WHERE tenant_id = ?
           ORDER BY revision_id DESC`,
@@ -162,9 +167,9 @@ export async function addSiteBundleRevision(
 ): Promise<number> {
   const updatedAt = new Date().toISOString();
   const insert = await db.execute({
-    sql: `INSERT INTO site_bundle_revision (tenant_id, html, css, js, created_at)
-          VALUES (?, ?, ?, ?, ?)`,
-    args: [tenantId, bundle.html, bundle.css, bundle.js, updatedAt],
+    sql: `INSERT INTO site_bundle_revision (tenant_id, html, css, js, ts, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [tenantId, bundle.html, bundle.css, bundle.js, bundle.ts, updatedAt],
   });
   const revisionId = Number(insert.lastInsertRowid);
 

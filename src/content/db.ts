@@ -7,7 +7,9 @@ import type {
   PageKind,
   ContentView,
   ContentViewKind,
+  ContentViewConfig,
   PostListViewConfig,
+  CustomViewConfig,
 } from "./types.js";
 
 // --- Row mappers ---
@@ -80,14 +82,31 @@ function normalizePostListConfig(raw: unknown): PostListViewConfig {
   return config;
 }
 
+function normalizeCustomConfig(raw: unknown): CustomViewConfig {
+  if (!raw || typeof raw !== "object") {
+    return { query: "", template: "" };
+  }
+  const maybeConfig = raw as { query?: unknown; template?: unknown };
+  return {
+    query: typeof maybeConfig.query === "string" ? maybeConfig.query : "",
+    template: typeof maybeConfig.template === "string" ? maybeConfig.template : "",
+  };
+}
+
+function normalizeViewConfig(kind: ContentViewKind, raw: unknown): ContentViewConfig {
+  if (kind === "custom") return normalizeCustomConfig(raw);
+  return normalizePostListConfig(raw);
+}
+
 function rowToContentView(row: Row): ContentView {
+  const kind = row.kind as ContentViewKind;
   const rawConfig = row.config ? JSON.parse(row.config as string) : {};
   return {
     id: row.content_view_id as string,
     slug: row.slug as string,
     title: row.title as string,
-    kind: row.kind as ContentViewKind,
-    config: normalizePostListConfig(rawConfig),
+    kind,
+    config: normalizeViewConfig(kind, rawConfig),
     published: (row.published as number) === 1,
     updated: row.updated ? (row.updated as string) : undefined,
   };
@@ -209,6 +228,7 @@ export async function upsertContentView(
   view: ContentView,
   tenantId: string
 ): Promise<void> {
+  const config = normalizeViewConfig(view.kind, view.config);
   await db.execute({
     sql: `INSERT INTO content_view (content_view_id, tenant_id, slug, title, kind, config, published, updated)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -225,10 +245,62 @@ export async function upsertContentView(
       view.slug,
       view.title,
       view.kind,
-      JSON.stringify(normalizePostListConfig(view.config)),
+      JSON.stringify(config),
       view.published ? 1 : 0,
       view.updated ?? null,
     ],
+  });
+}
+
+// --- Custom view query execution ---
+
+/**
+ * Validate that a SQL string is a safe SELECT query.
+ * Returns an error message if invalid, or null if valid.
+ */
+export function validateCustomQuery(sql: string): string | null {
+  const trimmed = sql.trim();
+  if (!trimmed) return "Query cannot be empty";
+
+  // Must start with SELECT (case-insensitive)
+  if (!/^SELECT\b/i.test(trimmed)) {
+    return "Query must be a SELECT statement";
+  }
+
+  // Block dangerous keywords that could modify data
+  const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|ATTACH|DETACH|PRAGMA|VACUUM)\b/i;
+  if (forbidden.test(trimmed)) {
+    return "Query contains forbidden keywords (only SELECT is allowed)";
+  }
+
+  return null;
+}
+
+/**
+ * Execute a custom SQL query for a view.
+ * The query receives :tenant_id as a bound named parameter.
+ * Returns plain objects (column name → value).
+ */
+export async function executeCustomViewQuery(
+  db: Client,
+  query: string,
+  tenantId: string
+): Promise<Record<string, unknown>[]> {
+  const error = validateCustomQuery(query);
+  if (error) throw new Error(`Invalid custom view query: ${error}`);
+
+  const result = await db.execute({
+    sql: query,
+    args: { tenant_id: tenantId },
+  });
+
+  // Convert libsql Row objects to plain objects
+  return result.rows.map((row) => {
+    const obj: Record<string, unknown> = {};
+    for (const col of result.columns) {
+      obj[col] = row[col];
+    }
+    return obj;
   });
 }
 

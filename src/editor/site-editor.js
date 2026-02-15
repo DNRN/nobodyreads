@@ -4,6 +4,11 @@ import { basicSetup } from "codemirror";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
+import { oneDark } from "@codemirror/theme-one-dark";
+
+function isDarkMode() {
+  return document.documentElement.dataset.theme === "dark";
+}
 
 function createEditor(textarea, extensions) {
   textarea.style.display = "none";
@@ -12,9 +17,11 @@ function createEditor(textarea, extensions) {
     throw new Error("Missing textarea parent");
   }
 
+  const themeExtensions = isDarkMode() ? [oneDark] : [];
+
   const state = EditorState.create({
     doc: textarea.value,
-    extensions: [basicSetup, ...extensions],
+    extensions: [basicSetup, ...themeExtensions, ...extensions],
   });
 
   const view = new EditorView({
@@ -36,11 +43,11 @@ function initSiteEditor() {
   const panes = document.querySelectorAll(".site-editor-pane");
   const htmlInput = document.getElementById("site-html");
   const cssInput = document.getElementById("site-css");
-  const jsInput = document.getElementById("site-js");
+  const tsInput = document.getElementById("site-ts");
   const preview = document.getElementById("site-preview");
   const saveStatus = document.getElementById("site-save-status");
 
-  if (!form || !tabs || !htmlInput || !cssInput || !jsInput || !preview) return;
+  if (!form || !tabs || !htmlInput || !cssInput || !tsInput || !preview) return;
 
   let isDirty = false;
 
@@ -68,7 +75,7 @@ function initSiteEditor() {
 
   const htmlEditor = createEditor(htmlInput, [html(), changeListener]);
   const cssEditor = createEditor(cssInput, [css(), changeListener]);
-  const jsEditor = createEditor(jsInput, [javascript(), changeListener]);
+  const tsEditor = createEditor(tsInput, [javascript({ typescript: true }), changeListener]);
   const previewUrl = preview.getAttribute("data-preview-url") || "/preview";
 
   function buildPreviewUrl(forceRefresh = false) {
@@ -88,7 +95,7 @@ function initSiteEditor() {
   function syncEditorsToInputs() {
     htmlInput.value = getEditorValue(htmlEditor);
     cssInput.value = getEditorValue(cssEditor);
-    jsInput.value = getEditorValue(jsEditor);
+    tsInput.value = getEditorValue(tsEditor);
   }
 
   function activateTab(target) {
@@ -137,6 +144,18 @@ function initSiteEditor() {
       }
 
       if (!response.ok) {
+        // Check for TypeScript compilation errors
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await response.json();
+          if (data.error) {
+            setSaveStatus("error");
+            saveStatus.textContent = `TS error: ${data.error}`;
+            saveStatus.title = data.error;
+            console.error("TypeScript compilation error:", data.error);
+            return;
+          }
+        }
         throw new Error(`Save failed: ${response.status}`);
       }
 

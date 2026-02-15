@@ -35,19 +35,34 @@ export interface PageNav {
   order: number; // Sort position (0 = leftmost)
 }
 
-export type ContentViewKind = "post_list";
+export type ContentViewKind = "post_list" | "custom";
 
 export interface PostListViewConfig {
   order: "newest";
   limit?: number;
 }
 
+export interface CustomViewConfig {
+  /** SQL SELECT query. Use :tenant_id as a named parameter for tenant scoping. */
+  query: string;
+  /**
+   * JavaScript function body that receives (rows, urlPrefix, escapeHtml)
+   * and returns an HTML string.
+   *
+   * Example:
+   *   return rows.map(row => `<article><a href="${urlPrefix}/posts/${row.slug}">${escapeHtml(row.title)}</a></article>`).join('\n');
+   */
+  template: string;
+}
+
+export type ContentViewConfig = PostListViewConfig | CustomViewConfig;
+
 export interface ContentView {
   id: string;
   slug: string;
   title: string;
   kind: ContentViewKind;
-  config: PostListViewConfig;
+  config: ContentViewConfig;
   published: boolean;
   updated?: string;
 }

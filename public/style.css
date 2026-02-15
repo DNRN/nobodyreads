@@ -1367,6 +1367,36 @@ main {
   min-height: 0;
 }
 
+/* ----- CodeMirror in page editor ----- */
+.editor-pane-write .cm-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-pane-write .cm-scroller {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.editor-pane-write .cm-gutters {
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+}
+
+.editor-pane-write .cm-content {
+  padding: 0.5rem 0;
+}
+
+.editor-pane-write .cm-activeLine {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="dark"] .editor-pane-write .cm-activeLine {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 /* ----- Preview pane ----- */
 .editor-preview-label {
   padding: 0.5rem 0.75rem;

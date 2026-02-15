@@ -58,6 +58,8 @@ async function migrateColumns(client: Client): Promise<void> {
     "ALTER TABLE tenant ADD COLUMN avatar_color TEXT",
     "ALTER TABLE tenant ADD COLUMN bio TEXT",
     "ALTER TABLE site_bundle ADD COLUMN current_revision_id INTEGER",
+    "ALTER TABLE site_bundle ADD COLUMN ts TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE site_bundle_revision ADD COLUMN ts TEXT NOT NULL DEFAULT ''",
   ];
   for (const sql of migrations) {
     try {
@@ -66,6 +68,41 @@ async function migrateColumns(client: Client): Promise<void> {
       // Column already exists — ignore
     }
   }
+
+  // Migrate content_view CHECK constraint to allow 'custom' kind
+  await migrateContentViewKind(client);
+}
+
+/**
+ * Recreate the content_view table if the CHECK constraint doesn't include 'custom'.
+ * SQLite does not support ALTER CONSTRAINT, so we recreate the table.
+ */
+async function migrateContentViewKind(client: Client): Promise<void> {
+  const info = await client.execute(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='content_view'"
+  );
+  if (info.rows.length === 0) return; // Table doesn't exist yet (fresh install will create it)
+
+  const createSql = info.rows[0].sql as string;
+  if (createSql.includes("'custom'")) return; // Already migrated
+
+  await client.executeMultiple(`
+    CREATE TABLE content_view_new (
+      content_view_id TEXT NOT NULL,
+      tenant_id       TEXT NOT NULL DEFAULT '_default',
+      slug            TEXT NOT NULL,
+      title           TEXT NOT NULL,
+      kind            TEXT NOT NULL CHECK(kind IN ('post_list', 'custom')),
+      config          TEXT NOT NULL DEFAULT '{}',
+      published       INTEGER NOT NULL DEFAULT 0,
+      updated         TEXT,
+      PRIMARY KEY (content_view_id, tenant_id),
+      UNIQUE (slug, tenant_id)
+    );
+    INSERT INTO content_view_new SELECT * FROM content_view;
+    DROP TABLE content_view;
+    ALTER TABLE content_view_new RENAME TO content_view;
+  `);
 }
 
 /** Get the raw database client (for scripts that need direct access). */

@@ -1,5 +1,5 @@
 ---
-import type { ContentView } from "../../../src/content/types.js";
+import type { ContentView, CustomViewConfig, PostListViewConfig } from "../../../src/content/types.js";
 
 const { view, viewsBase = "/admin/views" } = Astro.props as {
   view?: ContentView;
@@ -14,12 +14,38 @@ const v = view ?? {
   slug: "",
   title: "",
   kind: "post_list" as const,
-  config: { order: "newest" as const },
+  config: { order: "newest" as const } as PostListViewConfig,
   published: false,
 };
+
+const isCustom = v.kind === "custom";
+const customConfig = isCustom ? (v.config as CustomViewConfig) : { query: "", template: "" };
+const postListConfig = !isCustom ? (v.config as PostListViewConfig) : { order: "newest" as const };
+
+const defaultTemplate = `// rows: array of objects from your SQL query
+// urlPrefix: URL prefix for building links (e.g. "" or "/dennis")
+// escapeHtml: utility to escape HTML entities
+
+return rows.map(row => \`
+  <article class="post-preview">
+    <time class="post-date">\${row.date}</time>
+    <h2 class="post-title">
+      <a href="\${urlPrefix}/posts/\${row.slug}">\${escapeHtml(String(row.title))}</a>
+    </h2>
+    <p class="post-excerpt">\${escapeHtml(String(row.excerpt || ''))}</p>
+  </article>
+\`).join('\\n');`;
+
+const defaultQuery = `SELECT slug, title, excerpt, date
+FROM page
+WHERE published = 1
+  AND kind = 'post'
+  AND tenant_id = :tenant_id
+ORDER BY date DESC
+LIMIT 5`;
 ---
 <main class="editor-main">
-  <form method="POST" action={`${viewsBase}/save`} class="editor-form" id="view-editor-form">
+  <form method="POST" action={`${viewsBase}/save`} class="editor-form view-editor-form" id="view-editor-form">
     <input type="hidden" name="id" value={v.id} />
 
     <aside class="editor-sidebar">
@@ -47,13 +73,20 @@ const v = view ?? {
 
       <div class="field">
         <label for="kind">Kind</label>
-        <select id="kind" name="kind" disabled>
-          <option value="post_list" selected>Post list</option>
+        <select id="kind" name="kind">
+          <option value="post_list" selected={v.kind === "post_list"}>Post list</option>
+          <option value="custom" selected={v.kind === "custom"}>Custom query</option>
         </select>
-        <div class="hint">MVP supports post list views sorted by newest.</div>
+        <div class="hint" id="kind-hint-post-list" style={isCustom ? "display:none" : ""}>
+          Shows posts sorted by newest, with optional limit.
+        </div>
+        <div class="hint" id="kind-hint-custom" style={isCustom ? "" : "display:none"}>
+          Write a SQL SELECT query and a template to render the results.
+        </div>
       </div>
 
-      <div class="field">
+      <!-- Post list fields -->
+      <div class="field" id="field-limit" style={isCustom ? "display:none" : ""}>
         <label for="limit">Limit <span class="hint">(optional)</span></label>
         <input
           type="number"
@@ -61,7 +94,7 @@ const v = view ?? {
           name="limit"
           min="1"
           max="200"
-          value={typeof v.config.limit === "number" ? String(v.config.limit) : ""}
+          value={typeof postListConfig.limit === "number" ? String(postListConfig.limit) : ""}
         />
       </div>
 
@@ -97,5 +130,85 @@ const v = view ?? {
         )}
       </div>
     </aside>
+
+    <!-- Custom query fields (main content area) -->
+    <div class="editor-content" id="custom-fields" style={isCustom ? "" : "display:none"}>
+      <div class="field">
+        <label for="query">SQL Query</label>
+        <textarea
+          id="query"
+          name="query"
+          class="code-editor"
+          rows="10"
+          spellcheck="false"
+        >{customConfig.query || defaultQuery}</textarea>
+        <div class="hint">
+          Write a <code>SELECT</code> query. Use <code>:tenant_id</code> as a parameter for tenant scoping.
+          Only <code>SELECT</code> statements are allowed.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="template">Template <span class="hint">(JavaScript function body)</span></label>
+        <textarea
+          id="template"
+          name="template"
+          class="code-editor"
+          rows="16"
+          spellcheck="false"
+        >{customConfig.template || defaultTemplate}</textarea>
+        <div class="hint">
+          Function signature: <code>(rows, urlPrefix, escapeHtml) =&gt; string</code><br />
+          <code>rows</code> is an array of objects with columns from your query.
+          Return an HTML string.
+        </div>
+      </div>
+    </div>
   </form>
 </main>
+
+<style>
+  .view-editor-form {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .editor-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Fallback textarea style (hidden once CodeMirror loads) */
+  .code-editor {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    tab-size: 2;
+    white-space: pre;
+    resize: vertical;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 6px;
+    background: var(--bg, #f8f9fa);
+    color: var(--fg, #1a1a1a);
+  }
+
+  /* CodeMirror editor styling */
+  .editor-content .cm-editor {
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .editor-content .cm-scroller {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .editor-content .cm-gutters {
+    background: var(--bg, #f8f9fa);
+    border-right: 1px solid var(--border, #ddd);
+  }
+</style>

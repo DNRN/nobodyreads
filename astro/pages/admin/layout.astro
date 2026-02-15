@@ -22,7 +22,8 @@ const currentRevisionId = await getCurrentSiteBundleRevisionId(db, DEFAULT_TENAN
 
 const htmlValue = bundle?.html?.trim() ? bundle.html : DEFAULT_SITE_TEMPLATE;
 const cssValue = bundle?.css?.trim() ? bundle.css : DEFAULT_SITE_CSS;
-const jsValue = bundle?.js ?? "";
+// Prefer the TS source for editing; fall back to compiled JS for legacy bundles
+const tsValue = bundle?.ts?.trim() ? bundle.ts : (bundle?.js ?? "");
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -52,7 +53,7 @@ function formatDateTime(iso: string): string {
       <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
         <button type="button" class="editor-tab active" data-tab="html">HTML</button>
         <button type="button" class="editor-tab" data-tab="css">CSS</button>
-        <button type="button" class="editor-tab" data-tab="js">JS</button>
+        <button type="button" class="editor-tab" data-tab="ts">TypeScript</button>
         <button type="button" class="editor-tab" data-tab="preview">Preview</button>
       </div>
 
@@ -82,9 +83,9 @@ function formatDateTime(iso: string): string {
           <textarea id="site-css" name="css" rows="14" class="editor-textarea" spellcheck="false">{cssValue}</textarea>
         </div>
 
-        <div class="site-editor-pane site-editor-pane--js hidden" data-pane="js">
-          <label for="site-js">JavaScript (module)</label>
-          <textarea id="site-js" name="js" rows="14" class="editor-textarea" spellcheck="false">{jsValue}</textarea>
+        <div class="site-editor-pane site-editor-pane--ts hidden" data-pane="ts">
+          <label for="site-ts">TypeScript (compiled to JS on save)</label>
+          <textarea id="site-ts" name="ts" rows="14" class="editor-textarea" spellcheck="false">{tsValue}</textarea>
         </div>
 
         <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">

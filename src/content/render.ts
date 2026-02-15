@@ -1,8 +1,9 @@
 import type { Client } from "@libsql/client";
 import { Marked } from "marked";
-import { resolvePageLinks, getContentViewBySlug, listPostsForView } from "./db.js";
+import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustomViewQuery } from "./db.js";
 import { renderPostListView } from "./templates.js";
-import type { LinkTarget } from "./types.js";
+import { escapeHtml } from "../shared/http.js";
+import type { LinkTarget, CustomViewConfig } from "./types.js";
 
 const marked = new Marked({
   gfm: true,
@@ -93,10 +94,17 @@ export async function resolveViews(
     }
 
     if (view.kind === "post_list") {
+      const config = view.config as { limit?: number };
       const posts = await listPostsForView(db, tenantId, {
-        limit: view.config.limit,
+        limit: config.limit,
       });
       lookup.set(slug, renderPostListView(posts, urlPrefix));
+      continue;
+    }
+
+    if (view.kind === "custom") {
+      const html = await renderCustomView(db, view.config as CustomViewConfig, tenantId, urlPrefix);
+      lookup.set(slug, html);
       continue;
     }
 
@@ -104,6 +112,50 @@ export async function resolveViews(
   }
 
   return markdown.replace(VIEW_PATTERN, (_match, slug: string) => lookup.get(slug) ?? "");
+}
+
+// --- Custom view rendering ---
+
+/**
+ * Execute a custom view's SQL query and render the results through its template.
+ *
+ * The template is a JavaScript function body that receives:
+ *   - rows: Record<string, unknown>[] — the query result rows
+ *   - urlPrefix: string — URL prefix for building links
+ *   - escapeHtml: (s: string) => string — HTML escaping utility
+ *
+ * Example template:
+ *   return rows.map(row =>
+ *     `<article><a href="${urlPrefix}/posts/${row.slug}">${escapeHtml(String(row.title))}</a></article>`
+ *   ).join('\n');
+ */
+async function renderCustomView(
+  db: Client,
+  config: CustomViewConfig,
+  tenantId: string,
+  urlPrefix: string
+): Promise<string> {
+  if (!config.query || !config.template) {
+    return `<div class="content-view content-view-custom content-view-error"><p>Custom view is missing query or template.</p></div>`;
+  }
+
+  try {
+    const rows = await executeCustomViewQuery(db, config.query, tenantId);
+
+    // Build the template function: (rows, urlPrefix, escapeHtml) => string
+    const templateFn = new Function("rows", "urlPrefix", "escapeHtml", config.template) as (
+      rows: Record<string, unknown>[],
+      urlPrefix: string,
+      escapeHtml: (s: string) => string
+    ) => string;
+
+    const html = templateFn(rows, urlPrefix, escapeHtml);
+    return `<section class="content-view content-view-custom">\n${html}\n</section>`;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[custom view] render error: ${message}`);
+    return `<div class="content-view content-view-custom content-view-error"><p>View error: ${escapeHtml(message)}</p></div>`;
+  }
 }
 
 // --- Markdown rendering ---

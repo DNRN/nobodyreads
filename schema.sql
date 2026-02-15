@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS content_view (
   tenant_id       TEXT NOT NULL DEFAULT '_default',
   slug            TEXT NOT NULL,
   title           TEXT NOT NULL,
-  kind            TEXT NOT NULL CHECK(kind IN ('post_list')),
+  kind            TEXT NOT NULL CHECK(kind IN ('post_list', 'custom')),
   config          TEXT NOT NULL DEFAULT '{}',
   published       INTEGER NOT NULL DEFAULT 0,
   updated         TEXT,
@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS site_bundle (
   html       TEXT NOT NULL DEFAULT '',
   css        TEXT NOT NULL DEFAULT '',
   js         TEXT NOT NULL DEFAULT '',
+  ts         TEXT NOT NULL DEFAULT '',
   current_revision_id INTEGER,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -64,5 +65,6 @@ CREATE TABLE IF NOT EXISTS site_bundle_revision (
   html        TEXT NOT NULL DEFAULT '',
   css         TEXT NOT NULL DEFAULT '',
   js          TEXT NOT NULL DEFAULT '',
+  ts          TEXT NOT NULL DEFAULT '',
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );

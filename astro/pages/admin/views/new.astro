@@ -7,6 +7,6 @@ if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
   return Astro.redirect("/admin/login");
 }
 ---
-<AdminLayout title="New View — Admin">
+<AdminLayout title="New View — Admin" scripts={`<script src="/view-editor.js"></script>`}>
   <ViewEditorForm viewsBase="/admin/views" />
 </AdminLayout>

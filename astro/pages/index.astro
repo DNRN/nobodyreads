@@ -1,8 +1,7 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
-import PostPreview from "../components/PostPreview.astro";
-import { listPosts, getPageByKind, getNavItems } from "../../src/content/db.js";
-import { resolveLinks, renderMarkdown } from "../../src/content/render.js";
+import { getPageByKind, getNavItems } from "../../src/content/db.js";
+import { resolveLinks, resolveViews, renderMarkdown } from "../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getDbClient } from "../lib/db.js";
 
@@ -14,16 +13,16 @@ const siteTagline =
   "Sovereign publishing, not a platform. For writing mostly to yourself.";
 
 const db = await getDbClient();
-const [page, posts, navItems] = await Promise.all([
+const [page, navItems] = await Promise.all([
   getPageByKind(db, "home", tenantId),
-  listPosts(db, tenantId),
   getNavItems(db, tenantId),
 ]);
 
 let htmlBody = "";
 if (page?.content?.trim()) {
-  const resolved = await resolveLinks(db, page.content, tenantId, urlPrefix);
-  htmlBody = renderMarkdown(resolved);
+  const resolvedLinks = await resolveLinks(db, page.content, tenantId, urlPrefix);
+  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, urlPrefix);
+  htmlBody = renderMarkdown(resolvedViews);
 }
 
 if (page?.seo?.noAiTraining) {
@@ -61,11 +60,6 @@ const options = page
   {page ? (
     <>
       {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
-      {posts.length > 0 ? (
-        posts.map((post) => <PostPreview post={post} urlPrefix={urlPrefix} />)
-      ) : (
-        <p>No posts yet.</p>
-      )}
     </>
   ) : (
     <>

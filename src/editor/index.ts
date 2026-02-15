@@ -7,8 +7,10 @@ import {
   getPageById,
   deletePage,
   upsertPage,
+  deleteContentView,
+  upsertContentView,
 } from "../content/db.js";
-import type { Page, PageKind } from "../content/types.js";
+import type { Page, PageKind, ContentView } from "../content/types.js";
 import {
   isAuthenticated,
   editorRequiresAuth,
@@ -179,6 +181,37 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       return redirect(res, `${editorBase}/${pageId}`);
     }
 
+    // --- Content views: save (create or update) ---
+
+    if (pathname === "/admin/views/save" && req.method === "POST") {
+      const body = await parseFormBody(req);
+      const isNew = !body.id || body.id.trim() === "";
+      const viewId = isNew ? randomUUID() : body.id.trim();
+      const now = new Date().toISOString().slice(0, 10);
+
+      const parsedLimit = parseInt(body.limit || "", 10);
+      const limit =
+        Number.isFinite(parsedLimit) && parsedLimit > 0
+          ? Math.max(1, Math.min(200, parsedLimit))
+          : undefined;
+
+      const view: ContentView = {
+        id: viewId,
+        slug: (body.slug || "").trim().toLowerCase(),
+        title: (body.title || "").trim(),
+        kind: "post_list",
+        config: {
+          order: "newest",
+          limit,
+        },
+        published: body.published === "on",
+        updated: isNew ? undefined : now,
+      };
+
+      await upsertContentView(db, view, tenantId);
+      return redirect(res, `${adminBase}/views/${viewId}`);
+    }
+
     // --- Delete ---
 
     const deleteMatch = pathname.match(/^\/admin\/editor\/delete\/([a-zA-Z0-9_-]+)$/);
@@ -186,6 +219,15 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
       const pageId = deleteMatch[1];
       await deletePage(db, pageId, tenantId);
       return redirect(res, editorBase);
+    }
+
+    // --- Content views: delete ---
+
+    const deleteViewMatch = pathname.match(/^\/admin\/views\/delete\/([a-zA-Z0-9_-]+)$/);
+    if (deleteViewMatch && req.method === "POST") {
+      const viewId = deleteViewMatch[1];
+      await deleteContentView(db, viewId, tenantId);
+      return redirect(res, `${adminBase}/views`);
     }
 
     // --- 404 fallback ---

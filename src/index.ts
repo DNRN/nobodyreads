@@ -8,6 +8,7 @@ export type { EditorRouterOptions } from "./editor/index.js";
 export { initDb, getDb } from "./shared/db.js";
 export {
   listPosts,
+  listPostsForView,
   getPageBySlug,
   getPageByKind,
   getNavItems,
@@ -16,6 +17,11 @@ export {
   getPageById,
   deletePage,
   upsertPage,
+  listContentViews,
+  getContentViewBySlug,
+  getContentViewById,
+  deleteContentView,
+  upsertContentView,
 } from "./content/db.js";
 
 // HTTP utilities
@@ -38,7 +44,7 @@ export {
   contentPage,
   notFoundPage,
 } from "./content/templates.js";
-export { renderMarkdown, resolveLinks } from "./content/render.js";
+export { renderMarkdown, resolveLinks, resolveViews } from "./content/render.js";
 
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";
@@ -49,6 +55,9 @@ export type {
   PageSummary,
   NavItem,
   LinkTarget,
+  ContentView,
+  ContentViewKind,
+  PostListViewConfig,
   LayoutFn,
   LayoutOptions,
   PageMeta,

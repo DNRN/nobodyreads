@@ -9,7 +9,7 @@ import {
   getPageByKind,
   getNavItems,
 } from "./db.js";
-import { resolveLinks, renderMarkdown } from "./render.js";
+import { resolveLinks, resolveViews, renderMarkdown } from "./render.js";
 import {
   defaultLayout,
   homePage,
@@ -42,10 +42,15 @@ async function renderPageContent(
   db: Client,
   markdown: string,
   tenantId: string,
-  urlPrefix: string
+  urlPrefix: string,
+  options: { includeDraftViews?: boolean; showMissingViewPlaceholders?: boolean } = {}
 ): Promise<string> {
-  const resolved = await resolveLinks(db, markdown, tenantId, urlPrefix);
-  return renderMarkdown(resolved);
+  const resolvedLinks = await resolveLinks(db, markdown, tenantId, urlPrefix);
+  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, urlPrefix, {
+    includeDrafts: options.includeDraftViews,
+    showMissingPlaceholders: options.showMissingViewPlaceholders,
+  });
+  return renderMarkdown(resolvedViews);
 }
 
 /**
@@ -69,9 +74,8 @@ export function createBlogRouter(options: BlogRouterOptions): RequestHandler {
   return async (req, res, pathname) => {
     // --- Home page ---
     if (pathname === "/" && req.method === "GET") {
-      const [page, posts, navItems] = await Promise.all([
+      const [page, navItems] = await Promise.all([
         getPageByKind(db, "home", tenantId),
-        listPosts(db, tenantId),
         getNavItems(db, tenantId),
       ]);
 
@@ -83,7 +87,7 @@ export function createBlogRouter(options: BlogRouterOptions): RequestHandler {
         ? await renderPageContent(db, page.content, tenantId, urlPrefix)
         : undefined;
 
-      return html(res, homePage(layout, page, posts, navItems, htmlBody, urlPrefix), 200, {
+      return html(res, homePage(layout, page, navItems, htmlBody, urlPrefix), 200, {
         noAiTraining: page.seo?.noAiTraining,
       });
     }

@@ -35,6 +35,23 @@ export interface PageNav {
   order: number; // Sort position (0 = leftmost)
 }
 
+export type ContentViewKind = "post_list";
+
+export interface PostListViewConfig {
+  order: "newest";
+  limit?: number;
+}
+
+export interface ContentView {
+  id: string;
+  slug: string;
+  title: string;
+  kind: ContentViewKind;
+  config: PostListViewConfig;
+  published: boolean;
+  updated?: string;
+}
+
 export interface Page {
   id: string; // Stable identifier — never changes, used for [[id]] links
   slug: string; // URL path segment — can be renamed

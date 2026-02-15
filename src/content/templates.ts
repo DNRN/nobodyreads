@@ -176,28 +176,28 @@ function renderPostPreview(post: PageSummary, urlPrefix: string = ""): string {
     </article>`;
 }
 
+export function renderPostListView(posts: PageSummary[], urlPrefix: string = ""): string {
+  if (posts.length === 0) return "";
+  const items = posts.map((post) => renderPostPreview(post, urlPrefix)).join("\n");
+  return `
+<section class="content-view content-view-post-list">
+${items}
+</section>`;
+}
+
 /**
- * Home page: optional markdown content above the post listing.
- * The Page's content is rendered as HTML and placed before the list.
+ * Home page: markdown body is already rendered as HTML.
  */
 export function homePage(
   layout: LayoutFn,
   page: Page,
-  posts: PageSummary[],
   navItems: NavItem[],
   htmlBody?: string,
   urlPrefix: string = ""
 ): string {
-  const intro = htmlBody
+  const content = htmlBody
     ? `    <div class="home-intro">\n${htmlBody}\n    </div>\n`
     : "";
-
-  const listing =
-    posts.length > 0
-      ? posts.map((p) => renderPostPreview(p, urlPrefix)).join("\n")
-      : `<p>No posts yet.</p>`;
-
-  const content = `${intro}${listing}`;
 
   return layout(
     {

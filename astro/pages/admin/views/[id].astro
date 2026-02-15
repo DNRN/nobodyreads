@@ -1,0 +1,26 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ViewEditorForm from "../../../components/admin/ViewEditorForm.astro";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../../src/editor/auth.js";
+import { initDb } from "../../../../src/shared/db.js";
+import { DEFAULT_TENANT_ID } from "../../../../src/shared/types.js";
+import { getContentViewById } from "../../../../src/content/db.js";
+
+if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin/login");
+}
+
+const { id } = Astro.params;
+if (!id || id === "new" || id === "save" || id === "delete") {
+  return Astro.redirect("/admin/views");
+}
+
+const db = await initDb();
+const view = await getContentViewById(db, id, DEFAULT_TENANT_ID);
+if (!view) {
+  return Astro.redirect("/admin/views");
+}
+---
+<AdminLayout title={`Edit: ${view.title} — Admin`}>
+  <ViewEditorForm view={view} viewsBase="/admin/views" />
+</AdminLayout>

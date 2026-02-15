@@ -7,6 +7,7 @@ A minimal, self-hosted blog engine. Markdown-first, server-rendered, zero client
 - **Markdown-first** — write posts and pages in Markdown with YAML frontmatter
 - **Server-rendered** — pure HTML responses, no client JS frameworks
 - **Built-in editor** — browser-based Markdown editor with optional password protection
+- **Reusable content views** — define list views once and embed with `{{view:slug}}`
 - **Wiki-style links** — use `[[page-id]]` to link between pages
 - **SEO built-in** — meta tags, structured data, Open Graph, sitemap-ready
 - **Dark mode** — automatic theme switching with manual override
@@ -38,7 +39,7 @@ npm run site:bootstrap
 npm run dev
 ```
 
-The blog starts at `http://localhost:3000`. The admin overview is at `http://localhost:3000/admin` and the editor is at `http://localhost:3000/admin/editor`.
+The blog starts at `http://localhost:3000`. The admin overview is at `http://localhost:3000/admin`, the content editor at `http://localhost:3000/admin/editor`, and views at `http://localhost:3000/admin/views`.
 
 If you're editing HTML with Astro, run the dev server in a second terminal:
 
@@ -139,6 +140,21 @@ nav:
   order: 1
 ```
 
+### Content views
+
+Create reusable views in **Admin → Views**, then embed them in any page markdown:
+
+```markdown
+Welcome to my site.
+
+{{view:latest-posts}}
+
+More curated picks:
+{{view:recent-essays}}
+```
+
+MVP supports `post_list` views with newest-first ordering and an optional item limit.
+
 ### SEO frontmatter
 
 ```yaml
@@ -209,13 +225,13 @@ server.listen(3000);
 
 **Routers**: `createBlogRouter`, `createEditorRouter`
 
-**Database**: `initDb`, `getDb`, `listPosts`, `getPageBySlug`, `getPageByKind`, `getNavItems`, `listAllPages`, `getPageById`, `deletePage`, `upsertPage`
+**Database**: `initDb`, `getDb`, `listPosts`, `listPostsForView`, `getPageBySlug`, `getPageByKind`, `getNavItems`, `resolvePageLinks`, `listAllPages`, `getPageById`, `deletePage`, `upsertPage`, `listContentViews`, `getContentViewBySlug`, `getContentViewById`, `deleteContentView`, `upsertContentView`
 
 **HTTP utilities**: `html`, `json`, `redirect`, `serveStatic`, `parseFormBody`, `escapeHtml`
 
 **Templates**: `defaultLayout`, `createBlogLayoutWithAuth`, `homePage`, `postPage`, `contentPage`, `notFoundPage`
 
-**Rendering**: `renderMarkdown`, `resolveLinks`
+**Rendering**: `renderMarkdown`, `resolveLinks`, `resolveViews`
 
 **SEO**: `buildMetaTags`, `buildStructuredData`, `navHref`
 

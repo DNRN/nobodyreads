@@ -1,6 +1,7 @@
 import type { Client } from "@libsql/client";
 import { Marked } from "marked";
-import { resolvePageLinks } from "./db.js";
+import { resolvePageLinks, getContentViewBySlug, listPostsForView } from "./db.js";
+import { renderPostListView } from "./templates.js";
 import type { LinkTarget } from "./types.js";
 
 const marked = new Marked({
@@ -12,6 +13,7 @@ const marked = new Marked({
 
 /** Regex for wiki-style internal links: [[id]] or [[id|display text]] */
 const LINK_PATTERN = /\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g;
+const VIEW_PATTERN = /\{\{view:([a-z0-9-]+)\}\}/g;
 
 /** Build the URL for a page based on its kind and slug. */
 function pageUrl(target: LinkTarget, urlPrefix: string = ""): string {
@@ -51,6 +53,57 @@ export async function resolveLinks(
     const text = customText || target.title;
     return `[${text}](${pageUrl(target, urlPrefix)})`;
   });
+}
+
+// --- {{view:slug}} resolution ---
+
+export interface ResolveViewsOptions {
+  includeDrafts?: boolean;
+  showMissingPlaceholders?: boolean;
+}
+
+/**
+ * Resolve all {{view:slug}} tokens in markdown content.
+ * Replacements are HTML snippets inserted before markdown rendering.
+ */
+export async function resolveViews(
+  db: Client,
+  markdown: string,
+  tenantId: string,
+  urlPrefix: string = "",
+  options: ResolveViewsOptions = {}
+): Promise<string> {
+  const matches = [...markdown.matchAll(VIEW_PATTERN)];
+  if (matches.length === 0) return markdown;
+
+  const slugs = [...new Set(matches.map((m) => m[1]))];
+  const lookup = new Map<string, string>();
+
+  for (const slug of slugs) {
+    const view = await getContentViewBySlug(db, slug, tenantId, {
+      publishedOnly: !options.includeDrafts,
+    });
+
+    if (!view) {
+      const fallback = options.showMissingPlaceholders
+        ? `<div class="content-view content-view-missing"><p>Missing view: ${slug}</p></div>`
+        : "";
+      lookup.set(slug, fallback);
+      continue;
+    }
+
+    if (view.kind === "post_list") {
+      const posts = await listPostsForView(db, tenantId, {
+        limit: view.config.limit,
+      });
+      lookup.set(slug, renderPostListView(posts, urlPrefix));
+      continue;
+    }
+
+    lookup.set(slug, "");
+  }
+
+  return markdown.replace(VIEW_PATTERN, (_match, slug: string) => lookup.get(slug) ?? "");
 }
 
 // --- Markdown rendering ---

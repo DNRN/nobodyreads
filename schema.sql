@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS page (
   UNIQUE (slug, kind, tenant_id)
 );
 
+-- Reusable content views (embeddable via {{view:slug}} tokens)
+CREATE TABLE IF NOT EXISTS content_view (
+  content_view_id TEXT NOT NULL,
+  tenant_id       TEXT NOT NULL DEFAULT '_default',
+  slug            TEXT NOT NULL,
+  title           TEXT NOT NULL,
+  kind            TEXT NOT NULL CHECK(kind IN ('post_list')),
+  config          TEXT NOT NULL DEFAULT '{}',
+  published       INTEGER NOT NULL DEFAULT 0,
+  updated         TEXT,
+  PRIMARY KEY (content_view_id, tenant_id),
+  UNIQUE (slug, tenant_id)
+);
+
 -- Site bundle (admin-managed HTML/CSS/JS)
 CREATE TABLE IF NOT EXISTS site_bundle (
   tenant_id  TEXT PRIMARY KEY DEFAULT '_default',

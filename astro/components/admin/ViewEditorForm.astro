@@ -1,0 +1,101 @@
+---
+import type { ContentView } from "../../../src/content/types.js";
+
+const { view, viewsBase = "/admin/views" } = Astro.props as {
+  view?: ContentView;
+  viewsBase?: string;
+};
+
+const isNew = !view;
+const title = isNew ? "New View" : `Edit: ${view?.title ?? ""}`;
+
+const v = view ?? {
+  id: "",
+  slug: "",
+  title: "",
+  kind: "post_list" as const,
+  config: { order: "newest" as const },
+  published: false,
+};
+---
+<main class="editor-main">
+  <form method="POST" action={`${viewsBase}/save`} class="editor-form" id="view-editor-form">
+    <input type="hidden" name="id" value={v.id} />
+
+    <aside class="editor-sidebar">
+      <div class="editor-list-header">
+        <h2>{title}</h2>
+      </div>
+
+      <div class="field">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value={v.title} required />
+      </div>
+
+      <div class="field">
+        <label for="slug">Slug</label>
+        <input
+          type="text"
+          id="slug"
+          name="slug"
+          value={v.slug}
+          required
+          pattern="[a-z0-9-]+"
+          title="Lowercase letters, numbers, and hyphens only"
+        />
+      </div>
+
+      <div class="field">
+        <label for="kind">Kind</label>
+        <select id="kind" name="kind" disabled>
+          <option value="post_list" selected>Post list</option>
+        </select>
+        <div class="hint">MVP supports post list views sorted by newest.</div>
+      </div>
+
+      <div class="field">
+        <label for="limit">Limit <span class="hint">(optional)</span></label>
+        <input
+          type="number"
+          id="limit"
+          name="limit"
+          min="1"
+          max="200"
+          value={typeof v.config.limit === "number" ? String(v.config.limit) : ""}
+        />
+      </div>
+
+      <div class="field field-row">
+        <label for="published">
+          <input type="checkbox" id="published" name="published" checked={v.published} />
+          Published
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="embed_token">Embed token</label>
+        <input
+          type="text"
+          id="embed_token"
+          value={`{{view:${v.slug || "your-view-slug"}}}`}
+          readonly
+        />
+        <div class="hint">Use this token in any page markdown. You can add more than one per page.</div>
+      </div>
+
+      <div class="editor-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        {!isNew && (
+          <form
+            method="POST"
+            action={`${viewsBase}/delete/${v.id}`}
+            class="editor-delete-form"
+            onsubmit="return confirm('Delete this view permanently?')"
+          >
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        )}
+      </div>
+    </aside>
+  </form>
+</main>

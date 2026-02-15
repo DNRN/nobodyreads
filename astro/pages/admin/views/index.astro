@@ -1,0 +1,49 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { editorRequiresAuth, isAuthenticatedRequest } from "../../../../src/editor/auth.js";
+import { initDb } from "../../../../src/shared/db.js";
+import { DEFAULT_TENANT_ID } from "../../../../src/shared/types.js";
+import { listContentViews } from "../../../../src/content/db.js";
+
+if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
+  return Astro.redirect("/admin/login");
+}
+
+const db = await initDb();
+const views = await listContentViews(db, DEFAULT_TENANT_ID);
+---
+<AdminLayout title="Views — Admin">
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <h2>Views</h2>
+        <a href="/admin/views/new" class="btn btn-primary">New view</a>
+      </div>
+      <p class="hint">Embed in markdown using <code>{"{{view:slug}}"}</code>. You can include multiple views per page.</p>
+      {views.length === 0 ? (
+        <p class="editor-empty">No views yet. Create your first reusable view.</p>
+      ) : (
+        <table class="editor-table">
+          <thead>
+            <tr><th>Title</th><th>Slug</th><th>Kind</th><th>Status</th><th>Updated</th></tr>
+          </thead>
+          <tbody>
+            {views.map((view) => (
+              <tr>
+                <td><a href={`/admin/views/${view.id}`}>{view.title}</a></td>
+                <td class="cell-slug">{view.slug}</td>
+                <td>{view.kind}</td>
+                <td class="cell-status">
+                  {view.published
+                    ? <span class="badge badge-published">published</span>
+                    : <span class="badge badge-draft">draft</span>}
+                </td>
+                <td class="cell-date">{view.updated || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  </main>
+</AdminLayout>

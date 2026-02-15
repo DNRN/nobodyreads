@@ -1,5 +1,14 @@
 import type { Client, Row } from "@libsql/client";
-import type { Page, PageSummary, NavItem, LinkTarget, PageKind } from "./types.js";
+import type {
+  Page,
+  PageSummary,
+  NavItem,
+  LinkTarget,
+  PageKind,
+  ContentView,
+  ContentViewKind,
+  PostListViewConfig,
+} from "./types.js";
 
 // --- Row mappers ---
 
@@ -54,6 +63,36 @@ function rowToLinkTarget(row: Row): LinkTarget {
   };
 }
 
+function normalizePostListConfig(raw: unknown): PostListViewConfig {
+  if (!raw || typeof raw !== "object") {
+    return { order: "newest" };
+  }
+
+  const maybeConfig = raw as { order?: unknown; limit?: unknown };
+  const order = maybeConfig.order === "newest" ? "newest" : "newest";
+  const config: PostListViewConfig = { order };
+
+  if (typeof maybeConfig.limit === "number" && Number.isFinite(maybeConfig.limit)) {
+    const clamped = Math.max(1, Math.min(200, Math.floor(maybeConfig.limit)));
+    config.limit = clamped;
+  }
+
+  return config;
+}
+
+function rowToContentView(row: Row): ContentView {
+  const rawConfig = row.config ? JSON.parse(row.config as string) : {};
+  return {
+    id: row.content_view_id as string,
+    slug: row.slug as string,
+    title: row.title as string,
+    kind: row.kind as ContentViewKind,
+    config: normalizePostListConfig(rawConfig),
+    published: (row.published as number) === 1,
+    updated: row.updated ? (row.updated as string) : undefined,
+  };
+}
+
 // --- Page queries ---
 
 /** List published posts, newest first (for the home page listing). */
@@ -64,6 +103,28 @@ export async function listPosts(db: Client, tenantId: string): Promise<PageSumma
           WHERE published = 1 AND kind = 'post' AND tenant_id = ?
           ORDER BY date DESC`,
     args: [tenantId],
+  });
+  return result.rows.map(rowToPageSummary);
+}
+
+/** List posts for a post-list content view (newest first, optional limit). */
+export async function listPostsForView(
+  db: Client,
+  tenantId: string,
+  options: { limit?: number } = {}
+): Promise<PageSummary[]> {
+  const limit =
+    typeof options.limit === "number" && Number.isFinite(options.limit)
+      ? Math.max(1, Math.min(200, Math.floor(options.limit)))
+      : undefined;
+
+  const result = await db.execute({
+    sql: `SELECT page_id, slug, title, excerpt, tags, date
+          FROM page
+          WHERE published = 1 AND kind = 'post' AND tenant_id = ?
+          ORDER BY date DESC
+          ${limit ? "LIMIT ?" : ""}`,
+    args: limit ? [tenantId, limit] : [tenantId],
   });
   return result.rows.map(rowToPageSummary);
 }
@@ -84,6 +145,91 @@ export async function getPageBySlug(
     args: [slug, kind, tenantId],
   });
   return result.rows.length > 0 ? rowToPage(result.rows[0]) : null;
+}
+
+// --- Content view queries ---
+
+/** List all content views for a tenant (including drafts). */
+export async function listContentViews(db: Client, tenantId: string): Promise<ContentView[]> {
+  const result = await db.execute({
+    sql: `SELECT content_view_id, slug, title, kind, config, published, updated
+          FROM content_view
+          WHERE tenant_id = ?
+          ORDER BY title ASC`,
+    args: [tenantId],
+  });
+  return result.rows.map(rowToContentView);
+}
+
+/** Fetch a single content view by slug. */
+export async function getContentViewBySlug(
+  db: Client,
+  slug: string,
+  tenantId: string,
+  options: { publishedOnly?: boolean } = {}
+): Promise<ContentView | null> {
+  const publishedFilter = options.publishedOnly ? "AND published = 1" : "";
+  const result = await db.execute({
+    sql: `SELECT content_view_id, slug, title, kind, config, published, updated
+          FROM content_view
+          WHERE slug = ? AND tenant_id = ? ${publishedFilter}
+          LIMIT 1`,
+    args: [slug, tenantId],
+  });
+  return result.rows.length > 0 ? rowToContentView(result.rows[0]) : null;
+}
+
+/** Fetch a single content view by stable id. */
+export async function getContentViewById(
+  db: Client,
+  id: string,
+  tenantId: string
+): Promise<ContentView | null> {
+  const result = await db.execute({
+    sql: `SELECT content_view_id, slug, title, kind, config, published, updated
+          FROM content_view
+          WHERE content_view_id = ? AND tenant_id = ?
+          LIMIT 1`,
+    args: [id, tenantId],
+  });
+  return result.rows.length > 0 ? rowToContentView(result.rows[0]) : null;
+}
+
+/** Delete a content view by stable id. */
+export async function deleteContentView(db: Client, id: string, tenantId: string): Promise<void> {
+  await db.execute({
+    sql: `DELETE FROM content_view WHERE content_view_id = ? AND tenant_id = ?`,
+    args: [id, tenantId],
+  });
+}
+
+/** Create or update a content view, keyed by stable id + tenant. */
+export async function upsertContentView(
+  db: Client,
+  view: ContentView,
+  tenantId: string
+): Promise<void> {
+  await db.execute({
+    sql: `INSERT INTO content_view (content_view_id, tenant_id, slug, title, kind, config, published, updated)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (content_view_id, tenant_id) DO UPDATE SET
+            slug = excluded.slug,
+            title = excluded.title,
+            kind = excluded.kind,
+            config = excluded.config,
+            published = excluded.published,
+            updated = excluded.updated`,
+    args: [
+      view.id,
+      tenantId,
+      view.slug,
+      view.title,
+      view.kind,
+      JSON.stringify(normalizePostListConfig(view.config)),
+      view.published ? 1 : 0,
+      view.updated ?? null,
+    ],
+  });
 }
 
 /** Fetch the first published page of a given kind (used for home). */

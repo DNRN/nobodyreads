@@ -1,8 +1,7 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
-import PostPreview from "../../components/PostPreview.astro";
-import { listPosts, getPageByKind, getNavItems } from "../../../src/content/db.js";
-import { resolveLinks, renderMarkdown } from "../../../src/content/render.js";
+import { getPageByKind, getNavItems } from "../../../src/content/db.js";
+import { resolveLinks, resolveViews, renderMarkdown } from "../../../src/content/render.js";
 import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
@@ -25,11 +24,10 @@ const siteTagline =
   "Sovereign publishing, not a platform. For writing mostly to yourself.";
 
 const db = await getDbClient();
-const [siteBundle, latestRevisionId, page, posts, navItems] = await Promise.all([
+const [siteBundle, latestRevisionId, page, navItems] = await Promise.all([
   getLatestSiteBundleRevision(db, tenantId),
   getLatestSiteBundleRevisionId(db, tenantId),
   getPageByKind(db, "home", tenantId),
-  listPosts(db, tenantId),
   getNavItems(db, tenantId),
 ]);
 
@@ -76,8 +74,12 @@ const autoReloadScript = `(() => {
 
 let htmlBody = "";
 if (page?.content?.trim()) {
-  const resolved = await resolveLinks(db, page.content, tenantId, previewUrlPrefix);
-  htmlBody = renderMarkdown(resolved);
+  const resolvedLinks = await resolveLinks(db, page.content, tenantId, previewUrlPrefix);
+  const resolvedViews = await resolveViews(db, resolvedLinks, tenantId, previewUrlPrefix, {
+    includeDrafts: true,
+    showMissingPlaceholders: true,
+  });
+  htmlBody = renderMarkdown(resolvedViews);
 }
 
 if (!page) {
@@ -111,11 +113,6 @@ const options = page
   {page ? (
     <>
       {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
-      {posts.length > 0 ? (
-        posts.map((post) => <PostPreview post={post} urlPrefix={previewUrlPrefix} />)
-      ) : (
-        <p>No posts yet.</p>
-      )}
     </>
   ) : (
     <>

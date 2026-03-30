@@ -1,7 +1,6 @@
 import type { Client, Row } from "@libsql/client";
 import { randomUUID, randomBytes } from "node:crypto";
-import type { Subscriber, SubscriptionSettings } from "./types.js";
-import { DEFAULT_SUBSCRIPTION_SETTINGS } from "./types.js";
+import type { Subscriber } from "./types.js";
 
 // --- Row mapper ---
 
@@ -18,80 +17,6 @@ function rowToSubscriber(row: Row): Subscriber {
       ? (row.unsubscribed_at as string)
       : null,
   };
-}
-
-// --- Settings ---
-
-/** Read subscription settings from the site_settings table. */
-export async function getSubscriptionSettings(
-  db: Client,
-  tenantId: string
-): Promise<SubscriptionSettings> {
-  const result = await db.execute({
-    sql: `SELECT key, value FROM site_settings WHERE tenant_id = ? AND key LIKE 'subscription.%'`,
-    args: [tenantId],
-  });
-
-  const settings = { ...DEFAULT_SUBSCRIPTION_SETTINGS };
-
-  for (const row of result.rows) {
-    const key = (row.key as string).replace("subscription.", "");
-    const value = row.value as string;
-    switch (key) {
-      case "enabled":
-        settings.enabled = value === "true";
-        break;
-      case "provider":
-        settings.provider = value as SubscriptionSettings["provider"];
-        break;
-      case "apiKey":
-        settings.apiKey = value;
-        break;
-      case "domain":
-        settings.domain = value;
-        break;
-      case "fromName":
-        settings.fromName = value;
-        break;
-      case "fromEmail":
-        settings.fromEmail = value;
-        break;
-    }
-  }
-
-  // Env-var fallbacks (env vars override only when DB values are empty)
-  if (!settings.apiKey && process.env.MAILGUN_API_KEY) {
-    settings.apiKey = process.env.MAILGUN_API_KEY;
-  }
-  if (!settings.domain && process.env.MAILGUN_DOMAIN) {
-    settings.domain = process.env.MAILGUN_DOMAIN;
-  }
-
-  return settings;
-}
-
-/** Persist subscription settings to the site_settings table. */
-export async function saveSubscriptionSettings(
-  db: Client,
-  tenantId: string,
-  settings: SubscriptionSettings
-): Promise<void> {
-  const pairs: [string, string][] = [
-    ["subscription.enabled", String(settings.enabled)],
-    ["subscription.provider", settings.provider],
-    ["subscription.apiKey", settings.apiKey],
-    ["subscription.domain", settings.domain],
-    ["subscription.fromName", settings.fromName],
-    ["subscription.fromEmail", settings.fromEmail],
-  ];
-
-  for (const [key, value] of pairs) {
-    await db.execute({
-      sql: `INSERT INTO site_settings (tenant_id, key, value) VALUES (?, ?, ?)
-            ON CONFLICT (tenant_id, key) DO UPDATE SET value = excluded.value`,
-      args: [tenantId, key, value],
-    });
-  }
 }
 
 // --- Subscribers ---

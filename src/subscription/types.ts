@@ -9,23 +9,3 @@ export interface Subscriber {
   unsubscribed: boolean;
   unsubscribedAt: string | null;
 }
-
-/** Subscription feature settings stored in site_settings. */
-export interface SubscriptionSettings {
-  enabled: boolean;
-  provider: "mailgun";
-  apiKey: string;
-  domain: string;
-  fromName: string;
-  fromEmail: string;
-}
-
-/** Default settings when nothing is configured yet. */
-export const DEFAULT_SUBSCRIPTION_SETTINGS: SubscriptionSettings = {
-  enabled: false,
-  provider: "mailgun",
-  apiKey: "",
-  domain: "",
-  fromName: "",
-  fromEmail: "",
-};

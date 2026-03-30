@@ -1,4 +1,3 @@
-import type { SubscriptionSettings } from "./types.js";
 import type { Subscriber } from "./types.js";
 
 // --- Email provider abstraction ---
@@ -14,61 +13,113 @@ export interface EmailProvider {
   sendEmail(message: EmailMessage): Promise<void>;
 }
 
-// --- Mailgun provider (fetch-based, no SDK) ---
+// --- Provider registry ---
 
-class MailgunProvider implements EmailProvider {
+/**
+ * Registry for email providers.
+ *
+ * To add a custom provider, call `registerEmailProvider` with a name and a
+ * factory function. The factory receives no arguments — it should read its own
+ * configuration from `process.env` and return an `EmailProvider` instance, or
+ * `null` if the required env vars are missing.
+ *
+ * Example:
+ * ```ts
+ * registerEmailProvider("sendgrid", () => {
+ *   const apiKey = process.env.SENDGRID_API_KEY;
+ *   if (!apiKey) return null;
+ *   return new SendgridProvider(apiKey, getFromAddress());
+ * });
+ * ```
+ */
+const providers = new Map<string, () => EmailProvider | null>();
+
+export function registerEmailProvider(
+  name: string,
+  factory: () => EmailProvider | null
+): void {
+  providers.set(name.toLowerCase(), factory);
+}
+
+// --- Mailjet provider (fetch-based, no SDK) ---
+
+class MailjetProvider implements EmailProvider {
   private apiKey: string;
-  private domain: string;
-  private from: string;
+  private apiSecret: string;
+  private fromName: string;
+  private fromEmail: string;
 
-  constructor(apiKey: string, domain: string, fromName: string, fromEmail: string) {
+  constructor(apiKey: string, apiSecret: string, fromName: string, fromEmail: string) {
     this.apiKey = apiKey;
-    this.domain = domain;
-    this.from = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+    this.apiSecret = apiSecret;
+    this.fromName = fromName;
+    this.fromEmail = fromEmail;
   }
 
   async sendEmail(message: EmailMessage): Promise<void> {
-    const url = `https://api.mailgun.net/v3/${this.domain}/messages`;
-    const body = new URLSearchParams({
-      from: this.from,
-      to: message.to,
-      subject: message.subject,
-      html: message.html,
-      text: message.text,
-    });
+    const url = "https://api.mailjet.com/v3.1/send";
+
+    const body = {
+      Messages: [
+        {
+          From: {
+            Email: this.fromEmail,
+            Name: this.fromName,
+          },
+          To: [{ Email: message.to }],
+          Subject: message.subject,
+          HTMLPart: message.html,
+          TextPart: message.text,
+        },
+      ],
+    };
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${Buffer.from(`api:${this.apiKey}`).toString("base64")}`,
+        "Content-Type": "application/json",
+        Authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString("base64")}`,
       },
-      body,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Mailgun error (${response.status}): ${text}`);
+      throw new Error(`Mailjet error (${response.status}): ${text}`);
     }
   }
 }
 
-/** Create an email provider from the subscription settings. */
-export function createEmailProvider(settings: SubscriptionSettings): EmailProvider | null {
-  if (!settings.apiKey || !settings.domain || !settings.fromEmail) {
+// Register the built-in Mailjet provider
+registerEmailProvider("mailjet", () => {
+  const apiKey = process.env.MAILJET_API_KEY;
+  const apiSecret = process.env.MAILJET_API_SECRET;
+  const fromEmail = process.env.EMAIL_FROM_EMAIL;
+  const fromName = process.env.EMAIL_FROM_NAME || "";
+
+  if (!apiKey || !apiSecret || !fromEmail) return null;
+  return new MailjetProvider(apiKey, apiSecret, fromName, fromEmail);
+});
+
+// --- Env helpers ---
+
+/** Check whether email subscriptions are enabled via env. */
+export function isEmailEnabled(): boolean {
+  return process.env.EMAIL_ENABLED === "true";
+}
+
+/** Create an email provider based on the EMAIL_PROVIDER env var. */
+export function createEmailProvider(): EmailProvider | null {
+  const name = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+  if (!name) return null;
+
+  const factory = providers.get(name);
+  if (!factory) {
+    console.warn(`Unknown email provider "${name}". Registered providers: ${[...providers.keys()].join(", ")}`);
     return null;
   }
 
-  switch (settings.provider) {
-    case "mailgun":
-      return new MailgunProvider(
-        settings.apiKey,
-        settings.domain,
-        settings.fromName,
-        settings.fromEmail
-      );
-    default:
-      return null;
-  }
+  return factory();
 }
 
 // --- Email templates ---

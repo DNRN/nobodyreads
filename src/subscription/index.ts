@@ -3,16 +3,14 @@ import type { Client } from "@libsql/client";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import { redirect, parseFormBody } from "../shared/http.js";
 import {
-  getSubscriptionSettings,
-  saveSubscriptionSettings,
   addSubscriber,
   verifySubscriber,
   unsubscribeById,
   listVerifiedSubscribers,
   deleteSubscriber,
 } from "./db.js";
-import type { SubscriptionSettings } from "./types.js";
 import {
+  isEmailEnabled,
   createEmailProvider,
   sendVerificationEmail,
   sendNewPostNotification,
@@ -41,7 +39,6 @@ export interface SubscriptionRouterOptions {
  *   GET  /api/unsubscribe         — unsubscribe via id
  *
  * Admin routes:
- *   POST /admin/settings/save     — save subscription settings
  *   POST /admin/subscribers/delete/:id — delete subscriber
  */
 export function createSubscriptionRouter(
@@ -65,8 +62,7 @@ export function createSubscriptionRouter(
         return respondHtml(res, 400, "Invalid email", "Please provide a valid email address.", siteUrl);
       }
 
-      const settings = await getSubscriptionSettings(db, tenantId);
-      if (!settings.enabled) {
+      if (!isEmailEnabled()) {
         return respondHtml(res, 403, "Subscriptions disabled", "Email subscriptions are not currently available.", siteUrl);
       }
 
@@ -77,7 +73,7 @@ export function createSubscriptionRouter(
       }
 
       // Send verification email
-      const provider = createEmailProvider(settings);
+      const provider = createEmailProvider();
       if (provider && token) {
         try {
           await sendVerificationEmail(provider, siteUrl, siteName, email, token);
@@ -126,23 +122,6 @@ export function createSubscriptionRouter(
       return respondHtml(res, 200, "Already unsubscribed", "You're already unsubscribed.", siteUrl);
     }
 
-    // --- POST /admin/settings/save ---
-    if (pathname === "/admin/settings/save" && req.method === "POST") {
-      const body = await parseFormBody(req);
-
-      const settings: SubscriptionSettings = {
-        enabled: body.enabled === "on",
-        provider: "mailgun",
-        apiKey: (body.apiKey || "").trim(),
-        domain: (body.domain || "").trim(),
-        fromName: (body.fromName || "").trim(),
-        fromEmail: (body.fromEmail || "").trim(),
-      };
-
-      await saveSubscriptionSettings(db, tenantId, settings);
-      return redirect(res, `${adminBase}/settings`);
-    }
-
     // --- POST /admin/subscribers/delete/:id ---
     const deleteMatch = pathname.match(
       /^\/admin\/subscribers\/delete\/([a-zA-Z0-9_-]+)$/
@@ -165,10 +144,9 @@ export async function notifySubscribers(
   post: { title: string; slug: string; excerpt: string }
 ): Promise<void> {
   try {
-    const settings = await getSubscriptionSettings(db, tenantId);
-    if (!settings.enabled) return;
+    if (!isEmailEnabled()) return;
 
-    const provider = createEmailProvider(settings);
+    const provider = createEmailProvider();
     if (!provider) return;
 
     const subscribers = await listVerifiedSubscribers(db, tenantId);

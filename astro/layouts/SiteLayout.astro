@@ -7,7 +7,7 @@ import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import type { SiteBundle } from "../../src/shared/site-bundle.js";
 import { getSiteBundle } from "../../src/shared/site-bundle.js";
 import { DEFAULT_SITE_TEMPLATE } from "../../src/shared/site-template.js";
-import { getSubscriptionSettings } from "../../src/subscription/db.js";
+import { isEmailEnabled } from "../../src/subscription/email.js";
 
 const { options, authLinksHtml, siteBundleOverride } = Astro.props as {
   options: LayoutOptions;
@@ -37,9 +37,9 @@ const devReload = import.meta.env.DEV
 
 const db = await initDb();
 const siteBundle = siteBundleOverride ?? (await getSiteBundle(db, DEFAULT_TENANT_ID));
-const subscriptionSettings = await getSubscriptionSettings(db, DEFAULT_TENANT_ID);
+const emailEnabled = isEmailEnabled();
 
-const subscribeFormHtml = subscriptionSettings.enabled
+const subscribeFormHtml = emailEnabled
   ? `<form class="nb-subscribe" method="POST" action="/api/subscribe">
       <input type="email" name="email" placeholder="Your email" required />
       <button type="submit">Subscribe</button>
@@ -78,7 +78,7 @@ let bodyHtml = templateHtml
 
 // Auto-inject subscribe form after post content when no {{subscribe}} token in layout
 const autoInjectSubscribe =
-  subscriptionSettings.enabled && !hasSubscribeToken && options.page?.kind === "post";
+  emailEnabled && !hasSubscribeToken && options.page?.kind === "post";
 const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : slotHtml;
 
 bodyHtml = bodyHtml.includes("{{content}}")

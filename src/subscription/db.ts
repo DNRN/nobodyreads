@@ -1,21 +1,23 @@
-import type { Client, Row } from "@libsql/client";
+import { eq, and, desc, asc } from "drizzle-orm";
+import { subscriber } from "../db/schema.js";
+import type { Database } from "../db/index.js";
 import { randomUUID, randomBytes } from "node:crypto";
 import type { Subscriber } from "./types.js";
 
 // --- Row mapper ---
 
-function rowToSubscriber(row: Row): Subscriber {
+type SubscriberRow = typeof subscriber.$inferSelect;
+
+function toSubscriber(row: SubscriberRow): Subscriber {
   return {
-    id: row.subscriber_id as string,
-    email: row.email as string,
-    verified: (row.verified as number) === 1,
-    verifyToken: row.verify_token ? (row.verify_token as string) : null,
-    createdAt: row.created_at as string,
-    verifiedAt: row.verified_at ? (row.verified_at as string) : null,
-    unsubscribed: (row.unsubscribed as number) === 1,
-    unsubscribedAt: row.unsubscribed_at
-      ? (row.unsubscribed_at as string)
-      : null,
+    id: row.subscriberId,
+    email: row.email,
+    verified: row.verified,
+    verifyToken: row.verifyToken,
+    createdAt: row.createdAt,
+    verifiedAt: row.verifiedAt,
+    unsubscribed: row.unsubscribed,
+    unsubscribedAt: row.unsubscribedAt,
   };
 }
 
@@ -27,47 +29,52 @@ function rowToSubscriber(row: Row): Subscriber {
  * If verified and not unsubscribed, returns null (already subscribed).
  */
 export async function addSubscriber(
-  db: Client,
+  db: Database,
   tenantId: string,
   email: string
 ): Promise<{ token: string | null; alreadySubscribed: boolean }> {
   const normalizedEmail = email.trim().toLowerCase();
   const verifyToken = randomBytes(32).toString("hex");
 
-  // Check if subscriber already exists
-  const existing = await db.execute({
-    sql: `SELECT subscriber_id, verified, unsubscribed, verify_token
-          FROM subscriber WHERE email = ? AND tenant_id = ? LIMIT 1`,
-    args: [normalizedEmail, tenantId],
-  });
+  const existing = await db
+    .select({
+      subscriberId: subscriber.subscriberId,
+      verified: subscriber.verified,
+      unsubscribed: subscriber.unsubscribed,
+    })
+    .from(subscriber)
+    .where(and(eq(subscriber.email, normalizedEmail), eq(subscriber.tenantId, tenantId)))
+    .limit(1);
 
-  if (existing.rows.length > 0) {
-    const row = existing.rows[0];
-    const verified = (row.verified as number) === 1;
-    const unsubscribed = (row.unsubscribed as number) === 1;
+  if (existing.length > 0) {
+    const row = existing[0];
 
-    if (verified && !unsubscribed) {
+    if (row.verified && !row.unsubscribed) {
       return { token: null, alreadySubscribed: true };
     }
 
-    // Re-subscribe or re-send verification
-    await db.execute({
-      sql: `UPDATE subscriber
-            SET verify_token = ?, verified = 0, verified_at = NULL,
-                unsubscribed = 0, unsubscribed_at = NULL
-            WHERE subscriber_id = ? AND tenant_id = ?`,
-      args: [verifyToken, row.subscriber_id as string, tenantId],
-    });
+    await db
+      .update(subscriber)
+      .set({
+        verifyToken,
+        verified: false,
+        verifiedAt: null,
+        unsubscribed: false,
+        unsubscribedAt: null,
+      })
+      .where(
+        and(eq(subscriber.subscriberId, row.subscriberId), eq(subscriber.tenantId, tenantId))
+      );
 
     return { token: verifyToken, alreadySubscribed: false };
   }
 
-  // New subscriber
   const subscriberId = randomUUID();
-  await db.execute({
-    sql: `INSERT INTO subscriber (subscriber_id, tenant_id, email, verify_token)
-          VALUES (?, ?, ?, ?)`,
-    args: [subscriberId, tenantId, normalizedEmail, verifyToken],
+  await db.insert(subscriber).values({
+    subscriberId,
+    tenantId,
+    email: normalizedEmail,
+    verifyToken,
   });
 
   return { token: verifyToken, alreadySubscribed: false };
@@ -75,92 +82,108 @@ export async function addSubscriber(
 
 /** Verify a subscriber by their token. Returns true if successful. */
 export async function verifySubscriber(
-  db: Client,
+  db: Database,
   tenantId: string,
   token: string
 ): Promise<boolean> {
   const now = new Date().toISOString();
-  const result = await db.execute({
-    sql: `UPDATE subscriber
-          SET verified = 1, verified_at = ?, verify_token = NULL
-          WHERE verify_token = ? AND tenant_id = ? AND verified = 0`,
-    args: [now, token, tenantId],
-  });
-  return result.rowsAffected > 0;
+  const result = await db
+    .update(subscriber)
+    .set({ verified: true, verifiedAt: now, verifyToken: null })
+    .where(
+      and(
+        eq(subscriber.verifyToken, token),
+        eq(subscriber.tenantId, tenantId),
+        eq(subscriber.verified, false)
+      )
+    )
+    .returning({ subscriberId: subscriber.subscriberId });
+  return result.length > 0;
 }
 
-/** Unsubscribe by email or by token (used in unsubscribe links). */
+/** Unsubscribe by email. */
 export async function unsubscribeByEmail(
-  db: Client,
+  db: Database,
   tenantId: string,
   email: string
 ): Promise<boolean> {
   const now = new Date().toISOString();
-  const result = await db.execute({
-    sql: `UPDATE subscriber
-          SET unsubscribed = 1, unsubscribed_at = ?
-          WHERE email = ? AND tenant_id = ? AND unsubscribed = 0`,
-    args: [now, email.trim().toLowerCase(), tenantId],
-  });
-  return result.rowsAffected > 0;
+  const result = await db
+    .update(subscriber)
+    .set({ unsubscribed: true, unsubscribedAt: now })
+    .where(
+      and(
+        eq(subscriber.email, email.trim().toLowerCase()),
+        eq(subscriber.tenantId, tenantId),
+        eq(subscriber.unsubscribed, false)
+      )
+    )
+    .returning({ subscriberId: subscriber.subscriberId });
+  return result.length > 0;
 }
 
 /** Unsubscribe by subscriber id (used in unsubscribe links). */
 export async function unsubscribeById(
-  db: Client,
+  db: Database,
   tenantId: string,
   subscriberId: string
 ): Promise<boolean> {
   const now = new Date().toISOString();
-  const result = await db.execute({
-    sql: `UPDATE subscriber
-          SET unsubscribed = 1, unsubscribed_at = ?
-          WHERE subscriber_id = ? AND tenant_id = ? AND unsubscribed = 0`,
-    args: [now, subscriberId, tenantId],
-  });
-  return result.rowsAffected > 0;
+  const result = await db
+    .update(subscriber)
+    .set({ unsubscribed: true, unsubscribedAt: now })
+    .where(
+      and(
+        eq(subscriber.subscriberId, subscriberId),
+        eq(subscriber.tenantId, tenantId),
+        eq(subscriber.unsubscribed, false)
+      )
+    )
+    .returning({ subscriberId: subscriber.subscriberId });
+  return result.length > 0;
 }
 
 /** List all verified, active subscribers (for sending notifications). */
 export async function listVerifiedSubscribers(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<Subscriber[]> {
-  const result = await db.execute({
-    sql: `SELECT subscriber_id, email, verified, verify_token, created_at,
-                 verified_at, unsubscribed, unsubscribed_at
-          FROM subscriber
-          WHERE tenant_id = ? AND verified = 1 AND unsubscribed = 0
-          ORDER BY created_at ASC`,
-    args: [tenantId],
-  });
-  return result.rows.map(rowToSubscriber);
+  const rows = await db
+    .select()
+    .from(subscriber)
+    .where(
+      and(
+        eq(subscriber.tenantId, tenantId),
+        eq(subscriber.verified, true),
+        eq(subscriber.unsubscribed, false)
+      )
+    )
+    .orderBy(asc(subscriber.createdAt));
+  return rows.map(toSubscriber);
 }
 
 /** List all subscribers for admin view. */
 export async function listAllSubscribers(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<Subscriber[]> {
-  const result = await db.execute({
-    sql: `SELECT subscriber_id, email, verified, verify_token, created_at,
-                 verified_at, unsubscribed, unsubscribed_at
-          FROM subscriber
-          WHERE tenant_id = ?
-          ORDER BY created_at DESC`,
-    args: [tenantId],
-  });
-  return result.rows.map(rowToSubscriber);
+  const rows = await db
+    .select()
+    .from(subscriber)
+    .where(eq(subscriber.tenantId, tenantId))
+    .orderBy(desc(subscriber.createdAt));
+  return rows.map(toSubscriber);
 }
 
 /** Hard-delete a subscriber (admin action). */
 export async function deleteSubscriber(
-  db: Client,
+  db: Database,
   tenantId: string,
   subscriberId: string
 ): Promise<void> {
-  await db.execute({
-    sql: `DELETE FROM subscriber WHERE subscriber_id = ? AND tenant_id = ?`,
-    args: [subscriberId, tenantId],
-  });
+  await db
+    .delete(subscriber)
+    .where(
+      and(eq(subscriber.subscriberId, subscriberId), eq(subscriber.tenantId, tenantId))
+    );
 }

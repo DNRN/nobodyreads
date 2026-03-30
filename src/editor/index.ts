@@ -1,10 +1,17 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Client } from "@libsql/client";
+import { Hono } from "hono";
+import type { Context } from "hono";
+import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { transform } from "esbuild";
 import { extname } from "node:path";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
-import { redirect, parseFormBody, parseMultipartBody, json } from "../shared/http.js";
+import type { Database } from "../db/index.js";
+import {
+  pageFormSchema,
+  viewFormSchema,
+  siteBundleFormSchema,
+  loginFormSchema,
+} from "../db/validation.js";
 import {
   getPageById,
   deletePage,
@@ -19,11 +26,9 @@ import {
 import type { Page, PageKind, ContentView, ContentViewKind } from "../content/types.js";
 import type { MediaStorage } from "../media/storage.js";
 import {
-  isAuthenticated,
-  editorRequiresAuth,
   verifyEditorPassword,
-  createEditorSession,
-  clearEditorSession,
+  buildSessionCookie,
+  buildClearSessionCookies,
 } from "./auth.js";
 import {
   addSiteBundleRevision,
@@ -32,226 +37,193 @@ import {
 } from "../shared/site-bundle.js";
 import { notifySubscribers } from "../subscription/index.js";
 
-// --- Public API ---
-
-export type RequestHandler = (
-  req: IncomingMessage,
-  res: ServerResponse,
-  pathname: string
-) => Promise<void>;
-
 export interface EditorRouterOptions {
-  /** Database client. */
-  db: Client;
-  /** Media storage backend (local filesystem, GCS, etc.). */
+  db: Database;
   storage?: MediaStorage;
-  /** Tenant ID to scope all queries to. Defaults to "_default". */
   tenantId?: string;
-  /** URL prefix for all links, e.g. "/dennis". Defaults to "". */
   urlPrefix?: string;
-  /**
-   * If true, skip the built-in password auth (the caller is responsible
-   * for verifying the user before delegating to the editor).
-   */
-  skipAuth?: boolean;
 }
 
 /**
- * Create the editor request handler.
- * Admin overview lives at /admin, editor lives at /admin/editor (relative to urlPrefix).
+ * Editor / admin routes. Mount at /admin.
  *
- * Usage (single-user mode):
- *   createEditorRouter({ db })
- *   // editor at /admin, EDITOR_PASSWORD gate
- *
- * Usage (platform mode — tenant-scoped):
- *   createEditorRouter({ db, tenantId: tenant.id, urlPrefix: "/dennis", skipAuth: true })
- *   // editor at /dennis/admin, platform session auth handled by caller
+ * Auth middleware should be applied by the caller (standalone.ts) so that
+ * login and logout bypass it.
  */
-export function createEditorRouter(options: EditorRouterOptions): RequestHandler {
-  const { db, storage, skipAuth = false } = options;
+export function createEditorRoutes(options: EditorRouterOptions): Hono {
+  const { db, storage } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
   const adminBase = `${urlPrefix}/admin`;
   const editorBase = `${adminBase}/editor`;
 
-  return async (req, res, pathname) => {
-    // --- Logout (allow even if not authenticated) ---
-    if (pathname === "/admin/logout" && (req.method === "POST" || req.method === "GET")) {
-      clearEditorSession(res, adminBase);
-      return redirect(res, adminBase);
+  const app = new Hono();
+
+  // --- Login ---
+  app.post(
+    "/login",
+    zValidator("form", loginFormSchema, (result, c) => {
+      if (!result.success) {
+        return c.redirect(`${adminBase}/login?error=1`);
+      }
+    }),
+    async (c) => {
+      const { password } = c.req.valid("form");
+
+      if (!verifyEditorPassword(password)) {
+        return c.redirect(`${adminBase}/login?error=1`);
+      }
+
+      c.header("Set-Cookie", buildSessionCookie(urlPrefix || "/"));
+      return c.redirect(adminBase);
     }
+  );
 
-    // --- Login routes (only when using built-in auth) ---
+  // --- Logout ---
+  app.get("/logout", (c) => clearSessionAndRedirect(c, adminBase));
+  app.post("/logout", (c) => clearSessionAndRedirect(c, adminBase));
 
-    if (!skipAuth) {
-      if (pathname === "/admin/login" && req.method === "GET") {
-        return redirect(res, `${adminBase}/login`);
-      }
-
-      if (pathname === "/admin/login" && req.method === "POST") {
-        const body = await parseFormBody(req);
-        const password = body.password || "";
-
-        if (!verifyEditorPassword(password)) {
-          return redirect(res, `${adminBase}/login?error=1`);
-        }
-
-        createEditorSession(res, urlPrefix || "/");
-        return redirect(res, adminBase);
-      }
-
-      // --- Auth guard for all other /admin routes ---
-
-      if (!isAuthenticated(req)) {
-        if (editorRequiresAuth()) {
-          return redirect(res, `${adminBase}/login`);
-        }
-      }
-    }
-
-    // --- Media: list (JSON API for the media picker) ---
-    if (pathname === "/admin/media/list" && req.method === "GET" && storage) {
+  // --- Media: list (JSON for the editor media picker) ---
+  if (storage) {
+    app.get("/media/list", async (c) => {
       const items = await listMedia(db, tenantId, (key) => storage.url(key));
-      return json(res, items);
+      return c.json(items);
+    });
+  }
+
+  // --- Site / Layout: save ---
+  const saveSiteBundle = async (c: Context) => {
+    const body = await c.req.parseBody();
+    const parsed = siteBundleFormSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
     }
+    const { html, css, ts: tsSource } = parsed.data;
 
-    // --- GET admin routes are rendered by Astro ---
-    if (req.method === "GET" && pathname.startsWith("/admin")) {
-      return redirect(res, pathname);
-    }
-
-    if (
-      (pathname === "/admin/site/save" || pathname === "/admin/layout/save") &&
-      req.method === "POST"
-    ) {
-      const body = await parseFormBody(req);
-      const tsSource = body.ts || "";
-
-      // Transpile TypeScript → JavaScript using esbuild
-      let compiledJs = "";
-      if (tsSource.trim()) {
-        try {
-          const result = await transform(tsSource, {
-            loader: "ts",
-            target: "es2020",
-            format: "esm",
-          });
-          compiledJs = result.code;
-        } catch (err: unknown) {
-          // Return the error to the client so the user can fix it
-          const message =
-            err instanceof Error ? err.message : "TypeScript compilation failed";
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: message }));
-          return;
-        }
+    let compiledJs = "";
+    if (tsSource.trim()) {
+      try {
+        const result = await transform(tsSource, {
+          loader: "ts",
+          target: "es2020",
+          format: "esm",
+        });
+        compiledJs = result.code;
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "TypeScript compilation failed";
+        return c.json({ error: message }, 400);
       }
-
-      await addSiteBundleRevision(
-        db,
-        {
-          html: body.html || "",
-          css: body.css || "",
-          js: compiledJs,
-          ts: tsSource,
-        },
-        tenantId
-      );
-      return redirect(res, `${adminBase}/layout`);
     }
 
-    const useRevisionMatch =
-      pathname.match(/^\/admin\/site\/revision\/use\/(\d+)$/) ||
-      pathname.match(/^\/admin\/layout\/revision\/use\/(\d+)$/);
-    if (useRevisionMatch && req.method === "POST") {
-      const revisionId = parseInt(useRevisionMatch[1], 10);
-      await setCurrentSiteBundleRevision(db, revisionId, tenantId);
-      return redirect(res, `${adminBase}/layout`);
-    }
+    await addSiteBundleRevision(db, { html, css, js: compiledJs, ts: tsSource }, tenantId);
+    return c.redirect(`${adminBase}/layout`);
+  };
+  app.post("/site/save", saveSiteBundle);
+  app.post("/layout/save", saveSiteBundle);
 
-    const deleteRevisionMatch =
-      pathname.match(/^\/admin\/site\/revision\/delete\/(\d+)$/) ||
-      pathname.match(/^\/admin\/layout\/revision\/delete\/(\d+)$/);
-    if (deleteRevisionMatch && req.method === "POST") {
-      const revisionId = parseInt(deleteRevisionMatch[1], 10);
-      await deleteSiteBundleRevision(db, revisionId, tenantId);
-      return redirect(res, `${adminBase}/layout`);
-    }
+  // --- Revision: use ---
+  const useRevision = async (c: Context) => {
+    const revisionId = parseInt(c.req.param("id") ?? "0", 10);
+    await setCurrentSiteBundleRevision(db, revisionId, tenantId);
+    return c.redirect(`${adminBase}/layout`);
+  };
+  app.post("/site/revision/use/:id", useRevision);
+  app.post("/layout/revision/use/:id", useRevision);
 
-    // --- Save (create or update) ---
+  // --- Revision: delete ---
+  const deleteRevision = async (c: Context) => {
+    const revisionId = parseInt(c.req.param("id") ?? "0", 10);
+    await deleteSiteBundleRevision(db, revisionId, tenantId);
+    return c.redirect(`${adminBase}/layout`);
+  };
+  app.post("/site/revision/delete/:id", deleteRevision);
+  app.post("/layout/revision/delete/:id", deleteRevision);
 
-    if (pathname === "/admin/editor/save" && req.method === "POST") {
-      const body = await parseFormBody(req);
+  // --- Page: save (create or update) ---
+  app.post(
+    "/editor/save",
+    zValidator("form", pageFormSchema, (result, c) => {
+      if (!result.success) {
+        return c.json({ error: "Validation failed", details: result.error.issues }, 400);
+      }
+    }),
+    async (c) => {
+      const data = c.req.valid("form");
 
-      const isNew = !body.id || body.id.trim() === "";
-      const pageId = isNew ? randomUUID() : body.id.trim();
+      const isNew = !data.id || data.id.trim() === "";
+      const pageId = isNew ? randomUUID() : data.id!.trim();
       const now = new Date().toISOString();
 
-      // Check if this is a draft→published transition (for subscriber notifications)
       let wasPreviouslyPublished = false;
-      let content = body.content ?? "";
+      let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
         wasPreviouslyPublished = existing?.published ?? false;
-        // When updating: preserve existing content if request has no content (missing or empty),
-        // so we never overwrite with empty due to truncation or client bugs.
         if (!content && existing?.content) content = existing.content;
       }
 
-      const page: Page = {
+      const p: Page = {
         id: pageId,
-        slug: (body.slug || "").trim().toLowerCase(),
-        title: (body.title || "").trim(),
+        slug: data.slug,
+        title: data.title,
         content,
-        excerpt: (body.excerpt || "").trim(),
-        tags: (body.tags || "")
+        excerpt: data.excerpt,
+        tags: data.tags
           .split(",")
           .map((t: string) => t.trim())
           .filter(Boolean),
-        date: body.date || now.slice(0, 10),
+        date: data.date || now.slice(0, 10),
         updated: isNew ? undefined : now.slice(0, 10),
-        published: body.published === "on",
-        kind: (body.kind || "post") as PageKind,
+        published: data.published === "on",
+        kind: data.kind as PageKind,
         nav:
-          body.nav_label && body.nav_label.trim()
-            ? { label: body.nav_label.trim(), order: parseInt(body.nav_order || "0", 10) }
+          data.nav_label && data.nav_label.trim()
+            ? {
+                label: data.nav_label.trim(),
+                order: parseInt(data.nav_order || "0", 10),
+              }
             : undefined,
       };
 
-      await upsertPage(db, page, tenantId);
+      await upsertPage(db, p, tenantId);
 
-      // Notify subscribers when a post is newly published (draft → published)
-      if (page.kind === "post" && page.published && !wasPreviouslyPublished) {
+      if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
         notifySubscribers(db, tenantId, {
-          title: page.title,
-          slug: page.slug,
-          excerpt: page.excerpt,
+          title: p.title,
+          slug: p.slug,
+          excerpt: p.excerpt,
         }).catch((err) => console.error("Subscriber notification error:", err));
       }
 
-      return redirect(res, `${editorBase}/${pageId}`);
+      return c.redirect(`${editorBase}/${pageId}`);
     }
+  );
 
-    // --- Content views: save (create or update) ---
-
-    if (pathname === "/admin/views/save" && req.method === "POST") {
-      const body = await parseFormBody(req);
-      const isNew = !body.id || body.id.trim() === "";
-      const viewId = isNew ? randomUUID() : body.id.trim();
+  // --- Content views: save ---
+  app.post(
+    "/views/save",
+    zValidator("form", viewFormSchema, (result, c) => {
+      if (!result.success) {
+        return c.json({ error: "Validation failed", details: result.error.issues }, 400);
+      }
+    }),
+    async (c) => {
+      const data = c.req.valid("form");
+      const isNew = !data.id || data.id.trim() === "";
+      const viewId = isNew ? randomUUID() : data.id!.trim();
       const now = new Date().toISOString().slice(0, 10);
 
-      const kind: ContentViewKind =
-        body.kind === "custom" ? "custom" : "post_list";
+      const kind: ContentViewKind = data.kind;
 
       let config: ContentView["config"];
       if (kind === "custom") {
         config = {
-          query: body.query || "",
-          template: body.template || "",
+          query: data.query ?? "",
+          template: data.template ?? "",
         };
       } else {
-        const parsedLimit = parseInt(body.limit || "", 10);
+        const parsedLimit = parseInt(data.limit ?? "", 10);
         const limit =
           Number.isFinite(parsedLimit) && parsedLimit > 0
             ? Math.max(1, Math.min(200, parsedLimit))
@@ -261,89 +233,93 @@ export function createEditorRouter(options: EditorRouterOptions): RequestHandler
 
       const view: ContentView = {
         id: viewId,
-        slug: (body.slug || "").trim().toLowerCase(),
-        title: (body.title || "").trim(),
+        slug: data.slug,
+        title: data.title,
         kind,
         config,
-        published: body.published === "on",
+        published: data.published === "on",
         updated: isNew ? undefined : now,
       };
 
       await upsertContentView(db, view, tenantId);
-      return redirect(res, `${adminBase}/views/${viewId}`);
+      return c.redirect(`${adminBase}/views/${viewId}`);
     }
+  );
 
-    // --- Delete ---
+  // --- Page: delete ---
+  app.post("/editor/delete/:id", async (c) => {
+    const pageId = c.req.param("id");
+    await deletePage(db, pageId, tenantId);
+    return c.redirect(editorBase);
+  });
 
-    const deleteMatch = pathname.match(/^\/admin\/editor\/delete\/([a-zA-Z0-9_-]+)$/);
-    if (deleteMatch && req.method === "POST") {
-      const pageId = deleteMatch[1];
-      await deletePage(db, pageId, tenantId);
-      return redirect(res, editorBase);
-    }
+  // --- Content views: delete ---
+  app.post("/views/delete/:id", async (c) => {
+    const viewId = c.req.param("id");
+    await deleteContentView(db, viewId, tenantId);
+    return c.redirect(`${adminBase}/views`);
+  });
 
-    // --- Content views: delete ---
+  // --- Media: upload ---
+  if (storage) {
+    app.post("/media/upload", async (c) => {
+      const body = await c.req.parseBody();
+      const file = body.file;
 
-    const deleteViewMatch = pathname.match(/^\/admin\/views\/delete\/([a-zA-Z0-9_-]+)$/);
-    if (deleteViewMatch && req.method === "POST") {
-      const viewId = deleteViewMatch[1];
-      await deleteContentView(db, viewId, tenantId);
-      return redirect(res, `${adminBase}/views`);
-    }
-
-    // --- Media: upload ---
-
-    if (pathname === "/admin/media/upload" && req.method === "POST" && storage) {
-      const { files } = await parseMultipartBody(req);
-      const file = files[0];
-      if (!file) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "No file uploaded" }));
-        return;
+      if (!(file instanceof File)) {
+        return c.json({ error: "No file uploaded" }, 400);
       }
 
       const mediaId = randomUUID();
-      const ext = extname(file.filename).toLowerCase() || "";
+      const ext = extname(file.name).toLowerCase() || "";
       const storageKey = `${mediaId}${ext}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-      const stored = await storage.put(storageKey, file.data, file.mimeType);
+      const stored = await storage.put(storageKey, buffer, file.type);
 
       await insertMedia(
         db,
         {
           id: mediaId,
           storageKey,
-          originalName: file.filename,
-          mimeType: file.mimeType,
-          size: file.data.length,
+          originalName: file.name,
+          mimeType: file.type,
+          size: buffer.length,
         },
         tenantId
       );
 
-      // If the request accepts JSON (editor AJAX), return JSON; otherwise redirect
-      const accept = req.headers.accept || "";
+      const accept = c.req.header("accept") || "";
       if (accept.includes("application/json")) {
-        return json(res, { id: mediaId, url: stored.url, filename: file.filename });
+        return c.json({
+          id: mediaId,
+          url: stored.url,
+          filename: file.name,
+        });
       }
-      return redirect(res, `${adminBase}/media`);
-    }
+      return c.redirect(`${adminBase}/media`);
+    });
 
     // --- Media: delete ---
-
-    const deleteMediaMatch = pathname.match(/^\/admin\/media\/delete\/([a-zA-Z0-9_-]+)$/);
-    if (deleteMediaMatch && req.method === "POST" && storage) {
-      const mediaId = deleteMediaMatch[1];
-      const media = await getMediaById(db, mediaId, tenantId, (k) =>
+    app.post("/media/delete/:id", async (c) => {
+      const mediaId = c.req.param("id");
+      const m = await getMediaById(db, mediaId, tenantId, (k) =>
         storage.url(k)
       );
-      if (media) {
-        await storage.delete(media.storageKey);
+      if (m) {
+        await storage.delete(m.storageKey);
         await deleteMediaRecord(db, mediaId, tenantId);
       }
-      return redirect(res, `${adminBase}/media`);
-    }
+      return c.redirect(`${adminBase}/media`);
+    });
+  }
 
-    // --- 404 fallback ---
-    return redirect(res, adminBase);
-  };
+  return app;
+}
+
+function clearSessionAndRedirect(c: Context, adminBase: string): Response {
+  for (const cookie of buildClearSessionCookies(adminBase)) {
+    c.header("Set-Cookie", cookie, { append: true });
+  }
+  return c.redirect(adminBase);
 }

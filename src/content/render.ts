@@ -1,4 +1,4 @@
-import type { Client } from "@libsql/client";
+import type { Database } from "../db/index.js";
 import { Marked, type MarkedExtension } from "marked";
 import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustomViewQuery } from "./db.js";
 import { renderPostListView } from "./templates.js";
@@ -68,12 +68,11 @@ function pageUrl(target: LinkTarget, urlPrefix: string = ""): string {
  * point to the current slug even if a page has been renamed.
  */
 export async function resolveLinks(
-  db: Client,
+  db: Database,
   markdown: string,
   tenantId: string,
   urlPrefix: string = ""
 ): Promise<string> {
-  // Extract all referenced IDs
   const matches = [...markdown.matchAll(LINK_PATTERN)];
   if (matches.length === 0) return markdown;
 
@@ -81,7 +80,6 @@ export async function resolveLinks(
   const targets = await resolvePageLinks(db, ids, tenantId);
   const lookup = new Map<string, LinkTarget>(targets.map((t) => [t.id, t]));
 
-  // Replace tokens with standard markdown links
   return markdown.replace(LINK_PATTERN, (_match, id: string, customText?: string) => {
     const target = lookup.get(id);
     if (!target) return `[broken link: ${id}]`;
@@ -102,7 +100,7 @@ export interface ResolveViewsOptions {
  * Replacements are HTML snippets inserted before markdown rendering.
  */
 export async function resolveViews(
-  db: Client,
+  db: Database,
   markdown: string,
   tenantId: string,
   urlPrefix: string = "",
@@ -164,7 +162,7 @@ export async function resolveViews(
  *   ).join('\n');
  */
 async function renderCustomView(
-  db: Client,
+  db: Database,
   config: CustomViewConfig,
   tenantId: string,
   urlPrefix: string
@@ -176,7 +174,6 @@ async function renderCustomView(
   try {
     const rows = await executeCustomViewQuery(db, config.query, tenantId);
 
-    // Build the template function: (rows, urlPrefix, escapeHtml) => string
     const templateFn = new Function("rows", "urlPrefix", "escapeHtml", config.template) as (
       rows: Record<string, unknown>[],
       urlPrefix: string,
@@ -215,17 +212,14 @@ export function renderMarkdown(content: string): string {
  * in the final output.
  */
 export async function renderContent(
-  db: Client,
+  db: Database,
   markdown: string,
   tenantId: string,
   urlPrefix: string = "",
   viewOptions: ResolveViewsOptions = {}
 ): Promise<string> {
-  // 1. Resolve [[id]] wiki-links → standard markdown links
   const withLinks = await resolveLinks(db, markdown, tenantId, urlPrefix);
 
-  // 2. Replace {{view:slug}} tokens with comment placeholders and build a
-  //    map of placeholder → rendered HTML for each view.
   const { text: withPlaceholders, viewHtml } = await resolveViewPlaceholders(
     db,
     withLinks,
@@ -234,10 +228,8 @@ export async function renderContent(
     viewOptions
   );
 
-  // 3. Render markdown → HTML (placeholders survive as HTML comments)
   let html = renderMarkdown(withPlaceholders);
 
-  // 4. Swap placeholders for actual view HTML
   if (viewHtml.size > 0) {
     html = html.replace(VIEW_PLACEHOLDER_RE, (_match, slug: string) => viewHtml.get(slug) ?? "");
   }
@@ -247,19 +239,14 @@ export async function renderContent(
 
 // --- View placeholder helpers (internal) ---
 
-/** Prefix/suffix used for view placeholders that survive markdown rendering. */
 const VIEW_PLACEHOLDER_TAG = "nbr-view";
 const VIEW_PLACEHOLDER_RE = new RegExp(
   `<!--${VIEW_PLACEHOLDER_TAG}:([a-z0-9-]+)-->`,
   "g"
 );
 
-/**
- * Replace all {{view:slug}} tokens with HTML-comment placeholders and return
- * the modified text together with a map of slug → rendered HTML.
- */
 async function resolveViewPlaceholders(
-  db: Client,
+  db: Database,
   markdown: string,
   tenantId: string,
   urlPrefix: string,
@@ -302,7 +289,6 @@ async function resolveViewPlaceholders(
     viewHtml.set(slug, "");
   }
 
-  // Replace view tokens with comment placeholders
   const text = markdown.replace(
     VIEW_PATTERN,
     (_match, slug: string) => `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`

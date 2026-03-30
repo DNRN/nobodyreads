@@ -1,11 +1,15 @@
 import { createClient, type Client } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
+import * as schema from "../db/schema.js";
+import type { Database } from "../db/index.js";
 
 // --- Database connection ---
 
-let db: Client | undefined;
-let dbPromise: Promise<Client> | null = null;
+let database: Database | undefined;
+let rawClient: Client | undefined;
+let dbPromise: Promise<Database> | null = null;
 
 function resolveSchemaPath(): string {
   const candidates = [
@@ -19,35 +23,46 @@ function resolveSchemaPath(): string {
   return candidates[0];
 }
 
-export async function initDb(): Promise<Client> {
+export async function initDb(): Promise<Database> {
   if (dbPromise) return dbPromise;
 
   dbPromise = (async () => {
     const url = process.env.DATABASE_URL || "file:data/blog.db";
 
-    // Ensure the directory exists for local file databases
     if (url.startsWith("file:")) {
-      const dbPath = url.slice(5); // strip "file:"
+      const dbPath = url.slice(5);
       mkdirSync(dirname(dbPath), { recursive: true });
     }
 
-    db = createClient({
+    const client = createClient({
       url,
       authToken: process.env.TURSO_AUTH_TOKEN || undefined,
     });
 
-    // Run schema migration
-    const schema = readFileSync(resolveSchemaPath(), "utf-8");
-    await db.executeMultiple(schema);
+    const schemaSql = readFileSync(resolveSchemaPath(), "utf-8");
+    await client.executeMultiple(schemaSql);
 
-    // Run column migrations (safe to re-run — ALTER TABLE is a no-op if column exists)
-    await migrateColumns(db);
+    await migrateColumns(client);
+
+    rawClient = client;
+    database = drizzle(client, { schema });
 
     console.log(`database connected (${url})`);
-    return db;
+    return database;
   })();
 
   return dbPromise;
+}
+
+/** Get the Drizzle database instance (undefined if not yet initialized). */
+export function getDb(): Database | undefined {
+  return database;
+}
+
+/** Get the raw libSQL client for queries that need raw SQL (e.g. user-defined queries). */
+export function getRawClient(): Client {
+  if (!rawClient) throw new Error("Database not initialized");
+  return rawClient;
 }
 
 /** Add columns that may be missing from older databases. */
@@ -69,7 +84,6 @@ async function migrateColumns(client: Client): Promise<void> {
     }
   }
 
-  // Migrate content_view CHECK constraint to allow 'custom' kind
   await migrateContentViewKind(client);
 }
 
@@ -81,10 +95,10 @@ async function migrateContentViewKind(client: Client): Promise<void> {
   const info = await client.execute(
     "SELECT sql FROM sqlite_master WHERE type='table' AND name='content_view'"
   );
-  if (info.rows.length === 0) return; // Table doesn't exist yet (fresh install will create it)
+  if (info.rows.length === 0) return;
 
   const createSql = info.rows[0].sql as string;
-  if (createSql.includes("'custom'")) return; // Already migrated
+  if (createSql.includes("'custom'")) return;
 
   await client.executeMultiple(`
     CREATE TABLE content_view_new (
@@ -103,9 +117,4 @@ async function migrateContentViewKind(client: Client): Promise<void> {
     DROP TABLE content_view;
     ALTER TABLE content_view_new RENAME TO content_view;
   `);
-}
-
-/** Get the raw database client (for scripts that need direct access). */
-export function getDb(): Client | undefined {
-  return db;
 }

@@ -1,11 +1,18 @@
-// Routers
-export { createBlogRouter } from "./content/index.js";
-export type { BlogRouterOptions, RequestHandler } from "./content/index.js";
-export { createEditorRouter } from "./editor/index.js";
+// Routers (Hono sub-apps)
+export { createBlogApiRoutes } from "./content/index.js";
+export type { BlogApiOptions } from "./content/index.js";
+export { createEditorRoutes } from "./editor/index.js";
 export type { EditorRouterOptions } from "./editor/index.js";
+export {
+  createSubscriptionApiRoutes,
+  createSubscriptionAdminRoutes,
+  notifySubscribers,
+} from "./subscription/index.js";
+export type { SubscriptionRouterOptions } from "./subscription/index.js";
 
 // Database
-export { initDb, getDb } from "./shared/db.js";
+export { initDb, getDb, getRawClient } from "./shared/db.js";
+export type { Database } from "./db/index.js";
 export {
   listPosts,
   listPostsForView,
@@ -24,6 +31,22 @@ export {
   upsertContentView,
 } from "./content/db.js";
 
+// Validation schemas
+export {
+  pageFormSchema,
+  viewFormSchema,
+  siteBundleFormSchema,
+  subscribeFormSchema,
+  loginFormSchema,
+} from "./db/validation.js";
+export type {
+  PageFormData,
+  ViewFormData,
+  SiteBundleFormData,
+  SubscribeFormData,
+  LoginFormData,
+} from "./db/validation.js";
+
 // HTTP utilities
 export {
   html,
@@ -36,18 +59,24 @@ export {
 export type { HtmlOptions } from "./shared/http.js";
 
 // Templates & rendering
-export {
-  defaultLayout,
-  createBlogLayoutWithAuth,
-  homePage,
-  postPage,
-  contentPage,
-  notFoundPage,
-} from "./content/templates.js";
+export { renderPostListView } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
 
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";
+
+// Site bundle
+export {
+  getSiteBundle,
+  getLatestSiteBundleRevision,
+  getLatestSiteBundleRevisionId,
+  listSiteBundleRevisions,
+  getCurrentSiteBundleRevisionId,
+  addSiteBundleRevision,
+  setCurrentSiteBundleRevision,
+  deleteSiteBundleRevision,
+} from "./shared/site-bundle.js";
+export type { SiteBundle, SiteBundleRevision } from "./shared/site-bundle.js";
 
 // Types
 export type {
@@ -58,7 +87,6 @@ export type {
   ContentView,
   ContentViewKind,
   PostListViewConfig,
-  LayoutFn,
   LayoutOptions,
   PageMeta,
   PageKind,

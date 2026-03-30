@@ -1,4 +1,7 @@
-import type { Client, Row } from "@libsql/client";
+import { eq, and, desc } from "drizzle-orm";
+import { siteBundle, siteBundleRevision } from "../db/schema.js";
+import { getRawClient } from "./db.js";
+import type { Database } from "../db/index.js";
 
 export interface SiteBundle {
   html: string;
@@ -13,177 +16,181 @@ export interface SiteBundleRevision extends SiteBundle {
   createdAt: string;
 }
 
-function rowToBundle(row: Row): SiteBundle {
+// --- Row mappers ---
+
+type RevisionRow = typeof siteBundleRevision.$inferSelect;
+
+function toRevision(row: RevisionRow): SiteBundleRevision {
   return {
-    html: (row.html as string) ?? "",
-    css: (row.css as string) ?? "",
-    js: (row.js as string) ?? "",
-    ts: (row.ts as string) ?? "",
-    updatedAt: row.updated_at as string,
+    revisionId: row.revisionId,
+    html: row.html,
+    css: row.css,
+    js: row.js,
+    ts: row.ts,
+    updatedAt: row.createdAt,
+    createdAt: row.createdAt,
   };
 }
 
-function rowToRevision(row: Row): SiteBundleRevision {
+function toRevisionBundle(row: Pick<RevisionRow, "html" | "css" | "js" | "ts" | "createdAt">): SiteBundle {
   return {
-    revisionId: row.revision_id as number,
-    html: (row.html as string) ?? "",
-    css: (row.css as string) ?? "",
-    js: (row.js as string) ?? "",
-    ts: (row.ts as string) ?? "",
-    updatedAt: row.created_at as string,
-    createdAt: row.created_at as string,
-  };
-}
-
-function rowToRevisionBundle(row: Row): SiteBundle {
-  return {
-    html: (row.html as string) ?? "",
-    css: (row.css as string) ?? "",
-    js: (row.js as string) ?? "",
-    ts: (row.ts as string) ?? "",
-    updatedAt: row.created_at as string,
+    html: row.html,
+    css: row.css,
+    js: row.js,
+    ts: row.ts,
+    updatedAt: row.createdAt,
   };
 }
 
 export async function getLatestSiteBundleRevision(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<SiteBundle | null> {
-  const result = await db.execute({
-    sql: `SELECT html, css, js, ts, created_at
-          FROM site_bundle_revision
-          WHERE tenant_id = ?
-          ORDER BY revision_id DESC
-          LIMIT 1`,
-    args: [tenantId],
-  });
+  const rows = await db
+    .select({
+      html: siteBundleRevision.html,
+      css: siteBundleRevision.css,
+      js: siteBundleRevision.js,
+      ts: siteBundleRevision.ts,
+      createdAt: siteBundleRevision.createdAt,
+    })
+    .from(siteBundleRevision)
+    .where(eq(siteBundleRevision.tenantId, tenantId))
+    .orderBy(desc(siteBundleRevision.revisionId))
+    .limit(1);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return rowToRevisionBundle(result.rows[0]);
+  return rows.length > 0 ? toRevisionBundle(rows[0]) : null;
 }
 
 export async function getLatestSiteBundleRevisionId(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<number | null> {
-  const result = await db.execute({
-    sql: `SELECT revision_id
-          FROM site_bundle_revision
-          WHERE tenant_id = ?
-          ORDER BY revision_id DESC
-          LIMIT 1`,
-    args: [tenantId],
-  });
+  const rows = await db
+    .select({ revisionId: siteBundleRevision.revisionId })
+    .from(siteBundleRevision)
+    .where(eq(siteBundleRevision.tenantId, tenantId))
+    .orderBy(desc(siteBundleRevision.revisionId))
+    .limit(1);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  return result.rows[0].revision_id as number;
+  return rows.length > 0 ? rows[0].revisionId : null;
 }
 
 export async function getSiteBundle(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<SiteBundle | null> {
-  const current = await db.execute({
-    sql: `SELECT current_revision_id, html, css, js, ts, updated_at
-          FROM site_bundle
-          WHERE tenant_id = ?
-          LIMIT 1`,
-    args: [tenantId],
-  });
+  const current = await db
+    .select({
+      currentRevisionId: siteBundle.currentRevisionId,
+      html: siteBundle.html,
+      css: siteBundle.css,
+      js: siteBundle.js,
+      ts: siteBundle.ts,
+      updatedAt: siteBundle.updatedAt,
+    })
+    .from(siteBundle)
+    .where(eq(siteBundle.tenantId, tenantId))
+    .limit(1);
 
-  if (current.rows.length > 0) {
-    const row = current.rows[0];
-    const currentRevisionId = row.current_revision_id as number | null;
-    if (currentRevisionId != null) {
-      const revision = await db.execute({
-        sql: `SELECT html, css, js, ts, created_at
-              FROM site_bundle_revision
-              WHERE revision_id = ? AND tenant_id = ?
-              LIMIT 1`,
-        args: [currentRevisionId, tenantId],
-      });
-      if (revision.rows.length > 0) {
-        const r = revision.rows[0];
-        return {
-          html: (r.html as string) ?? "",
-          css: (r.css as string) ?? "",
-          js: (r.js as string) ?? "",
-          ts: (r.ts as string) ?? "",
-          updatedAt: r.created_at as string,
-        };
+  if (current.length > 0) {
+    const row = current[0];
+
+    if (row.currentRevisionId != null) {
+      const revisions = await db
+        .select({
+          html: siteBundleRevision.html,
+          css: siteBundleRevision.css,
+          js: siteBundleRevision.js,
+          ts: siteBundleRevision.ts,
+          createdAt: siteBundleRevision.createdAt,
+        })
+        .from(siteBundleRevision)
+        .where(
+          and(
+            eq(siteBundleRevision.revisionId, row.currentRevisionId),
+            eq(siteBundleRevision.tenantId, tenantId)
+          )
+        )
+        .limit(1);
+
+      if (revisions.length > 0) {
+        return toRevisionBundle(revisions[0]);
       }
     }
 
     // Legacy fallback (pre-revisions) stored directly on site_bundle
-    if ((row.html as string) || (row.css as string) || (row.js as string)) {
-      return rowToBundle(row);
+    if (row.html || row.css || row.js) {
+      return {
+        html: row.html,
+        css: row.css,
+        js: row.js,
+        ts: row.ts,
+        updatedAt: row.updatedAt,
+      };
     }
   }
 
-  // If no current pointer, use the latest revision if any
   return getLatestSiteBundleRevision(db, tenantId);
 }
 
 export async function listSiteBundleRevisions(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<SiteBundleRevision[]> {
-  const result = await db.execute({
-    sql: `SELECT revision_id, html, css, js, ts, created_at
-          FROM site_bundle_revision
-          WHERE tenant_id = ?
-          ORDER BY revision_id DESC`,
-    args: [tenantId],
-  });
-  return result.rows.map(rowToRevision);
+  const rows = await db
+    .select()
+    .from(siteBundleRevision)
+    .where(eq(siteBundleRevision.tenantId, tenantId))
+    .orderBy(desc(siteBundleRevision.revisionId));
+  return rows.map(toRevision);
 }
 
 export async function getCurrentSiteBundleRevisionId(
-  db: Client,
+  db: Database,
   tenantId: string
 ): Promise<number | null> {
-  const result = await db.execute({
-    sql: `SELECT current_revision_id
-          FROM site_bundle
-          WHERE tenant_id = ?
-          LIMIT 1`,
-    args: [tenantId],
-  });
-  if (result.rows.length === 0) return null;
-  const value = result.rows[0].current_revision_id as number | null;
-  return value ?? null;
+  const rows = await db
+    .select({ currentRevisionId: siteBundle.currentRevisionId })
+    .from(siteBundle)
+    .where(eq(siteBundle.tenantId, tenantId))
+    .limit(1);
+
+  if (rows.length === 0) return null;
+  return rows[0].currentRevisionId ?? null;
 }
 
 export async function addSiteBundleRevision(
-  db: Client,
+  db: Database,
   bundle: Omit<SiteBundle, "updatedAt">,
   tenantId: string
 ): Promise<number> {
   const updatedAt = new Date().toISOString();
-  const insert = await db.execute({
-    sql: `INSERT INTO site_bundle_revision (tenant_id, html, css, js, ts, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)`,
-    args: [tenantId, bundle.html, bundle.css, bundle.js, bundle.ts, updatedAt],
-  });
-  const revisionId = Number(insert.lastInsertRowid);
 
-  await db.execute({
-    sql: `INSERT INTO site_bundle (tenant_id, current_revision_id, updated_at)
-          VALUES (?, ?, ?)
-          ON CONFLICT (tenant_id) DO UPDATE SET
-            current_revision_id = excluded.current_revision_id,
-            updated_at = excluded.updated_at`,
-    args: [tenantId, revisionId, updatedAt],
-  });
+  const [inserted] = await db
+    .insert(siteBundleRevision)
+    .values({
+      tenantId,
+      html: bundle.html,
+      css: bundle.css,
+      js: bundle.js,
+      ts: bundle.ts,
+      createdAt: updatedAt,
+    })
+    .returning({ revisionId: siteBundleRevision.revisionId });
+  const revisionId = inserted.revisionId;
 
-  // Keep last 50 revisions per tenant (best-effort cleanup)
-  await db.execute({
+  await db
+    .insert(siteBundle)
+    .values({ tenantId, currentRevisionId: revisionId, updatedAt })
+    .onConflictDoUpdate({
+      target: siteBundle.tenantId,
+      set: { currentRevisionId: revisionId, updatedAt },
+    });
+
+  // Best-effort cleanup: keep last 50 revisions per tenant (LIMIT -1 OFFSET 50 is SQLite-specific)
+  const client = getRawClient();
+  await client.execute({
     sql: `DELETE FROM site_bundle_revision
           WHERE revision_id IN (
             SELECT revision_id
@@ -199,52 +206,48 @@ export async function addSiteBundleRevision(
 }
 
 export async function setCurrentSiteBundleRevision(
-  db: Client,
+  db: Database,
   revisionId: number,
   tenantId: string
 ): Promise<void> {
   const updatedAt = new Date().toISOString();
-  await db.execute({
-    sql: `INSERT INTO site_bundle (tenant_id, current_revision_id, updated_at)
-          VALUES (?, ?, ?)
-          ON CONFLICT (tenant_id) DO UPDATE SET
-            current_revision_id = excluded.current_revision_id,
-            updated_at = excluded.updated_at`,
-    args: [tenantId, revisionId, updatedAt],
-  });
+  await db
+    .insert(siteBundle)
+    .values({ tenantId, currentRevisionId: revisionId, updatedAt })
+    .onConflictDoUpdate({
+      target: siteBundle.tenantId,
+      set: { currentRevisionId: revisionId, updatedAt },
+    });
 }
 
 export async function deleteSiteBundleRevision(
-  db: Client,
+  db: Database,
   revisionId: number,
   tenantId: string
 ): Promise<void> {
-  await db.execute({
-    sql: `DELETE FROM site_bundle_revision
-          WHERE revision_id = ? AND tenant_id = ?`,
-    args: [revisionId, tenantId],
-  });
+  await db
+    .delete(siteBundleRevision)
+    .where(
+      and(eq(siteBundleRevision.revisionId, revisionId), eq(siteBundleRevision.tenantId, tenantId))
+    );
 
   const currentId = await getCurrentSiteBundleRevisionId(db, tenantId);
   if (currentId === revisionId) {
-    const latest = await db.execute({
-      sql: `SELECT revision_id
-            FROM site_bundle_revision
-            WHERE tenant_id = ?
-            ORDER BY revision_id DESC
-            LIMIT 1`,
-      args: [tenantId],
-    });
-    const nextId =
-      latest.rows.length > 0 ? (latest.rows[0].revision_id as number) : null;
+    const latest = await db
+      .select({ revisionId: siteBundleRevision.revisionId })
+      .from(siteBundleRevision)
+      .where(eq(siteBundleRevision.tenantId, tenantId))
+      .orderBy(desc(siteBundleRevision.revisionId))
+      .limit(1);
+
+    const nextId = latest.length > 0 ? latest[0].revisionId : null;
     const updatedAt = new Date().toISOString();
-    await db.execute({
-      sql: `INSERT INTO site_bundle (tenant_id, current_revision_id, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT (tenant_id) DO UPDATE SET
-              current_revision_id = excluded.current_revision_id,
-              updated_at = excluded.updated_at`,
-      args: [tenantId, nextId, updatedAt],
-    });
+    await db
+      .insert(siteBundle)
+      .values({ tenantId, currentRevisionId: nextId, updatedAt })
+      .onConflictDoUpdate({
+        target: siteBundle.tenantId,
+        set: { currentRevisionId: nextId, updatedAt },
+      });
   }
 }

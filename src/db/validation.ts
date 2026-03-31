@@ -39,13 +39,11 @@ export const viewFormSchema = z.object({
 });
 export type ViewFormData = z.infer<typeof viewFormSchema>;
 
-/** Site bundle / layout save form (POST /admin/site/save, POST /admin/layout/save). */
-export const siteBundleFormSchema = z.object({
-  html: z.string().default(""),
-  css: z.string().default(""),
-  ts: z.string().default(""),
+/** Site template save form (POST /admin/layout/save). */
+export const siteTemplateFormSchema = z.object({
+  template: z.string().min(1, "Template JSON is required"),
 });
-export type SiteBundleFormData = z.infer<typeof siteBundleFormSchema>;
+export type SiteTemplateFormData = z.infer<typeof siteTemplateFormSchema>;
 
 /** Subscribe form (POST /api/subscribe). */
 export const subscribeFormSchema = z.object({

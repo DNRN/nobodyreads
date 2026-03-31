@@ -2,14 +2,13 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
-import { transform } from "esbuild";
 import { extname } from "node:path";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import type { Database } from "../db/index.js";
 import {
   pageFormSchema,
   viewFormSchema,
-  siteBundleFormSchema,
+  siteTemplateFormSchema,
   loginFormSchema,
 } from "../db/validation.js";
 import {
@@ -31,9 +30,9 @@ import {
   buildClearSessionCookies,
 } from "./auth.js";
 import {
-  addSiteBundleRevision,
-  deleteSiteBundleRevision,
-  setCurrentSiteBundleRevision,
+  addSiteTemplateRevision,
+  deleteSiteTemplateRevision,
+  setCurrentSiteTemplateRevision,
 } from "../shared/site-bundle.js";
 import { notifySubscribers } from "../subscription/index.js";
 
@@ -91,41 +90,31 @@ export function createEditorRoutes(options: EditorRouterOptions): Hono {
     });
   }
 
-  // --- Site / Layout: save ---
-  const saveSiteBundle = async (c: Context) => {
+  // --- Site / Layout: save template ---
+  const saveSiteTemplate = async (c: Context) => {
     const body = await c.req.parseBody();
-    const parsed = siteBundleFormSchema.safeParse(body);
+    const parsed = siteTemplateFormSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: "Validation failed", details: parsed.error.issues }, 400);
     }
-    const { html, css, ts: tsSource } = parsed.data;
 
-    let compiledJs = "";
-    if (tsSource.trim()) {
-      try {
-        const result = await transform(tsSource, {
-          loader: "ts",
-          target: "es2020",
-          format: "esm",
-        });
-        compiledJs = result.code;
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "TypeScript compilation failed";
-        return c.json({ error: message }, 400);
-      }
+    let template: unknown;
+    try {
+      template = JSON.parse(parsed.data.template);
+    } catch {
+      return c.json({ error: "Invalid JSON" }, 400);
     }
 
-    await addSiteBundleRevision(db, { html, css, js: compiledJs, ts: tsSource }, tenantId);
+    await addSiteTemplateRevision(db, template as import("../template/types.js").SiteTemplateDefinition, tenantId);
     return c.redirect(`${adminBase}/layout`);
   };
-  app.post("/site/save", saveSiteBundle);
-  app.post("/layout/save", saveSiteBundle);
+  app.post("/site/save", saveSiteTemplate);
+  app.post("/layout/save", saveSiteTemplate);
 
   // --- Revision: use ---
   const useRevision = async (c: Context) => {
     const revisionId = parseInt(c.req.param("id") ?? "0", 10);
-    await setCurrentSiteBundleRevision(db, revisionId, tenantId);
+    await setCurrentSiteTemplateRevision(db, revisionId, tenantId);
     return c.redirect(`${adminBase}/layout`);
   };
   app.post("/site/revision/use/:id", useRevision);
@@ -134,7 +123,7 @@ export function createEditorRoutes(options: EditorRouterOptions): Hono {
   // --- Revision: delete ---
   const deleteRevision = async (c: Context) => {
     const revisionId = parseInt(c.req.param("id") ?? "0", 10);
-    await deleteSiteBundleRevision(db, revisionId, tenantId);
+    await deleteSiteTemplateRevision(db, revisionId, tenantId);
     return c.redirect(`${adminBase}/layout`);
   };
   app.post("/site/revision/delete/:id", deleteRevision);

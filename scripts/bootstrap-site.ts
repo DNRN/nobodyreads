@@ -1,9 +1,8 @@
 import { initDb, getDb } from "../src/shared/db.js";
-import { DEFAULT_SITE_TEMPLATE } from "../src/shared/site-template.js";
-import { DEFAULT_SITE_CSS } from "../src/shared/site-style.js";
+import { DEFAULT_TEMPLATE } from "../src/template/defaults.js";
 import {
-  addSiteBundleRevision,
-  listSiteBundleRevisions,
+  addSiteTemplateRevision,
+  listSiteTemplateRevisions,
 } from "../src/shared/site-bundle.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
 import { getContentViewBySlug, upsertContentView } from "../src/content/db.js";
@@ -19,20 +18,12 @@ if (!db) {
   process.exit(1);
 }
 
-const existing = await listSiteBundleRevisions(db, TENANT_ID);
+const existing = await listSiteTemplateRevisions(db, TENANT_ID);
 if (existing.length === 0) {
-  await addSiteBundleRevision(
-    db,
-    {
-      html: DEFAULT_SITE_TEMPLATE,
-      css: DEFAULT_SITE_CSS,
-      js: "",
-    },
-    TENANT_ID
-  );
-  console.log(`Initialized site bundle for tenant ${TENANT_ID}.`);
+  await addSiteTemplateRevision(db, DEFAULT_TEMPLATE, TENANT_ID);
+  console.log(`Initialized site template for tenant ${TENANT_ID}.`);
 } else {
-  console.log(`Site bundle already initialized for tenant ${TENANT_ID}.`);
+  console.log(`Site template already initialized for tenant ${TENANT_ID}.`);
 }
 
 const latestPostsView = await getContentViewBySlug(db, "latest-posts", TENANT_ID);

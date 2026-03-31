@@ -47,25 +47,19 @@ CREATE TABLE IF NOT EXISTS content_view (
   UNIQUE (slug, tenant_id)
 );
 
--- Site bundle (admin-managed HTML/CSS/JS)
-CREATE TABLE IF NOT EXISTS site_bundle (
+-- Site template (structured JSON template definition)
+CREATE TABLE IF NOT EXISTS site_template (
   tenant_id  TEXT PRIMARY KEY DEFAULT '_default',
-  html       TEXT NOT NULL DEFAULT '',
-  css        TEXT NOT NULL DEFAULT '',
-  js         TEXT NOT NULL DEFAULT '',
-  ts         TEXT NOT NULL DEFAULT '',
+  template   TEXT NOT NULL DEFAULT '{}',
   current_revision_id INTEGER,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Site bundle revisions (append-only history)
-CREATE TABLE IF NOT EXISTS site_bundle_revision (
+-- Site template revisions (append-only history)
+CREATE TABLE IF NOT EXISTS site_template_revision (
   revision_id INTEGER PRIMARY KEY AUTOINCREMENT,
   tenant_id   TEXT NOT NULL DEFAULT '_default',
-  html        TEXT NOT NULL DEFAULT '',
-  css         TEXT NOT NULL DEFAULT '',
-  js          TEXT NOT NULL DEFAULT '',
-  ts          TEXT NOT NULL DEFAULT '',
+  template    TEXT NOT NULL DEFAULT '{}',
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

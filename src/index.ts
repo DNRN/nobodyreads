@@ -14,6 +14,16 @@ export type { SubscriptionRouterOptions } from "./subscription/index.js";
 export { initDb, getDb, getRawClient } from "./shared/db.js";
 export type { Database } from "./db/index.js";
 export {
+  tenant,
+  page,
+  contentView,
+  siteTemplate,
+  siteTemplateRevision,
+  siteSettings,
+  media,
+  subscriber,
+} from "./db/schema.js";
+export {
   listPosts,
   listPostsForView,
   getPageBySlug,
@@ -35,14 +45,14 @@ export {
 export {
   pageFormSchema,
   viewFormSchema,
-  siteBundleFormSchema,
+  siteTemplateFormSchema,
   subscribeFormSchema,
   loginFormSchema,
 } from "./db/validation.js";
 export type {
   PageFormData,
   ViewFormData,
-  SiteBundleFormData,
+  SiteTemplateFormData,
   SubscribeFormData,
   LoginFormData,
 } from "./db/validation.js";
@@ -65,18 +75,31 @@ export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./con
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";
 
-// Site bundle
+// Site template
 export {
-  getSiteBundle,
-  getLatestSiteBundleRevision,
-  getLatestSiteBundleRevisionId,
-  listSiteBundleRevisions,
-  getCurrentSiteBundleRevisionId,
-  addSiteBundleRevision,
-  setCurrentSiteBundleRevision,
-  deleteSiteBundleRevision,
+  getSiteTemplate,
+  getLatestSiteTemplateRevision,
+  getLatestSiteTemplateRevisionId,
+  listSiteTemplateRevisions,
+  getCurrentSiteTemplateRevisionId,
+  addSiteTemplateRevision,
+  setCurrentSiteTemplateRevision,
+  deleteSiteTemplateRevision,
 } from "./shared/site-bundle.js";
-export type { SiteBundle, SiteBundleRevision } from "./shared/site-bundle.js";
+export type { SiteTemplateRecord, SiteTemplateRevisionRecord } from "./shared/site-bundle.js";
+
+// Template system
+export {
+  generateCss,
+  generateHtml,
+  DEFAULT_TEMPLATE,
+} from "./template/index.js";
+export type {
+  SiteTemplateDefinition,
+  TokenSet,
+  SectionConfig,
+  ComponentVariants,
+} from "./template/index.js";
 
 // Types
 export type {
@@ -95,6 +118,23 @@ export type {
 } from "./content/types.js";
 export { DEFAULT_TENANT_ID, PLATFORM_TENANT_ID } from "./shared/types.js";
 export type { Tenant } from "./shared/types.js";
+
+// Media storage
+export {
+  createMediaStorage,
+  LocalMediaStorage,
+  GcsMediaStorage,
+} from "./media/storage.js";
+export type { MediaStorage, StoredFile } from "./media/storage.js";
+
+// Editor auth
+export {
+  editorRequiresAuth,
+  isAuthenticatedRequest,
+  buildSessionCookie,
+  buildClearSessionCookies,
+  verifyEditorPassword,
+} from "./editor/auth.js";
 
 // Package paths
 export { getPublicDir, getSchemaPath, getRobotsTxtPath } from "./paths.js";

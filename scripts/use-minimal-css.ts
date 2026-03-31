@@ -1,6 +1,6 @@
 import { initDb, getDb } from "../src/shared/db.js";
-import { DEFAULT_SITE_CSS } from "../src/shared/site-style.js";
-import { getSiteBundle, addSiteBundleRevision } from "../src/shared/site-bundle.js";
+import { DEFAULT_TEMPLATE } from "../src/template/defaults.js";
+import { getSiteTemplate, addSiteTemplateRevision } from "../src/shared/site-bundle.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
 
 await initDb();
@@ -12,9 +12,9 @@ if (!db) {
 }
 
 const tenantsResult = await db.execute({
-  sql: `SELECT DISTINCT tenant_id FROM site_bundle
+  sql: `SELECT DISTINCT tenant_id FROM site_template
         UNION
-        SELECT DISTINCT tenant_id FROM site_bundle_revision`,
+        SELECT DISTINCT tenant_id FROM site_template_revision`,
 });
 
 const tenantIds =
@@ -23,17 +23,8 @@ const tenantIds =
     : [DEFAULT_TENANT_ID];
 
 for (const tenantId of tenantIds) {
-  const bundle = await getSiteBundle(db, tenantId);
-  await addSiteBundleRevision(
-    db,
-    {
-      html: bundle?.html ?? "",
-      css: DEFAULT_SITE_CSS,
-      js: bundle?.js ?? "",
-    },
-    tenantId
-  );
-  console.log(`Applied minimal CSS to tenant ${tenantId}`);
+  await addSiteTemplateRevision(db, DEFAULT_TEMPLATE, tenantId);
+  console.log(`Applied default template to tenant ${tenantId}`);
 }
 
 db.close();

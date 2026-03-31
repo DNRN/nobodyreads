@@ -4,16 +4,34 @@ const {
   adminBase = "/admin",
   siteBase = "/",
   scripts = "",
+  fullWidth = false,
 } = Astro.props as {
   title?: string;
   adminBase?: string;
   siteBase?: string;
   scripts?: string;
+  fullWidth?: boolean;
 };
 
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
+
+const currentPath = Astro.url.pathname;
+
+function isActive(href: string): boolean {
+  if (href === adminBase) return currentPath === adminBase || currentPath === adminBase + "/";
+  return currentPath.startsWith(href);
+}
+
+const navItems = [
+  { href: adminBase, label: "Dashboard" },
+  { href: `${adminBase}/editor`, label: "Content" },
+  { href: `${adminBase}/layout`, label: "Layout" },
+  { href: `${adminBase}/media`, label: "Media" },
+  { href: `${adminBase}/views`, label: "Views" },
+  { href: `${adminBase}/settings`, label: "Settings" },
+];
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -37,23 +55,66 @@ const devReload = import.meta.env.DEV
         }
       })();
     </script>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/editor.css" />
     <Fragment set:html={devReload} />
   </head>
   <body>
-    <header class="editor-header">
-      <div class="editor-header-inner">
-        <a class="editor-logo" href={adminBase}>Admin</a>
-        <nav class="editor-nav">
-          <form method="POST" action={`${adminBase}/logout`} class="editor-nav-form">
+    <div class="nr-admin">
+      <header class="nr-admin-header">
+        <div class="nr-admin-header-left">
+          <button class="nr-admin-hamburger" id="sidebar-toggle" type="button" aria-label="Toggle navigation">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+          </button>
+          <a class="nr-admin-logo" href={adminBase}>nobodyreads</a>
+        </div>
+        <div class="nr-admin-header-right">
+          <a href={siteBase} target="_blank">View site</a>
+          <form method="POST" action={`${adminBase}/logout`} style="margin:0">
             <button type="submit" class="btn btn-ghost">Sign out</button>
           </form>
-          <a href={siteBase} target="_blank">View site</a>
-        </nav>
+        </div>
+      </header>
+
+      <div class="nr-admin-body">
+        <div class="nr-admin-sidebar-overlay" id="sidebar-overlay"></div>
+        <aside class="nr-admin-sidebar" id="admin-sidebar">
+          <div class="nr-admin-nav-section">Navigation</div>
+          {navItems.map((item) => (
+            <a
+              href={item.href}
+              class:list={["nr-admin-nav-link", { active: isActive(item.href) }]}
+            >
+              {item.label}
+            </a>
+          ))}
+        </aside>
+        <div class="nr-admin-content">
+          <slot />
+        </div>
       </div>
-    </header>
-    <slot />
+    </div>
     <script src="/site.js" defer></script>
     <Fragment set:html={scripts} />
+    <script is:inline>
+      (function () {
+        var toggle = document.getElementById("sidebar-toggle");
+        var sidebar = document.getElementById("admin-sidebar");
+        var overlay = document.getElementById("sidebar-overlay");
+        if (!toggle || !sidebar || !overlay) return;
+        function openSidebar() {
+          sidebar.classList.add("open");
+          overlay.classList.add("open");
+        }
+        function closeSidebar() {
+          sidebar.classList.remove("open");
+          overlay.classList.remove("open");
+        }
+        toggle.addEventListener("click", function () {
+          if (sidebar.classList.contains("open")) closeSidebar();
+          else openSidebar();
+        });
+        overlay.addEventListener("click", closeSidebar);
+      })();
+    </script>
   </body>
 </html>

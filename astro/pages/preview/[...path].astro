@@ -6,8 +6,8 @@ import { renderContent } from "../../../src/content/render.js";
 import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
-  getLatestSiteBundleRevision,
-  getLatestSiteBundleRevisionId,
+  getLatestSiteTemplateRevision,
+  getLatestSiteTemplateRevisionId,
 } from "../../../src/shared/site-bundle.js";
 import { getDbClient } from "../../lib/db.js";
 import { formatDate, pagePath } from "../../lib/format.js";
@@ -26,9 +26,9 @@ const siteTagline =
   "Another simple blog engine. For writing mostly to yourself.";
 
 const db = await getDbClient();
-const [siteBundle, latestRevisionId, navItems] = await Promise.all([
-  getLatestSiteBundleRevision(db, tenantId),
-  getLatestSiteBundleRevisionId(db, tenantId),
+const [siteTemplate, latestRevisionId, navItems] = await Promise.all([
+  getLatestSiteTemplateRevision(db, tenantId),
+  getLatestSiteTemplateRevisionId(db, tenantId),
   getNavItems(db, tenantId),
 ]);
 
@@ -130,7 +130,7 @@ const options = page
       siteTagline,
     };
 ---
-<SiteLayout options={options} siteBundleOverride={siteBundle}>
+<SiteLayout options={options} templateOverride={siteTemplate}>
   {page ? (
     <>
       <div class="post-header">

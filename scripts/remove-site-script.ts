@@ -1,5 +1,5 @@
 import { initDb, getDb } from "../src/shared/db.js";
-import { getSiteBundle, addSiteBundleRevision } from "../src/shared/site-bundle.js";
+import { getSiteTemplate, addSiteTemplateRevision } from "../src/shared/site-bundle.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
 
 const TENANT_ID = process.env.TENANT_ID ?? DEFAULT_TENANT_ID;
@@ -12,27 +12,15 @@ if (!db) {
   process.exit(1);
 }
 
-const bundle = await getSiteBundle(db, TENANT_ID);
-if (!bundle) {
-  console.log(`No bundle found for tenant ${TENANT_ID}.`);
+const template = await getSiteTemplate(db, TENANT_ID);
+if (!template) {
+  console.log(`No template found for tenant ${TENANT_ID}.`);
   db.close();
   process.exit(0);
 }
 
-const cleanedHtml = bundle.html.replace(
-  /\n?<script\s+src=["']\/site\.js["']\s+defer><\/script>\n?/g,
-  "\n"
-);
-
-await addSiteBundleRevision(
-  db,
-  {
-    html: cleanedHtml,
-    css: bundle.css,
-    js: bundle.js,
-  },
-  TENANT_ID
-);
+const cleaned = { ...template, customJs: "" };
+await addSiteTemplateRevision(db, cleaned, TENANT_ID);
 
 db.close();
-console.log(`Removed /site.js script from bundle for tenant ${TENANT_ID}.`);
+console.log(`Cleared custom JS from template for tenant ${TENANT_ID}.`);

@@ -74,29 +74,23 @@ export const contentView = sqliteTable(
   ]
 );
 
-// --- Site bundle (admin-managed HTML/CSS/JS) ---
+// --- Site template (structured JSON template definition) ---
 
-export const siteBundle = sqliteTable("site_bundle", {
+export const siteTemplate = sqliteTable("site_template", {
   tenantId: text("tenant_id").primaryKey().default("_default"),
-  html: text("html").notNull().default(""),
-  css: text("css").notNull().default(""),
-  js: text("js").notNull().default(""),
-  ts: text("ts").notNull().default(""),
+  template: text("template", { mode: "json" }).notNull().default({}),
   currentRevisionId: integer("current_revision_id"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(datetime('now'))`),
 });
 
-// --- Site bundle revisions (append-only history) ---
+// --- Site template revisions (append-only history) ---
 
-export const siteBundleRevision = sqliteTable("site_bundle_revision", {
+export const siteTemplateRevision = sqliteTable("site_template_revision", {
   revisionId: integer("revision_id").primaryKey({ autoIncrement: true }),
   tenantId: text("tenant_id").notNull().default("_default"),
-  html: text("html").notNull().default(""),
-  css: text("css").notNull().default(""),
-  js: text("js").notNull().default(""),
-  ts: text("ts").notNull().default(""),
+  template: text("template", { mode: "json" }).notNull().default({}),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

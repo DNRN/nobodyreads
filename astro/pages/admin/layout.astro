@@ -3,12 +3,11 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
 import { initDb } from "../../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
-import { DEFAULT_SITE_TEMPLATE } from "../../../src/shared/site-template.js";
-import { DEFAULT_SITE_CSS } from "../../../src/shared/site-style.js";
+import { DEFAULT_TEMPLATE } from "../../../src/template/defaults.js";
 import {
-  getSiteBundle,
-  listSiteBundleRevisions,
-  getCurrentSiteBundleRevisionId,
+  getSiteTemplate,
+  listSiteTemplateRevisions,
+  getCurrentSiteTemplateRevisionId,
 } from "../../../src/shared/site-bundle.js";
 
 if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
@@ -16,14 +15,11 @@ if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
 }
 
 const db = await initDb();
-const bundle = await getSiteBundle(db, DEFAULT_TENANT_ID);
-const revisions = await listSiteBundleRevisions(db, DEFAULT_TENANT_ID);
-const currentRevisionId = await getCurrentSiteBundleRevisionId(db, DEFAULT_TENANT_ID);
+const template = (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
+const revisions = await listSiteTemplateRevisions(db, DEFAULT_TENANT_ID);
+const currentRevisionId = await getCurrentSiteTemplateRevisionId(db, DEFAULT_TENANT_ID);
 
-const htmlValue = bundle?.html?.trim() ? bundle.html : DEFAULT_SITE_TEMPLATE;
-const cssValue = bundle?.css?.trim() ? bundle.css : DEFAULT_SITE_CSS;
-// Prefer the TS source for editing; fall back to compiled JS for legacy bundles
-const tsValue = bundle?.ts?.trim() ? bundle.ts : (bundle?.js ?? "");
+const templateJson = JSON.stringify(template, null, 2);
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -43,50 +39,28 @@ function formatDateTime(iso: string): string {
   <main class="editor-main editor-main--site">
     <form method="POST" action="/admin/layout/save" class="editor-form editor-form--site" id="site-editor-form">
       <div class="editor-list-header">
-        <h2>Layout Editor</h2>
+        <h2>Template Editor</h2>
         <div class="editor-actions">
-          <button type="submit" class="btn btn-primary">Save &amp; build</button>
+          <button type="submit" class="btn btn-primary">Save</button>
           <span id="site-save-status" class="editor-save-status" aria-live="polite">Ready</span>
         </div>
       </div>
 
       <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
-        <button type="button" class="editor-tab active" data-tab="html">HTML</button>
-        <button type="button" class="editor-tab" data-tab="css">CSS</button>
-        <button type="button" class="editor-tab" data-tab="ts">TypeScript</button>
+        <button type="button" class="editor-tab active" data-tab="template">Template</button>
         <button type="button" class="editor-tab" data-tab="preview">Preview</button>
       </div>
 
       <div class="site-editor">
-        <div class="site-editor-pane site-editor-pane--html" data-pane="html">
-          <label for="site-html">HTML template</label>
+        <div class="site-editor-pane site-editor-pane--template" data-pane="template">
+          <label for="site-template">Template definition (JSON)</label>
           <details class="editor-tokens">
-            <summary>Template tokens</summary>
+            <summary>About the template</summary>
             <div class="editor-tokens-body">
-              <p class="hint">Use these placeholders in your HTML template:</p>
-              <ul class="editor-token-list">
-                <li><code>{"{{content}}"}</code> — the rendered page body.</li>
-                <li><code>{"{{nav}}"}</code> — the main navigation links.</li>
-                <li><code>{"{{siteTagline}}"}</code> — the site tagline text.</li>
-                <li><code>{"{{homeHref}}"}</code> — the home URL.</li>
-                <li><code>{"{{year}}"}</code> — current year.</li>
-                <li><code>{"{{authLinksBlock}}"}</code> — auth/profile links (if enabled).</li>
-                <li><code>{"{{navToggle}}"}</code> — mobile nav toggle button.</li>
-                <li><code>{"{{subscribe}}"}</code> — email subscribe form (if enabled in Settings).</li>
-              </ul>
+              <p class="hint">The template defines your site's design tokens (colors, fonts, spacing), layout sections, and component variants as structured JSON. Changes here control the entire site appearance.</p>
             </div>
           </details>
-          <textarea id="site-html" name="html" rows="14" class="editor-textarea" spellcheck="false">{htmlValue}</textarea>
-        </div>
-
-        <div class="site-editor-pane site-editor-pane--css hidden" data-pane="css">
-          <label for="site-css">CSS</label>
-          <textarea id="site-css" name="css" rows="14" class="editor-textarea" spellcheck="false">{cssValue}</textarea>
-        </div>
-
-        <div class="site-editor-pane site-editor-pane--ts hidden" data-pane="ts">
-          <label for="site-ts">TypeScript (compiled to JS on save)</label>
-          <textarea id="site-ts" name="ts" rows="14" class="editor-textarea" spellcheck="false">{tsValue}</textarea>
+          <textarea id="site-template" name="template" rows="24" class="editor-textarea" spellcheck="false">{templateJson}</textarea>
         </div>
 
         <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">

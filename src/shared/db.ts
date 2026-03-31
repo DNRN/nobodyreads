@@ -72,9 +72,7 @@ async function migrateColumns(client: Client): Promise<void> {
     "ALTER TABLE tenant ADD COLUMN avatar_url TEXT",
     "ALTER TABLE tenant ADD COLUMN avatar_color TEXT",
     "ALTER TABLE tenant ADD COLUMN bio TEXT",
-    "ALTER TABLE site_bundle ADD COLUMN current_revision_id INTEGER",
-    "ALTER TABLE site_bundle ADD COLUMN ts TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE site_bundle_revision ADD COLUMN ts TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE site_template ADD COLUMN current_revision_id INTEGER",
   ];
   for (const sql of migrations) {
     try {

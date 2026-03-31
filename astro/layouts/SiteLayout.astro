@@ -4,15 +4,16 @@ import { escapeHtml } from "../../src/shared/http.js";
 import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/seo.js";
 import { initDb } from "../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
-import type { SiteBundle } from "../../src/shared/site-bundle.js";
-import { getSiteBundle } from "../../src/shared/site-bundle.js";
-import { DEFAULT_SITE_TEMPLATE } from "../../src/shared/site-template.js";
+import { getSiteTemplate } from "../../src/shared/site-bundle.js";
+import type { SiteTemplateDefinition } from "../../src/template/types.js";
+import { generateCss, generateHtml } from "../../src/template/generate.js";
+import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
 import { isEmailEnabled } from "../../src/subscription/email.js";
 
-const { options, authLinksHtml, siteBundleOverride } = Astro.props as {
+const { options, authLinksHtml, templateOverride } = Astro.props as {
   options: LayoutOptions;
   authLinksHtml?: string;
-  siteBundleOverride?: SiteBundle | null;
+  templateOverride?: SiteTemplateDefinition | null;
 };
 
 const siteName = options.siteName ?? (process.env.SITE_NAME || "nobodyreads.me");
@@ -36,7 +37,9 @@ const devReload = import.meta.env.DEV
   : "";
 
 const db = await initDb();
-const siteBundle = siteBundleOverride ?? (await getSiteBundle(db, DEFAULT_TENANT_ID));
+const templateDef: SiteTemplateDefinition =
+  templateOverride ?? (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
+
 const emailEnabled = isEmailEnabled();
 
 const subscribeFormHtml = emailEnabled
@@ -65,7 +68,8 @@ const navToggle = authLinksHtml
       <span></span><span></span><span></span>
      </button>`
   : "";
-const templateHtml = siteBundle?.html?.trim() ? siteBundle.html : DEFAULT_SITE_TEMPLATE;
+
+const templateHtml = generateHtml(templateDef);
 const hasSubscribeToken = templateHtml.includes("{{subscribe}}");
 let bodyHtml = templateHtml
   .replaceAll("{{nav}}", navHtml)
@@ -76,7 +80,6 @@ let bodyHtml = templateHtml
   .replaceAll("{{year}}", `${new Date().getFullYear()}`)
   .replaceAll("{{subscribe}}", subscribeFormHtml);
 
-// Auto-inject subscribe form after post content when no {{subscribe}} token in layout
 const autoInjectSubscribe =
   emailEnabled && !hasSubscribeToken && options.page?.kind === "post";
 const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : slotHtml;
@@ -84,8 +87,9 @@ const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : 
 bodyHtml = bodyHtml.includes("{{content}}")
   ? bodyHtml.replaceAll("{{content}}", contentHtml)
   : `${bodyHtml}\n${contentHtml}`;
-const bundleCss = siteBundle?.css?.trim() ? siteBundle.css : "";
-const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
+
+const generatedCss = generateCss(templateDef);
+const customJs = templateDef.customJs?.trim() || "";
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -118,8 +122,6 @@ const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
     />
     <style is:global>
-      /* Base image constraints — always applied regardless of custom CSS bundle.
-         Must be is:global because images are injected via set:html and lack Astro scoping attributes. */
       .post-body img,
       .page-body img,
       .home-intro img {
@@ -127,14 +129,13 @@ const bundleJs = siteBundle?.js?.trim() ? siteBundle.js : "";
         height: auto;
       }
     </style>
-    {!bundleCss ? <link rel="stylesheet" href="/style.css" /> : null}
-    {bundleCss ? <style set:html={bundleCss} /> : null}
+    <style set:html={generatedCss} />
     <Fragment set:html={scriptTags} />
     <Fragment set:html={devReload} />
   </head>
   <body>
     <Fragment set:html={bodyHtml} />
-    {bundleJs ? <script type="module" set:html={bundleJs} /> : null}
+    {customJs ? <script type="module" set:html={customJs} /> : null}
     <script src="/site.js" defer></script>
   </body>
 </html>

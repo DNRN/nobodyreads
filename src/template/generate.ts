@@ -39,6 +39,9 @@ export function generateCss(def: SiteTemplateDefinition): string {
 }
 
 export function generateHtml(def: SiteTemplateDefinition): string {
+  if (def.layoutHtml) {
+    return def.layoutHtml;
+  }
   return def.sections
     .filter((s) => s.enabled)
     .map((section) => generateSectionHtml(section))

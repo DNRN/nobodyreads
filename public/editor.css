@@ -1084,6 +1084,29 @@
   color: var(--nr-text);
 }
 
+.nr-admin .editor-input--sm {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--nr-border);
+  border-radius: var(--nr-radius);
+  background: var(--nr-bg);
+  color: var(--nr-text);
+}
+
+.nr-admin .editor-label--sm {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nr-muted);
+  margin-bottom: 0.2rem;
+}
+
+.nr-admin .btn-sm {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+}
+
 /* ========================================
    View editor overrides
    ======================================== */

@@ -135,13 +135,20 @@ export async function addSiteTemplateRevision(
     .returning({ revisionId: siteTemplateRevision.revisionId });
   const revisionId = inserted.revisionId;
 
-  await db
-    .insert(siteTemplate)
-    .values({ tenantId, currentRevisionId: revisionId, updatedAt })
-    .onConflictDoUpdate({
-      target: siteTemplate.tenantId,
-      set: { currentRevisionId: revisionId, updatedAt },
-    });
+  // Ensure the site_template row exists (for tenants with no template yet)
+  // but do NOT auto-set currentRevisionId — the revision stays as a draft
+  // until explicitly published via setCurrentSiteTemplateRevision.
+  const existing = await db
+    .select({ tenantId: siteTemplate.tenantId })
+    .from(siteTemplate)
+    .where(eq(siteTemplate.tenantId, tenantId))
+    .limit(1);
+
+  if (existing.length === 0) {
+    await db
+      .insert(siteTemplate)
+      .values({ tenantId, currentRevisionId: null, updatedAt });
+  }
 
   const client = getRawClient();
   await client.execute({

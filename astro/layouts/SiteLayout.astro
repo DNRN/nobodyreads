@@ -5,6 +5,7 @@ import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/se
 import { initDb } from "../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getSiteTemplate } from "../../src/shared/site-bundle.js";
+import { getSiteSettings } from "../../src/shared/site-settings.js";
 import type { SiteTemplateDefinition } from "../../src/template/types.js";
 import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
@@ -75,6 +76,7 @@ let bodyHtml = templateHtml
   .replaceAll("{{nav}}", navHtml)
   .replaceAll("{{authLinksBlock}}", authLinksBlock)
   .replaceAll("{{navToggle}}", navToggle)
+  .replaceAll("{{siteName}}", escapeHtml(siteName))
   .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))
   .replaceAll("{{year}}", `${new Date().getFullYear()}`)
@@ -87,6 +89,15 @@ const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : 
 bodyHtml = bodyHtml.includes("{{content}}")
   ? bodyHtml.replaceAll("{{content}}", contentHtml)
   : `${bodyHtml}\n${contentHtml}`;
+
+if (templateDef.customTokens?.length) {
+  const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
+  for (const token of templateDef.customTokens) {
+    const value = settings[`custom_token:${token.key}`] ?? token.defaultValue;
+    const rendered = token.type === "html" ? value : escapeHtml(value);
+    bodyHtml = bodyHtml.replaceAll(`{{${token.key}}}`, rendered);
+  }
+}
 
 const generatedCss = generateCss(templateDef);
 const customJs = templateDef.customJs?.trim() || "";

@@ -4,6 +4,8 @@ import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/
 import { initDb } from "../../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import { DEFAULT_TEMPLATE } from "../../../src/template/defaults.js";
+import { generateHtml } from "../../../src/template/generate.js";
+import { getSiteSettings } from "../../../src/shared/site-settings.js";
 import {
   getSiteTemplate,
   listSiteTemplateRevisions,
@@ -18,8 +20,31 @@ const db = await initDb();
 const template = (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
 const revisions = await listSiteTemplateRevisions(db, DEFAULT_TENANT_ID);
 const currentRevisionId = await getCurrentSiteTemplateRevisionId(db, DEFAULT_TENANT_ID);
+const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
 
+const layoutHtml = template.layoutHtml ?? "";
+const customCss = template.customCss ?? "";
+const customJs = template.customJs ?? "";
+const customTokens = template.customTokens ?? [];
+const themeMeta = template.themeMeta ?? null;
 const templateJson = JSON.stringify(template, null, 2);
+
+const generatedHtml = generateHtml({ ...template, layoutHtml: undefined });
+
+const tokenValues: Record<string, string> = {};
+for (const token of customTokens) {
+  tokenValues[token.key] = settings[`custom_token:${token.key}`] ?? token.defaultValue;
+}
+
+const builtinTokens = [
+  { token: "{{content}}", description: "Page/post body content" },
+  { token: "{{nav}}", description: "Navigation links" },
+  { token: "{{subscribe}}", description: "Email subscribe form" },
+  { token: "{{siteName}}", description: "Site name" },
+  { token: "{{siteTagline}}", description: "Site tagline" },
+  { token: "{{homeHref}}", description: "Home page URL" },
+  { token: "{{year}}", description: "Current year" },
+];
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -33,37 +58,143 @@ function formatDateTime(iso: string): string {
 }
 ---
 <AdminLayout
-  title="Layout Editor — Admin"
+  title="Theme Editor — Admin"
   scripts={`<script src="/site-editor.js"></script>`}
 >
   <main class="editor-main editor-main--site">
     <form method="POST" action="/admin/layout/save" class="editor-form editor-form--site" id="site-editor-form">
       <div class="editor-list-header">
-        <h2>Template Editor</h2>
+        <h2>Theme Editor</h2>
         <div class="editor-actions">
-          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="submit" class="btn btn-primary">Save draft</button>
           <span id="site-save-status" class="editor-save-status" aria-live="polite">Ready</span>
         </div>
       </div>
 
       <div class="editor-tabs editor-tabs--site" id="site-editor-tabs">
-        <button type="button" class="editor-tab active" data-tab="template">Template</button>
+        <button type="button" class="editor-tab active" data-tab="html">HTML</button>
+        <button type="button" class="editor-tab" data-tab="css">CSS</button>
+        <button type="button" class="editor-tab" data-tab="js">JS</button>
+        <button type="button" class="editor-tab" data-tab="tokens">Tokens</button>
+        <button type="button" class="editor-tab" data-tab="advanced">Advanced</button>
         <button type="button" class="editor-tab" data-tab="preview">Preview</button>
       </div>
 
+      <input type="hidden" name="template" id="site-template-hidden" value={templateJson} />
+
       <div class="site-editor">
-        <div class="site-editor-pane site-editor-pane--template" data-pane="template">
-          <label for="site-template">Template definition (JSON)</label>
+        <!-- HTML Layout tab -->
+        <div class="site-editor-pane" data-pane="html">
+          <label for="site-html">Layout HTML</label>
           <details class="editor-tokens">
-            <summary>About the template</summary>
+            <summary>Available tokens</summary>
             <div class="editor-tokens-body">
-              <p class="hint">The template defines your site's design tokens (colors, fonts, spacing), layout sections, and component variants as structured JSON. Changes here control the entire site appearance.</p>
+              <p class="hint">Use these tokens in your HTML layout. They will be replaced with actual content at render time.</p>
+              <ul class="editor-token-list">
+                {builtinTokens.map(({ token, description }) => (
+                  <li><code>{token}</code> — {description}</li>
+                ))}
+                {customTokens.map((t) => (
+                  <li><code>{`{{${t.key}}}`}</code> — {t.label} (custom)</li>
+                ))}
+              </ul>
+              {!layoutHtml && (
+                <p class="hint" style="margin-top: 0.5rem">
+                  No custom HTML set. The generated layout from your section config is shown below.
+                  Edit it to start customizing, or leave empty to use the auto-generated layout.
+                </p>
+              )}
             </div>
           </details>
-          <textarea id="site-template" name="template" rows="24" class="editor-textarea" spellcheck="false">{templateJson}</textarea>
+          <textarea id="site-html" name="layoutHtml" rows="24" class="editor-textarea" spellcheck="false">{layoutHtml || generatedHtml}</textarea>
         </div>
 
-        <div class="site-editor-pane site-editor-pane--preview hidden" data-pane="preview">
+        <!-- CSS tab -->
+        <div class="site-editor-pane hidden" data-pane="css">
+          <label for="site-css">Custom CSS</label>
+          <p class="hint">Additional CSS appended after the generated theme styles. Use CSS variables from your design tokens.</p>
+          <textarea id="site-css" name="customCss" rows="24" class="editor-textarea" spellcheck="false">{customCss}</textarea>
+        </div>
+
+        <!-- JS tab -->
+        <div class="site-editor-pane hidden" data-pane="js">
+          <label for="site-ts">Custom JavaScript</label>
+          <p class="hint">Runs as a module script on every page. Use with caution.</p>
+          <textarea id="site-ts" name="customJs" rows="24" class="editor-textarea" spellcheck="false">{customJs}</textarea>
+        </div>
+
+        <!-- Custom Tokens tab -->
+        <div class="site-editor-pane hidden" data-pane="tokens">
+          <label>Custom Tokens</label>
+          <p class="hint">Define reusable variables for your layout. Token keys become <code>{"{{key}}"}</code> placeholders in your HTML.</p>
+
+          <div id="custom-tokens-editor" data-tokens={JSON.stringify(customTokens)} data-values={JSON.stringify(tokenValues)}>
+            {customTokens.length === 0 ? (
+              <p class="editor-empty">No custom tokens defined. Add one below.</p>
+            ) : (
+              <table class="editor-table">
+                <thead>
+                  <tr><th>Key</th><th>Label</th><th>Type</th><th>Value</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {customTokens.map((t) => (
+                    <tr data-token-key={t.key}>
+                      <td><code>{`{{${t.key}}}`}</code></td>
+                      <td>{t.label}</td>
+                      <td>{t.type}</td>
+                      <td>
+                        <input
+                          type={t.type === "color" ? "color" : "text"}
+                          class="editor-input editor-input--sm"
+                          name={`tokenval:${t.key}`}
+                          value={tokenValues[t.key] ?? t.defaultValue}
+                        />
+                      </td>
+                      <td>
+                        <button type="button" class="btn btn-danger btn-sm" data-remove-token={t.key}>Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <div class="editor-token-add" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end;">
+              <div>
+                <label class="editor-label--sm" for="new-token-key">Key</label>
+                <input type="text" id="new-token-key" class="editor-input editor-input--sm" placeholder="e.g. copyright_text" pattern="[a-zA-Z_][a-zA-Z0-9_]*" />
+              </div>
+              <div>
+                <label class="editor-label--sm" for="new-token-label">Label</label>
+                <input type="text" id="new-token-label" class="editor-input editor-input--sm" placeholder="e.g. Copyright Text" />
+              </div>
+              <div>
+                <label class="editor-label--sm" for="new-token-type">Type</label>
+                <select id="new-token-type" class="editor-input editor-input--sm">
+                  <option value="text">text</option>
+                  <option value="html">html</option>
+                  <option value="url">url</option>
+                  <option value="color">color</option>
+                </select>
+              </div>
+              <div>
+                <label class="editor-label--sm" for="new-token-default">Default</label>
+                <input type="text" id="new-token-default" class="editor-input editor-input--sm" placeholder="default value" />
+              </div>
+              <button type="button" class="btn btn-ghost" id="add-token-btn">Add token</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced (raw JSON) tab -->
+        <div class="site-editor-pane hidden" data-pane="advanced">
+          <label for="site-json">Raw Template JSON</label>
+          <p class="hint">Edit the full template definition as JSON. Changes here override all other tabs. For advanced users only.</p>
+          <textarea id="site-json" name="templateJson" rows="24" class="editor-textarea" spellcheck="false">{templateJson}</textarea>
+        </div>
+
+        <!-- Preview tab -->
+        <div class="site-editor-pane hidden" data-pane="preview">
           <div class="editor-preview-label">
             Preview
             <a href="/preview" target="_blank" rel="noreferrer" class="btn btn-ghost">Open in new tab</a>
@@ -71,54 +202,78 @@ function formatDateTime(iso: string): string {
           <iframe id="site-preview" title="Site preview" src="/preview" data-preview-url="/preview"></iframe>
         </div>
       </div>
+    </form>
 
-      <div class="editor-list-section">
-        <h3>Revisions</h3>
-        {revisions.length === 0 ? (
-          <p class="editor-empty">No revisions yet. Save your first change.</p>
-        ) : (
-          <table class="editor-table">
-            <thead>
-              <tr><th>ID</th><th>Saved</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {revisions.map((rev) => {
-                const isCurrent = currentRevisionId === rev.revisionId;
-                return (
-                  <tr>
-                    <td>#{rev.revisionId}</td>
-                    <td>{formatDateTime(rev.createdAt)}</td>
-                    <td>
-                      {isCurrent
-                        ? <span class="badge badge-published">active</span>
-                        : <span class="badge badge-draft">saved</span>}
-                    </td>
-                    <td class="cell-actions">
-                      {!isCurrent ? (
-                        <form
-                          method="POST"
-                          action={`/admin/layout/revision/use/${rev.revisionId}`}
-                          class="editor-inline-form"
-                        >
-                          <button type="submit" class="btn btn-ghost">Use</button>
-                        </form>
-                      ) : null}
-                      <form
-                        method="POST"
-                        action={`/admin/layout/revision/delete/${rev.revisionId}`}
-                        class="editor-inline-form"
-                        onsubmit="return confirm('Delete this revision?')"
-                      >
-                        <button type="submit" class="btn btn-danger">Delete</button>
-                      </form>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+    <!-- Theme Import / Export -->
+    <div class="editor-list-section">
+      <h3>Theme</h3>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <a href="/admin/theme/export" class="btn btn-ghost" download>Export theme</a>
+
+        <form method="POST" action="/admin/theme/import" enctype="multipart/form-data" class="editor-inline-form" style="display: flex; gap: 0.5rem; align-items: center;">
+          <input type="file" name="file" accept=".json,application/json" class="editor-input editor-input--sm" />
+          <button type="submit" class="btn btn-ghost">Import theme</button>
+        </form>
+
+        {themeMeta && (
+          <span class="hint" style="margin-left: 0.5rem">
+            Current: <strong>{themeMeta.name}</strong> v{themeMeta.version} by {themeMeta.author}
+          </span>
         )}
       </div>
-    </form>
+    </div>
+
+    <!-- Revisions -->
+    <div class="editor-list-section">
+      <h3>Revisions</h3>
+      {revisions.length === 0 ? (
+        <p class="editor-empty">No revisions yet. Save your first change.</p>
+      ) : (
+        <table class="editor-table">
+          <thead>
+            <tr><th>ID</th><th>Saved</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {revisions.map((rev) => {
+              const isCurrent = currentRevisionId === rev.revisionId;
+              const meta = (rev.template as any)?.themeMeta;
+              return (
+                <tr>
+                  <td>
+                    #{rev.revisionId}
+                    {meta?.name ? <span class="hint" style="margin-left: 0.25rem">({meta.name})</span> : null}
+                  </td>
+                  <td>{formatDateTime(rev.createdAt)}</td>
+                  <td>
+                    {isCurrent
+                      ? <span class="badge badge-published">published</span>
+                      : <span class="badge badge-draft">draft</span>}
+                  </td>
+                  <td class="cell-actions">
+                    {!isCurrent ? (
+                      <form
+                        method="POST"
+                        action={`/admin/layout/revision/publish/${rev.revisionId}`}
+                        class="editor-inline-form"
+                      >
+                        <button type="submit" class="btn btn-primary btn-sm">Publish</button>
+                      </form>
+                    ) : null}
+                    <form
+                      method="POST"
+                      action={`/admin/layout/revision/delete/${rev.revisionId}`}
+                      class="editor-inline-form"
+                      onsubmit="return confirm('Delete this revision?')"
+                    >
+                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
   </main>
 </AdminLayout>

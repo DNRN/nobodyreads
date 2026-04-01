@@ -50,6 +50,20 @@ export interface ComponentVariants {
   nav: "inline" | "dropdown";
 }
 
+export interface CustomToken {
+  key: string;
+  label: string;
+  defaultValue: string;
+  type: "text" | "html" | "url" | "color";
+}
+
+export interface ThemeMeta {
+  name: string;
+  author: string;
+  description: string;
+  version: string;
+}
+
 export interface SiteTemplateDefinition {
   tokens: {
     light: TokenSet;
@@ -59,4 +73,7 @@ export interface SiteTemplateDefinition {
   components: ComponentVariants;
   customCss?: string;
   customJs?: string;
+  layoutHtml?: string;
+  customTokens?: CustomToken[];
+  themeMeta?: ThemeMeta;
 }

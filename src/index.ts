@@ -88,6 +88,14 @@ export {
 } from "./shared/site-bundle.js";
 export type { SiteTemplateRecord, SiteTemplateRevisionRecord } from "./shared/site-bundle.js";
 
+// Site settings
+export {
+  getSiteSettings,
+  getSiteSetting,
+  setSiteSetting,
+  deleteSiteSetting,
+} from "./shared/site-settings.js";
+
 // Template system
 export {
   generateCss,
@@ -99,6 +107,8 @@ export type {
   TokenSet,
   SectionConfig,
   ComponentVariants,
+  CustomToken,
+  ThemeMeta,
 } from "./template/index.js";
 
 // Types

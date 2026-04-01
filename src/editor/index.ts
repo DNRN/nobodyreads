@@ -30,10 +30,14 @@ import {
   buildClearSessionCookies,
 } from "./auth.js";
 import {
+  getSiteTemplate,
   addSiteTemplateRevision,
   deleteSiteTemplateRevision,
   setCurrentSiteTemplateRevision,
 } from "../shared/site-bundle.js";
+import { getSiteSettings, setSiteSetting, deleteSiteSetting } from "../shared/site-settings.js";
+import { validateTheme, themeHasScripts } from "../template/theme-io.js";
+import { DEFAULT_TEMPLATE } from "../template/defaults.js";
 import { notifySubscribers } from "../subscription/index.js";
 
 export interface EditorRouterOptions {
@@ -111,14 +115,15 @@ export function createEditorRoutes(options: EditorRouterOptions): Hono {
   app.post("/site/save", saveSiteTemplate);
   app.post("/layout/save", saveSiteTemplate);
 
-  // --- Revision: use ---
-  const useRevision = async (c: Context) => {
+  // --- Revision: publish ---
+  const publishRevision = async (c: Context) => {
     const revisionId = parseInt(c.req.param("id") ?? "0", 10);
     await setCurrentSiteTemplateRevision(db, revisionId, tenantId);
     return c.redirect(`${adminBase}/layout`);
   };
-  app.post("/site/revision/use/:id", useRevision);
-  app.post("/layout/revision/use/:id", useRevision);
+  app.post("/site/revision/use/:id", publishRevision);
+  app.post("/layout/revision/use/:id", publishRevision);
+  app.post("/layout/revision/publish/:id", publishRevision);
 
   // --- Revision: delete ---
   const deleteRevision = async (c: Context) => {
@@ -302,6 +307,88 @@ export function createEditorRoutes(options: EditorRouterOptions): Hono {
       return c.redirect(`${adminBase}/media`);
     });
   }
+
+  // --- Theme: export ---
+  app.get("/theme/export", async (c) => {
+    const template = (await getSiteTemplate(db, tenantId)) ?? DEFAULT_TEMPLATE;
+    const filename = template.themeMeta?.name
+      ? `${template.themeMeta.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`
+      : "theme.json";
+    c.header("Content-Type", "application/json");
+    c.header("Content-Disposition", `attachment; filename="${filename}"`);
+    return c.body(JSON.stringify(template, null, 2));
+  });
+
+  // --- Theme: import ---
+  app.post("/theme/import", async (c) => {
+    const body = await c.req.parseBody();
+    const file = body.file;
+
+    let raw: string;
+    if (file instanceof File) {
+      raw = await file.text();
+    } else if (typeof body.theme === "string") {
+      raw = body.theme;
+    } else {
+      return c.json({ error: "No theme data provided" }, 400);
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const result = validateTheme(parsed);
+    if (!result.ok) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    const revisionId = await addSiteTemplateRevision(db, result.theme, tenantId);
+    const hasScripts = themeHasScripts(result.theme);
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) {
+      return c.json({ revisionId, hasScripts });
+    }
+    return c.redirect(`${adminBase}/layout`);
+  });
+
+  // --- Custom token settings: save values ---
+  app.post("/settings/tokens", async (c) => {
+    const body = await c.req.parseBody();
+
+    for (const [key, value] of Object.entries(body)) {
+      if (!key.startsWith("token:") || typeof value !== "string") continue;
+      const tokenKey = key.slice("token:".length);
+      const settingKey = `custom_token:${tokenKey}`;
+
+      if (value.trim() === "") {
+        await deleteSiteSetting(db, tenantId, settingKey);
+      } else {
+        await setSiteSetting(db, tenantId, settingKey, value);
+      }
+    }
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) {
+      return c.json({ ok: true });
+    }
+    return c.redirect(`${adminBase}/layout`);
+  });
+
+  // --- Custom token settings: get values (JSON) ---
+  app.get("/settings/tokens", async (c) => {
+    const settings = await getSiteSettings(db, tenantId);
+    const tokens: Record<string, string> = {};
+    for (const [key, value] of Object.entries(settings)) {
+      if (key.startsWith("custom_token:")) {
+        tokens[key.slice("custom_token:".length)] = value;
+      }
+    }
+    return c.json(tokens);
+  });
 
   return app;
 }

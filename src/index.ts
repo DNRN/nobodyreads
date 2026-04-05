@@ -1,8 +1,14 @@
 // Routers (Hono sub-apps)
 export { createBlogApiRoutes } from "./content/index.js";
 export type { BlogApiOptions } from "./content/index.js";
-export { createEditorRoutes } from "./editor/index.js";
-export type { EditorRouterOptions } from "./editor/index.js";
+export { createAdminRoutes, createEditorRoutes } from "./admin/server/routes.js";
+export type { AdminRouterOptions, EditorRouterOptions } from "./admin/server/routes.js";
+export { createContentRoutes } from "./admin/server/modules/content.js";
+export { createThemeRoutes } from "./admin/server/modules/theme.js";
+export { createMediaRoutes } from "./admin/server/modules/media.js";
+export { createViewRoutes } from "./admin/server/modules/views.js";
+export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
+export type { AdminModuleContext } from "./admin/server/modules/types.js";
 export {
   createSubscriptionApiRoutes,
   createSubscriptionAdminRoutes,
@@ -139,12 +145,13 @@ export type { MediaStorage, StoredFile } from "./media/storage.js";
 
 // Editor auth
 export {
+  guardAuth,
   editorRequiresAuth,
   isAuthenticatedRequest,
   buildSessionCookie,
   buildClearSessionCookies,
   verifyEditorPassword,
-} from "./editor/auth.js";
+} from "./admin/server/auth.js";
 
 // Package paths
 export { getPublicDir, getSchemaPath, getRobotsTxtPath } from "./paths.js";

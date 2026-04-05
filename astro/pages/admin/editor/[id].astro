@@ -1,14 +1,12 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../../src/editor/auth.js";
+import { guardAuth } from "../../../../src/admin/server/auth.js";
 import { initDb } from "../../../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../../../src/shared/types.js";
 import { getPageById } from "../../../../src/content/db.js";
 
-if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
-  return Astro.redirect("/admin/login");
-}
+if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 
 const { id } = Astro.params;
 if (!id || id === "new" || id === "save" || id === "login" || id === "delete") {

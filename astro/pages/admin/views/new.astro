@@ -1,11 +1,9 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import ViewEditorForm from "../../../components/admin/ViewEditorForm.astro";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../../src/editor/auth.js";
+import { guardAuth } from "../../../../src/admin/server/auth.js";
 
-if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
-  return Astro.redirect("/admin/login");
-}
+if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 ---
 <AdminLayout title="New View — Admin" scripts={`<script src="/view-editor.js"></script>`}>
   <ViewEditorForm viewsBase="/admin/views" />

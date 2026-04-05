@@ -1,11 +1,9 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../../src/editor/auth.js";
+import { guardAuth } from "../../../../src/admin/server/auth.js";
 
-if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
-  return Astro.redirect("/admin/login");
-}
+if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 ---
 <AdminLayout
   title="New Page — Admin"

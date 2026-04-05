@@ -13,7 +13,7 @@ import { streamSSE } from "hono/streaming";
 import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/index.js";
-import { createEditorRoutes } from "./editor/index.js";
+import { createEditorRoutes } from "./admin/server/routes.js";
 import {
   createSubscriptionApiRoutes,
   createSubscriptionAdminRoutes,
@@ -21,7 +21,7 @@ import {
 import {
   editorRequiresAuth,
   isAuthenticatedRequest,
-} from "./editor/auth.js";
+} from "./admin/server/auth.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -242,7 +242,7 @@ async function start() {
               : undefined,
           redirect: "manual",
           duplex: "half",
-        });
+        } as RequestInit);
 
         const headers = new Headers();
         proxyRes.headers.forEach((value, key) => {

@@ -2,7 +2,7 @@
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageByKind, getNavItems } from "../../../src/content/db.js";
 import { renderContent } from "../../../src/content/render.js";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+import { guardAuth } from "../../../src/admin/server/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
   getLatestSiteTemplateRevision,
@@ -10,9 +10,7 @@ import {
 } from "../../../src/shared/site-bundle.js";
 import { getDbClient } from "../../lib/db.js";
 
-if (editorRequiresAuth() && !isAuthenticatedRequest(Astro.request)) {
-  return Astro.redirect("/admin/login");
-}
+if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 
 Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
 

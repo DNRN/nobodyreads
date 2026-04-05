@@ -1,61 +1,38 @@
-import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { basicSetup } from "codemirror";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { replaceTextarea } from "./core/create-editor.js";
+import type { EditorInstance } from "./types.js";
+import type { SiteEditorOptions, SiteEditorInstance } from "./types.js";
 
-function isDarkMode() {
-  return document.documentElement.dataset.theme === "dark";
-}
-
-function createEditor(textarea, extensions) {
-  textarea.style.display = "none";
-  const parent = textarea.parentElement;
-  if (!parent) {
-    throw new Error("Missing textarea parent");
-  }
-
-  const themeExtensions = isDarkMode() ? [oneDark] : [];
-
-  const state = EditorState.create({
-    doc: textarea.value,
-    extensions: [basicSetup, ...themeExtensions, ...extensions],
-  });
-
-  const view = new EditorView({
-    state,
-    parent,
-  });
-
-  return { view, textarea };
-}
-
-function getEditorValue(editor) {
-  if (!editor) return "";
-  return editor.view.state.doc.toString();
-}
-
-function initSiteEditor() {
-  const form = document.getElementById("site-editor-form");
-  const tabs = document.getElementById("site-editor-tabs");
-  const panes = document.querySelectorAll(".site-editor-pane");
-  const htmlInput = document.getElementById("site-html");
-  const cssInput = document.getElementById("site-css");
-  const tsInput = document.getElementById("site-ts");
-  const jsonInput = document.getElementById("site-json");
-  const templateHidden = document.getElementById("site-template-hidden");
-  const preview = document.getElementById("site-preview");
-  const saveStatus = document.getElementById("site-save-status");
-
-  if (!form || !tabs || !htmlInput || !cssInput || !tsInput || !templateHidden || !preview) return;
+/**
+ * Create a site/template editor with multiple CodeMirror panes
+ * (HTML, CSS, JS, advanced JSON), tabbed navigation, live preview,
+ * and custom token management.
+ */
+export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance {
+  const {
+    formElement,
+    tabs,
+    panes,
+    htmlInput,
+    cssInput,
+    tsInput,
+    jsonInput,
+    templateHidden,
+    preview,
+    saveStatus,
+    customTokensEditor,
+    addTokenBtn,
+  } = options;
+  const tokenSaveUrl = options.tokenSaveUrl ?? "/admin/settings/tokens";
 
   let isDirty = false;
-  let editMode = "tabs"; // "tabs" or "advanced"
+  let editMode: "tabs" | "advanced" = "tabs";
 
-  function setSaveStatus(state) {
+  function setSaveStatus(state: string) {
     if (!saveStatus) return;
     saveStatus.dataset.state = state;
     if (state === "dirty") saveStatus.textContent = "Unsaved changes";
@@ -72,18 +49,19 @@ function initSiteEditor() {
   }
 
   const changeListener = EditorView.updateListener.of((update) => {
-    if (update.docChanged) {
-      markDirty();
-    }
+    if (update.docChanged) markDirty();
   });
 
-  const htmlEditor = createEditor(htmlInput, [html(), changeListener]);
-  const cssEditor = createEditor(cssInput, [css(), changeListener]);
-  const tsEditor = createEditor(tsInput, [javascript({ typescript: true }), changeListener]);
-  const jsonEditor = jsonInput ? createEditor(jsonInput, [json(), changeListener]) : null;
+  const htmlEditor = replaceTextarea(htmlInput, [html(), changeListener])!;
+  const cssEditor = replaceTextarea(cssInput, [css(), changeListener])!;
+  const tsEditor = replaceTextarea(tsInput, [javascript({ typescript: true }), changeListener])!;
+  const jsonEditor: EditorInstance | null = jsonInput
+    ? replaceTextarea(jsonInput, [json(), changeListener])
+    : null;
+
   const previewUrl = preview.getAttribute("data-preview-url") || "/preview";
 
-  function buildPreviewUrl(forceRefresh = false) {
+  function buildPreviewUrl(forceRefresh = false): string {
     const url = new URL(previewUrl, window.location.origin);
     if (forceRefresh) {
       url.searchParams.set("t", String(Date.now()));
@@ -97,7 +75,7 @@ function initSiteEditor() {
     preview.setAttribute("src", buildPreviewUrl(forceRefresh));
   }
 
-  function getCurrentTemplate() {
+  function getCurrentTemplate(): Record<string, unknown> {
     try {
       return JSON.parse(templateHidden.value);
     } catch {
@@ -105,23 +83,25 @@ function initSiteEditor() {
     }
   }
 
-  function getCustomTokensFromUI() {
-    const rows = document.querySelectorAll("#custom-tokens-editor tr[data-token-key]");
-    const tokens = [];
+  function getCustomTokensFromUI(): Array<{ key: string; label: string; type: string; defaultValue: string }> {
+    const container = customTokensEditor ?? document.getElementById("custom-tokens-editor");
+    if (!container) return [];
+    const rows = container.querySelectorAll("tr[data-token-key]");
+    const tokens: Array<{ key: string; label: string; type: string; defaultValue: string }> = [];
     for (const row of rows) {
-      const key = row.getAttribute("data-token-key");
+      const key = row.getAttribute("data-token-key") ?? "";
       const label = row.querySelector("td:nth-child(2)")?.textContent?.trim() ?? key;
       const type = row.querySelector("td:nth-child(3)")?.textContent?.trim() ?? "text";
-      const input = row.querySelector(`input[name="tokenval:${key}"]`);
+      const input = row.querySelector(`input[name="tokenval:${key}"]`) as HTMLInputElement | null;
       const defaultValue = input?.value ?? "";
       tokens.push({ key, label, type, defaultValue });
     }
     return tokens;
   }
 
-  function getTokenValuesFromUI() {
-    const values = {};
-    const inputs = document.querySelectorAll('input[name^="tokenval:"]');
+  function getTokenValuesFromUI(): Record<string, string> {
+    const values: Record<string, string> = {};
+    const inputs = document.querySelectorAll('input[name^="tokenval:"]') as NodeListOf<HTMLInputElement>;
     for (const input of inputs) {
       const key = input.name.slice("tokenval:".length);
       values[key] = input.value;
@@ -129,48 +109,37 @@ function initSiteEditor() {
     return values;
   }
 
-  function buildTemplateJson() {
+  function buildTemplateJson(): string {
     if (editMode === "advanced" && jsonEditor) {
-      return getEditorValue(jsonEditor);
+      return jsonEditor.getValue();
     }
 
     const base = getCurrentTemplate();
-    const layoutHtml = getEditorValue(htmlEditor).trim();
-    const customCss = getEditorValue(cssEditor).trim();
-    const customJs = getEditorValue(tsEditor).trim();
+    const layoutHtml = htmlEditor.getValue().trim();
+    const customCss = cssEditor.getValue().trim();
+    const customJs = tsEditor.getValue().trim();
     const customTokens = getCustomTokensFromUI();
 
-    if (layoutHtml) {
-      base.layoutHtml = layoutHtml;
-    } else {
-      delete base.layoutHtml;
-    }
+    if (layoutHtml) base.layoutHtml = layoutHtml;
+    else delete base.layoutHtml;
 
-    if (customCss) {
-      base.customCss = customCss;
-    } else {
-      delete base.customCss;
-    }
+    if (customCss) base.customCss = customCss;
+    else delete base.customCss;
 
-    if (customJs) {
-      base.customJs = customJs;
-    } else {
-      delete base.customJs;
-    }
+    if (customJs) base.customJs = customJs;
+    else delete base.customJs;
 
-    if (customTokens.length > 0) {
-      base.customTokens = customTokens;
-    } else {
-      delete base.customTokens;
-    }
+    if (customTokens.length > 0) base.customTokens = customTokens;
+    else delete base.customTokens;
 
     return JSON.stringify(base, null, 2);
   }
 
-  function activateTab(target) {
+  function activateTab(target: string) {
     tabs.querySelectorAll(".editor-tab").forEach((t) => t.classList.remove("active"));
     tabs.querySelector(`.editor-tab[data-tab="${target}"]`)?.classList.add("active");
-    panes.forEach((pane) => {
+    const paneList = Array.from(panes);
+    paneList.forEach((pane) => {
       const isTarget = pane.getAttribute("data-pane") === target;
       pane.classList.toggle("hidden", !isTarget);
     });
@@ -192,20 +161,19 @@ function initSiteEditor() {
   }
 
   tabs.addEventListener("click", (e) => {
-    const tab = e.target?.closest(".editor-tab");
+    const tab = (e.target as HTMLElement)?.closest(".editor-tab") as HTMLElement | null;
     if (!tab) return;
     const target = tab.dataset.tab;
     if (target) activateTab(target);
   });
 
   // Custom token management
-  const addTokenBtn = document.getElementById("add-token-btn");
   if (addTokenBtn) {
     addTokenBtn.addEventListener("click", () => {
-      const keyInput = document.getElementById("new-token-key");
-      const labelInput = document.getElementById("new-token-label");
-      const typeSelect = document.getElementById("new-token-type");
-      const defaultInput = document.getElementById("new-token-default");
+      const keyInput = document.getElementById("new-token-key") as HTMLInputElement | null;
+      const labelInput = document.getElementById("new-token-label") as HTMLInputElement | null;
+      const typeSelect = document.getElementById("new-token-type") as HTMLSelectElement | null;
+      const defaultInput = document.getElementById("new-token-default") as HTMLInputElement | null;
 
       const key = keyInput?.value?.trim();
       const label = labelInput?.value?.trim();
@@ -224,19 +192,20 @@ function initSiteEditor() {
         return;
       }
 
-      const tbody = document.querySelector("#custom-tokens-editor tbody");
+      const container = customTokensEditor ?? document.getElementById("custom-tokens-editor");
+      let tbody = container?.querySelector("tbody");
       if (!tbody) {
-        const emptyMsg = document.querySelector("#custom-tokens-editor .editor-empty");
+        const emptyMsg = container?.querySelector(".editor-empty");
         if (emptyMsg) {
           const table = document.createElement("table");
           table.className = "editor-table";
           table.innerHTML = `<thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Value</th><th></th></tr></thead><tbody></tbody>`;
           emptyMsg.replaceWith(table);
         }
+        tbody = container?.querySelector("tbody") ?? null;
       }
 
-      const target = document.querySelector("#custom-tokens-editor tbody");
-      if (!target) return;
+      if (!tbody) return;
 
       const tr = document.createElement("tr");
       tr.setAttribute("data-token-key", key);
@@ -248,24 +217,25 @@ function initSiteEditor() {
         <td><input type="${inputType}" class="editor-input editor-input--sm" name="tokenval:${key}" value="${defaultValue}" /></td>
         <td><button type="button" class="btn btn-danger btn-sm" data-remove-token="${key}">Remove</button></td>
       `;
-      target.appendChild(tr);
+      tbody.appendChild(tr);
 
-      keyInput.value = "";
-      labelInput.value = "";
-      defaultInput.value = "";
+      if (keyInput) keyInput.value = "";
+      if (labelInput) labelInput.value = "";
+      if (defaultInput) defaultInput.value = "";
       markDirty();
     });
   }
 
-  document.addEventListener("click", (e) => {
-    const btn = e.target?.closest("[data-remove-token]");
+  const onRemoveToken = (e: Event) => {
+    const btn = (e.target as HTMLElement)?.closest("[data-remove-token]");
     if (!btn) return;
     const row = btn.closest("tr");
     if (row) {
       row.remove();
       markDirty();
     }
-  });
+  };
+  document.addEventListener("click", onRemoveToken);
 
   async function saveTokenValues() {
     const values = getTokenValuesFromUI();
@@ -275,7 +245,7 @@ function initSiteEditor() {
     }
 
     try {
-      await fetch("/admin/settings/tokens", {
+      await fetch(tokenSaveUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
@@ -289,7 +259,7 @@ function initSiteEditor() {
     }
   }
 
-  form.addEventListener("submit", async (event) => {
+  formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     setSaveStatus("saving");
@@ -301,8 +271,8 @@ function initSiteEditor() {
     body.append("template", templateJson);
 
     try {
-      const response = await fetch(form.action, {
-        method: form.method || "POST",
+      const response = await fetch(formElement.action, {
+        method: formElement.method || "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
         },
@@ -321,8 +291,10 @@ function initSiteEditor() {
           const data = await response.json();
           if (data.error) {
             setSaveStatus("error");
-            saveStatus.textContent = `Error: ${data.error}`;
-            saveStatus.title = data.error;
+            if (saveStatus) {
+              saveStatus.textContent = `Error: ${data.error}`;
+              saveStatus.title = data.error;
+            }
             console.error("Save error:", data.error);
             return;
           }
@@ -344,6 +316,14 @@ function initSiteEditor() {
   setSaveStatus("ready");
   refreshPreview();
   activateTab("html");
-}
 
-initSiteEditor();
+  return {
+    destroy() {
+      document.removeEventListener("click", onRemoveToken);
+      htmlEditor.destroy();
+      cssEditor.destroy();
+      tsEditor.destroy();
+      jsonEditor?.destroy();
+    },
+  };
+}

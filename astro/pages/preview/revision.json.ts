@@ -1,11 +1,11 @@
 import type { APIRoute } from "astro";
 import { getDbClient } from "../../lib/db.js";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+import { guardAuth } from "../../../src/admin/server/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import { getLatestSiteTemplateRevisionId } from "../../../src/shared/site-bundle.js";
 
 export const GET: APIRoute = async ({ request }) => {
-  if (editorRequiresAuth() && !isAuthenticatedRequest(request)) {
+  if (guardAuth(request)) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: {

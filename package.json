@@ -7,7 +7,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./editor": {
+      "types": "./dist/admin/client/index.d.ts",
+      "import": "./dist/admin/client/index.js"
+    },
+    "./editor/styles": "./public/editor.css"
   },
   "bin": {
     "nobodyreads": "./dist/standalone.js"
@@ -23,9 +28,7 @@
     "dev:astro": "astro dev",
     "start": "NODE_ENV=production tsx src/standalone.ts",
     "build": "astro build && tsc",
-    "build:site-editor": "esbuild src/editor/site-editor.js --bundle --format=iife --target=es2018 --outfile=public/site-editor.js",
-    "build:view-editor": "esbuild src/editor/view-editor.js --bundle --format=iife --target=es2018 --outfile=public/view-editor.js",
-    "build:page-editor": "esbuild src/editor/page-editor.js --bundle --format=iife --target=es2018 --outfile=public/page-editor.js",
+    "build:editors": "esbuild src/admin/client/entries/page-editor.ts src/admin/client/entries/site-editor.ts src/admin/client/entries/view-editor.ts --bundle --format=iife --target=es2018 --outdir=public",
     "site:use-minimal-css": "tsx scripts/use-minimal-css.ts",
     "site:bootstrap": "tsx scripts/bootstrap-site.ts",
     "site:remove-site-script": "tsx scripts/remove-site-script.ts",

@@ -1,14 +1,8 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { editorRequiresAuth, isAuthenticatedRequest } from "../../../src/editor/auth.js";
+import { guardAuth } from "../../../src/admin/server/auth.js";
 
-if (!editorRequiresAuth()) {
-  return Astro.redirect("/admin");
-}
-
-if (isAuthenticatedRequest(Astro.request)) {
-  return Astro.redirect("/admin");
-}
+if (!guardAuth(Astro.request)) return Astro.redirect("/admin");
 
 const error = Astro.url.searchParams.get("error");
 ---

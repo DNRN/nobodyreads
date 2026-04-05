@@ -5,13 +5,16 @@ A minimal, self-hosted blog engine. Markdown-first, server-rendered, zero client
 ## Features
 
 - **Markdown-first** — write posts and pages in Markdown with YAML frontmatter
-- **Server-rendered** — pure HTML responses, no client JS frameworks
-- **Built-in editor** — browser-based Markdown editor with optional password protection
+- **Server-rendered** — Hono API server with Astro SSR for the public site
+- **Built-in admin** — browser-based editors for pages, views, site template, and media
+- **Template system** — design tokens, section-based layouts, CSS/HTML generation with live preview
 - **Reusable content views** — define list views once and embed with `{{view:slug}}`
 - **Wiki-style links** — use `[[page-id]]` to link between pages
+- **Media uploads** — local filesystem or Google Cloud Storage
+- **Email subscriptions** — built-in subscriber management with pluggable providers (Mailjet included)
 - **SEO built-in** — meta tags, structured data, Open Graph, sitemap-ready
 - **Dark mode** — automatic theme switching with manual override
-- **SQLite-powered** — uses libSQL/Turso for storage (local file or hosted)
+- **SQLite-powered** — Drizzle ORM with libSQL/Turso (local file or hosted)
 - **Self-hostable** — run anywhere with Node.js or Docker
 
 ## Quick start
@@ -32,53 +35,53 @@ nobodyreads
 ### Clone and run
 
 ```bash
-git clone https://github.com/yourusername/nobodyreads.git
+git clone https://github.com/nobodyreads/nobodyreads.git
 cd nobodyreads
 npm install
 npm run site:bootstrap
 npm run dev
 ```
 
-The blog starts at `http://localhost:3000`. The admin overview is at `http://localhost:3000/admin`, the content editor at `http://localhost:3000/admin/editor`, and views at `http://localhost:3000/admin/views`.
+The blog starts at `http://localhost:3000`. The admin area lives under `/admin`:
 
-If you're editing HTML with Astro, run the dev server in a second terminal:
+| Route | Purpose |
+|-------|---------|
+| `/admin` | Dashboard |
+| `/admin/editor` | Page/post editor |
+| `/admin/views` | Content views |
+| `/admin/media` | Media library |
+| `/admin/settings` | Site settings |
+| `/admin/layout` | Site template editor |
+| `/admin/login` | Auth (when password is set) |
 
-```bash
-npm run dev:astro
-```
+### Development with Astro
 
-With `ASTRO_DEV_PROXY=1` (default), the Node server proxies page requests to Astro in dev.
-
-### Editing HTML/CSS with Astro
-
-- HTML lives in `astro/layouts/` and `astro/pages/` as `.astro` files.
-- Reusable UI lives in `astro/components/`.
-- Styles are the same as before in `public/style.css` (Astro serves `public/` directly).
-
-Workflow for quick edits:
-1. Run `npm run dev` and `npm run dev:astro`.
-2. Change `.astro` files for HTML structure and `public/style.css` for styling.
-3. Refresh (or let Astro HMR update the page).
-
-### Production build and serve
-
-Build the production SSR bundle:
+The public site uses Astro for server-side rendering. In development, run both servers:
 
 ```bash
-npm run build
+npm run dev         # Hono API server (port 3000)
+npm run dev:astro   # Astro dev server (port 4321)
 ```
 
-Start the production server:
+The Hono server proxies page requests to Astro in dev mode (controlled by `ASTRO_DEV_PROXY`).
+
+- Layouts live in `astro/layouts/`
+- Pages live in `astro/pages/`
+- Components live in `astro/components/`
+- Server helpers live in `astro/lib/`
+
+### Production build
 
 ```bash
-npm run start
+npm run build    # runs astro build && tsc
+npm run start    # NODE_ENV=production
 ```
 
-The Node app serves the built Astro SSR output from `dist/astro/`.
+The Node server serves the built Astro SSR output from `dist/astro/`.
 
 ## Configuration
 
-Create a `.env` file (see `.env.example`):
+Copy `.env.example` to `.env`:
 
 ```env
 # Database — local SQLite file (default) or Turso URL
@@ -88,17 +91,26 @@ TURSO_AUTH_TOKEN=
 # Server
 PORT=3000
 NODE_ENV=development
-
-# Astro (dev + proxy)
-ASTRO_DEV_URL=http://localhost:4321
-ASTRO_DEV_PROXY=1
-
-# Site identity
 SITE_URL=http://localhost:3000
 SITE_NAME=My Blog
 
-# Editor password (leave empty to disable auth)
+# Editor password (leave empty for open access)
 EDITOR_PASSWORD=
+
+# Media storage — "local" (default) or "gcs"
+MEDIA_STORAGE=local
+MEDIA_DIR=media
+# GCS_BUCKET=
+# GCS_KEY_FILE=
+# GCS_PUBLIC_URL=https://storage.googleapis.com/your-bucket
+
+# Email subscriptions (optional)
+EMAIL_ENABLED=false
+EMAIL_PROVIDER=mailjet
+EMAIL_FROM_NAME=My Blog
+EMAIL_FROM_EMAIL=noreply@yourdomain.com
+MAILJET_API_KEY=
+MAILJET_API_SECRET=
 ```
 
 ## Publishing content
@@ -142,18 +154,13 @@ nav:
 
 ### Content views
 
-Create reusable views in **Admin → Views**, then embed them in any page markdown:
+Create reusable views in **Admin > Views**, then embed them in any page:
 
 ```markdown
 Welcome to my site.
 
 {{view:latest-posts}}
-
-More curated picks:
-{{view:recent-essays}}
 ```
-
-MVP supports `post_list` views with newest-first ordering and an optional item limit.
 
 ### SEO frontmatter
 
@@ -180,82 +187,113 @@ docker run -p 3000:3000 \
 
 ## Using as a library
 
-`nobodyreads` can also be used as an npm package to build your own blog:
-
 ```bash
 npm install nobodyreads
 ```
 
 ```typescript
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
 import {
   initDb,
-  createBlogRouter,
-  createEditorRouter,
-  serveStatic,
-  getPublicDir,
+  createBlogApiRoutes,
+  createEditorRoutes,
+  createSubscriptionApiRoutes,
+  createSubscriptionAdminRoutes,
+  createMediaStorage,
 } from "nobodyreads";
-import { createServer } from "node:http";
 
 const db = await initDb();
+const storage = createMediaStorage();
 
-const blogHandler = createBlogRouter({ db });
-const editorHandler = createEditorRouter({ db });
+const app = new Hono();
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host}`);
-  const { pathname } = url;
+app.route("/api", createBlogApiRoutes({ db }));
+app.route("/api", createSubscriptionApiRoutes({ db }));
+app.route("/admin", createEditorRoutes({ db, storage }));
+app.route("/admin", createSubscriptionAdminRoutes({ db }));
 
-  // Serve static assets (CSS, JS) from the package
-  const served = await serveStatic(res, pathname, getPublicDir());
-  if (served) return;
-
-  // Admin routes
-  if (pathname.startsWith("/admin")) {
-    return editorHandler(req, res, pathname);
-  }
-
-  // Blog routes
-  await blogHandler(req, res, pathname);
-});
-
-server.listen(3000);
+serve({ fetch: app.fetch, port: 3000 });
 ```
 
 ### Available exports
 
-**Routers**: `createBlogRouter`, `createEditorRouter`
+**Routers**: `createBlogApiRoutes`, `createEditorRoutes`, `createSubscriptionApiRoutes`, `createSubscriptionAdminRoutes`, `notifySubscribers`
 
-**Database**: `initDb`, `getDb`, `listPosts`, `listPostsForView`, `getPageBySlug`, `getPageByKind`, `getNavItems`, `resolvePageLinks`, `listAllPages`, `getPageById`, `deletePage`, `upsertPage`, `listContentViews`, `getContentViewBySlug`, `getContentViewById`, `deleteContentView`, `upsertContentView`
+**Database**: `initDb`, `getDb`, `getRawClient`
+
+**Schema (Drizzle tables)**: `tenant`, `page`, `contentView`, `siteTemplate`, `siteTemplateRevision`, `siteSettings`, `media`, `subscriber`
+
+**Content queries**: `listPosts`, `listPostsForView`, `getPageBySlug`, `getPageByKind`, `getNavItems`, `resolvePageLinks`, `listAllPages`, `getPageById`, `deletePage`, `upsertPage`, `listContentViews`, `getContentViewBySlug`, `getContentViewById`, `deleteContentView`, `upsertContentView`
+
+**Validation (Zod)**: `pageFormSchema`, `viewFormSchema`, `siteTemplateFormSchema`, `subscribeFormSchema`, `loginFormSchema`
 
 **HTTP utilities**: `html`, `json`, `redirect`, `serveStatic`, `parseFormBody`, `escapeHtml`
 
-**Templates**: `defaultLayout`, `createBlogLayoutWithAuth`, `homePage`, `postPage`, `contentPage`, `notFoundPage`
-
-**Rendering**: `renderMarkdown`, `resolveLinks`, `resolveViews`
+**Rendering**: `renderMarkdown`, `resolveLinks`, `resolveViews`, `renderContent`, `renderPostListView`
 
 **SEO**: `buildMetaTags`, `buildStructuredData`, `navHref`
 
+**Template system**: `generateCss`, `generateHtml`, `DEFAULT_TEMPLATE`
+
+**Site template management**: `getSiteTemplate`, `getLatestSiteTemplateRevision`, `addSiteTemplateRevision`, `setCurrentSiteTemplateRevision`, `deleteSiteTemplateRevision`, and more
+
+**Site settings**: `getSiteSettings`, `getSiteSetting`, `setSiteSetting`, `deleteSiteSetting`
+
+**Media storage**: `createMediaStorage`, `LocalMediaStorage`, `GcsMediaStorage`
+
+**Editor auth**: `editorRequiresAuth`, `isAuthenticatedRequest`, `buildSessionCookie`, `verifyEditorPassword`
+
 **Paths**: `getPublicDir`, `getSchemaPath`, `getRobotsTxtPath`
 
-**Types**: `Page`, `PageSummary`, `NavItem`, `LayoutFn`, `LayoutOptions`, etc.
+**Types**: `Page`, `PageSummary`, `NavItem`, `ContentView`, `LayoutOptions`, `SiteTemplateDefinition`, `TokenSet`, `Tenant`, and more
 
 ## Project structure
 
 ```
 nobodyreads/
 ├── src/
-│   ├── index.ts          # Package entry point (exports)
-│   ├── standalone.ts     # Standalone server (used by `npx nobodyreads`)
-│   ├── paths.ts          # Package resource path helpers
-│   ├── blog/             # Blog engine (routing, DB, rendering, templates)
-│   ├── editor/           # Markdown editor (routing, auth, templates)
-│   └── shared/           # Database init, HTTP utilities, SEO, types
-├── public/               # Static assets (CSS, JS)
-├── content/              # Example Markdown content
-├── scripts/              # Content publishing script
-├── schema.sql            # Database schema
-└── Dockerfile            # Container build
+│   ├── index.ts              # Library entry point (all public exports)
+│   ├── standalone.ts         # Standalone Hono server (npx nobodyreads)
+│   ├── paths.ts              # Package resource path helpers
+│   ├── content/              # Blog API routes, rendering, content DB queries
+│   ├── db/                   # Drizzle schema, Zod validation
+│   ├── editor/               # Admin routes, auth, browser editor bundles
+│   ├── media/                # Media storage backends (local, GCS)
+│   ├── shared/               # DB init, HTTP helpers, SEO, site settings/template
+│   ├── subscription/         # Email subscription routes and DB
+│   └── template/             # Theme tokens, CSS/HTML generation, section components
+├── astro/
+│   ├── layouts/              # SiteLayout, AdminLayout
+│   ├── pages/                # Public pages, admin pages, preview routes
+│   ├── components/           # Reusable Astro components
+│   └── lib/                  # Server-side helpers for Astro routes
+├── public/                   # Static assets (CSS, bundled editor JS)
+├── scripts/                  # Bootstrap, publish, and utility scripts
+├── content/                  # Example Markdown content
+├── schema.sql                # Database schema
+├── Dockerfile                # Multi-stage container build
+├── astro.config.mjs          # Astro configuration
+├── drizzle.config.ts         # Drizzle Kit configuration
+└── vitest.config.ts          # Test configuration
 ```
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server with hot reload |
+| `npm run dev:astro` | Start Astro dev server |
+| `npm run build` | Build for production (Astro + TypeScript) |
+| `npm run start` | Start production server |
+| `npm run post -- <file>` | Publish a Markdown file to the database |
+| `npm run site:bootstrap` | Bootstrap a new site with default content |
+| `npm run site:use-minimal-css` | Switch to minimal CSS theme |
+| `npm run build:site-editor` | Bundle the site template editor |
+| `npm run build:page-editor` | Bundle the page editor |
+| `npm run build:view-editor` | Bundle the view editor |
+| `npm test` | Run tests (Vitest) |
+| `npm run typecheck` | Type-check without emitting |
 
 ## License
 

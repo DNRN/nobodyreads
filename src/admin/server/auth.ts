@@ -56,6 +56,12 @@ export function buildClearSessionCookies(cookiePath: string = "/admin"): string[
   );
 }
 
+/** Returns true if the request should be denied (not authenticated). */
+export function guardAuth(request: Request): boolean {
+  if (!editorRequiresAuth()) return false;
+  return !isAuthenticatedRequest(request);
+}
+
 /** Verify the provided password against EDITOR_PASSWORD (constant-time). */
 export function verifyEditorPassword(password: string): boolean {
   if (!EDITOR_PASSWORD) return false;

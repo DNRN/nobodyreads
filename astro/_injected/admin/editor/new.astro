@@ -1,13 +1,15 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
-import { guardAuth } from "../../../../src/admin/server/auth.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
 ---
 <AdminLayout
   title="New Page — Admin"
+  adminBase={ctx.adminBase}
+  siteBase={ctx.siteBase}
   scripts={`<script src="/page-editor.js"></script>`}
 >
-  <PageEditorForm editorBase="/admin/editor" />
+  <PageEditorForm editorBase={ctx.editorBase} />
 </AdminLayout>

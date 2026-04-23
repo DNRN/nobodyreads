@@ -1,24 +1,26 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { guardAuth } from "../../../src/admin/server/auth.js";
-import { initDb } from "../../../src/shared/db.js";
-import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
-import { DEFAULT_TEMPLATE } from "../../../src/template/defaults.js";
-import { generateHtml } from "../../../src/template/generate.js";
-import { getSiteSettings } from "../../../src/shared/site-settings.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
 import {
+  initDb,
+  DEFAULT_TEMPLATE,
+  generateHtml,
+  getSiteSettings,
   getSiteTemplate,
   listSiteTemplateRevisions,
   getCurrentSiteTemplateRevisionId,
-} from "../../../src/shared/site-bundle.js";
+} from "nobodyreads";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
+const layoutBase = `${ctx.adminBase}/layout`;
+const themeBase = `${ctx.adminBase}/theme`;
+const previewUrl = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const db = await initDb();
-const template = (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
-const revisions = await listSiteTemplateRevisions(db, DEFAULT_TENANT_ID);
-const currentRevisionId = await getCurrentSiteTemplateRevisionId(db, DEFAULT_TENANT_ID);
-const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
+const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
+const revisions = await listSiteTemplateRevisions(db, ctx.tenantId);
+const currentRevisionId = await getCurrentSiteTemplateRevisionId(db, ctx.tenantId);
+const settings = await getSiteSettings(db, ctx.tenantId);
 
 const layoutHtml = template.layoutHtml ?? "";
 const customCss = template.customCss ?? "";
@@ -57,10 +59,12 @@ function formatDateTime(iso: string): string {
 ---
 <AdminLayout
   title="Theme Editor — Admin"
+  adminBase={ctx.adminBase}
+  siteBase={ctx.siteBase}
   scripts={`<script src="/site-editor.js"></script>`}
 >
   <main class="editor-main editor-main--site">
-    <form method="POST" action="/admin/layout/save" class="editor-form editor-form--site" id="site-editor-form">
+    <form method="POST" action={`${layoutBase}/save`} class="editor-form editor-form--site" id="site-editor-form">
       <div class="editor-list-header">
         <h2>Theme Editor</h2>
         <div class="editor-actions">
@@ -195,9 +199,9 @@ function formatDateTime(iso: string): string {
         <div class="site-editor-pane hidden" data-pane="preview">
           <div class="editor-preview-label">
             Preview
-            <a href="/preview" target="_blank" rel="noreferrer" class="btn btn-ghost">Open in new tab</a>
+            <a href={previewUrl} target="_blank" rel="noreferrer" class="btn btn-ghost">Open in new tab</a>
           </div>
-          <iframe id="site-preview" title="Site preview" src="/preview" data-preview-url="/preview"></iframe>
+          <iframe id="site-preview" title="Site preview" src={previewUrl} data-preview-url={previewUrl}></iframe>
         </div>
       </div>
     </form>
@@ -206,9 +210,9 @@ function formatDateTime(iso: string): string {
     <div class="editor-list-section">
       <h3>Theme</h3>
       <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-        <a href="/admin/theme/export" class="btn btn-ghost" download>Export theme</a>
+        <a href={`${themeBase}/export`} class="btn btn-ghost" download>Export theme</a>
 
-        <form method="POST" action="/admin/theme/import" enctype="multipart/form-data" class="editor-inline-form" style="display: flex; gap: 0.5rem; align-items: center;">
+        <form method="POST" action={`${themeBase}/import`} enctype="multipart/form-data" class="editor-inline-form" style="display: flex; gap: 0.5rem; align-items: center;">
           <input type="file" name="file" accept=".json,application/json" class="editor-input editor-input--sm" />
           <button type="submit" class="btn btn-ghost">Import theme</button>
         </form>
@@ -251,7 +255,7 @@ function formatDateTime(iso: string): string {
                     {!isCurrent ? (
                       <form
                         method="POST"
-                        action={`/admin/layout/revision/publish/${rev.revisionId}`}
+                        action={`${layoutBase}/revision/publish/${rev.revisionId}`}
                         class="editor-inline-form"
                       >
                         <button type="submit" class="btn btn-primary btn-sm">Publish</button>
@@ -259,7 +263,7 @@ function formatDateTime(iso: string): string {
                     ) : null}
                     <form
                       method="POST"
-                      action={`/admin/layout/revision/delete/${rev.revisionId}`}
+                      action={`${layoutBase}/revision/delete/${rev.revisionId}`}
                       class="editor-inline-form"
                       onsubmit="return confirm('Delete this revision?')"
                     >

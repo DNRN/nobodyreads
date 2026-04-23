@@ -1,15 +1,12 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import { guardAuth } from "../../../../src/admin/server/auth.js";
-import { initDb } from "../../../../src/shared/db.js";
-import { DEFAULT_TENANT_ID } from "../../../../src/shared/types.js";
-import { listAllPages } from "../../../../src/content/db.js";
-import type { Page } from "../../../../src/content/types.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, listAllPages, type Page } from "nobodyreads";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
 
 const db = await initDb();
-const pages = await listAllPages(db, DEFAULT_TENANT_ID);
+const pages = await listAllPages(db, ctx.tenantId);
 
 const groups: Record<string, Page[]> = { home: [], page: [], post: [] };
 for (const page of pages) {
@@ -32,13 +29,19 @@ function kindLabel(kind: string): string {
   if (kind === "post") return "Post";
   return "Page";
 }
+
+function viewUrl(p: Page): string {
+  if (p.kind === "post") return `${ctx.siteBase.replace(/\/$/, "")}/posts/${p.slug}`;
+  if (p.kind === "home") return ctx.siteBase;
+  return `${ctx.siteBase.replace(/\/$/, "")}/${p.slug}`;
+}
 ---
-<AdminLayout title="Content — Admin">
+<AdminLayout title="Content — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
         <h2>Content</h2>
-        <a href="/admin/editor/new" class="btn btn-primary">New page</a>
+        <a href={`${ctx.editorBase}/new`} class="btn btn-primary">New page</a>
       </div>
       {pages.length === 0 ? (
         <p class="editor-empty">No pages yet. Create your first one!</p>
@@ -56,10 +59,8 @@ function kindLabel(kind: string): string {
               <tbody>
                 {items.map((p) => (
                   <tr>
-                    <td><a href={`/admin/editor/${p.id}`}>{p.title}</a></td>
-                    <td class="cell-slug">
-                      /{p.kind === "post" ? `posts/${p.slug}` : p.kind === "home" ? "" : p.slug}
-                    </td>
+                    <td><a href={`${ctx.editorBase}/${p.id}`}>{p.title}</a></td>
+                    <td class="cell-slug">{viewUrl(p)}</td>
                     <td class="cell-status">
                       {p.published
                         ? <span class="badge badge-published">published</span>

@@ -1,0 +1,28 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ViewEditorForm from "../../../components/admin/ViewEditorForm.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, getContentViewById } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+const viewsBase = `${ctx.adminBase}/views`;
+
+const { id } = Astro.params;
+if (!id || id === "new" || id === "save" || id === "delete") {
+  return Astro.redirect(viewsBase);
+}
+
+const db = await initDb();
+const view = await getContentViewById(db, id, ctx.tenantId);
+if (!view) {
+  return Astro.redirect(viewsBase);
+}
+---
+<AdminLayout
+  title={`Edit: ${view.title} — Admin`}
+  adminBase={ctx.adminBase}
+  siteBase={ctx.siteBase}
+  scripts={`<script src="/view-editor.js"></script>`}
+>
+  <ViewEditorForm view={view} viewsBase={viewsBase} />
+</AdminLayout>

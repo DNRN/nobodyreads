@@ -8,11 +8,27 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./schema": {
+      "types": "./dist/db/schema.d.ts",
+      "import": "./dist/db/schema.js"
+    },
+    "./storage": {
+      "types": "./dist/media/storage.d.ts",
+      "import": "./dist/media/storage.js"
+    },
     "./editor": {
       "types": "./dist/admin/client/index.d.ts",
       "import": "./dist/admin/client/index.js"
     },
-    "./editor/styles": "./public/editor.css"
+    "./editor/styles": "./public/editor.css",
+    "./astro": {
+      "types": "./dist/astro/index.d.ts",
+      "import": "./dist/astro/index.js"
+    },
+    "./astro/context": {
+      "types": "./dist/astro/context.d.ts",
+      "import": "./dist/astro/context.js"
+    }
   },
   "bin": {
     "nobodyreads": "./dist/standalone.js"
@@ -20,6 +36,9 @@
   "files": [
     "dist",
     "public",
+    "astro/_injected",
+    "astro/layouts",
+    "astro/components/admin",
     "schema.sql",
     "robots.txt"
   ],

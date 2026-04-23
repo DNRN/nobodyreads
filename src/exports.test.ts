@@ -85,6 +85,17 @@ import {
 } from "./index.js";
 
 describe("public API exports", () => {
+  it("supports documented package subpath imports", async () => {
+    const schemaModule = await import("nobodyreads/schema");
+    const storageModule = await import("nobodyreads/storage");
+
+    expect(schemaModule.tenant).toBeDefined();
+    expect(schemaModule.page).toBeDefined();
+    expect(storageModule.createMediaStorage).toBeTypeOf("function");
+    expect(storageModule.LocalMediaStorage).toBeTypeOf("function");
+    expect(storageModule.GcsMediaStorage).toBeTypeOf("function");
+  });
+
   it("exports route factories", () => {
     expect(createBlogApiRoutes).toBeTypeOf("function");
     expect(createEditorRoutes).toBeTypeOf("function");

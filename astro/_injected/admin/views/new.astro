@@ -1,0 +1,16 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import ViewEditorForm from "../../../components/admin/ViewEditorForm.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+
+const ctx = requireAdminContext(Astro.locals);
+const viewsBase = `${ctx.adminBase}/views`;
+---
+<AdminLayout
+  title="New View — Admin"
+  adminBase={ctx.adminBase}
+  siteBase={ctx.siteBase}
+  scripts={`<script src="/view-editor.js"></script>`}
+>
+  <ViewEditorForm viewsBase={viewsBase} />
+</AdminLayout>

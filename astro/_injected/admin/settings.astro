@@ -1,15 +1,13 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { guardAuth } from "../../../src/admin/server/auth.js";
-import { initDb } from "../../../src/shared/db.js";
-import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
-import { listAllSubscribers } from "../../../src/subscription/db.js";
-import { isEmailEnabled } from "../../../src/subscription/email.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, listAllSubscribers, isEmailEnabled } from "nobodyreads";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
+const subscribersBase = `${ctx.adminBase}/subscribers`;
 
 const db = await initDb();
-const subscribers = await listAllSubscribers(db, DEFAULT_TENANT_ID);
+const subscribers = await listAllSubscribers(db, ctx.tenantId);
 
 const emailEnabled = isEmailEnabled();
 const emailProvider = process.env.EMAIL_PROVIDER || "(not set)";
@@ -39,7 +37,7 @@ function badgeClass(status: string): string {
 const verifiedCount = subscribers.filter(s => s.verified && !s.unsubscribed).length;
 const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).length;
 ---
-<AdminLayout title="Settings — Admin">
+<AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
@@ -94,7 +92,7 @@ const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).len
                     </td>
                     <td class="cell-date">{formatDate(sub.createdAt)}</td>
                     <td class="cell-actions">
-                      <form method="POST" action={`/admin/subscribers/delete/${sub.id}`}
+                      <form method="POST" action={`${subscribersBase}/delete/${sub.id}`}
                             onsubmit="return confirm('Delete this subscriber?')">
                         <button type="submit" class="btn btn-ghost btn-sm">delete</button>
                       </form>
@@ -109,4 +107,3 @@ const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).len
     </div>
   </main>
 </AdminLayout>
-

@@ -1,0 +1,27 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, getPageById } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+
+const { id } = Astro.params;
+if (!id || id === "new" || id === "save" || id === "login" || id === "delete") {
+  return Astro.redirect(`${ctx.editorBase}`);
+}
+
+const db = await initDb();
+const page = await getPageById(db, id, ctx.tenantId);
+if (!page) {
+  return Astro.redirect(`${ctx.editorBase}`);
+}
+---
+<AdminLayout
+  title={`Edit: ${page.title} — Admin`}
+  adminBase={ctx.adminBase}
+  siteBase={ctx.siteBase}
+  scripts={`<script src="/page-editor.js"></script>`}
+>
+  <PageEditorForm page={page} editorBase={ctx.editorBase} />
+</AdminLayout>

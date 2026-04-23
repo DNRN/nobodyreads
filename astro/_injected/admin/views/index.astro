@@ -1,21 +1,20 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import { guardAuth } from "../../../../src/admin/server/auth.js";
-import { initDb } from "../../../../src/shared/db.js";
-import { DEFAULT_TENANT_ID } from "../../../../src/shared/types.js";
-import { listContentViews } from "../../../../src/content/db.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, listContentViews } from "nobodyreads";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
+const viewsBase = `${ctx.adminBase}/views`;
 
 const db = await initDb();
-const views = await listContentViews(db, DEFAULT_TENANT_ID);
+const views = await listContentViews(db, ctx.tenantId);
 ---
-<AdminLayout title="Views — Admin">
+<AdminLayout title="Views — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
         <h2>Views</h2>
-        <a href="/admin/views/new" class="btn btn-primary">New view</a>
+        <a href={`${viewsBase}/new`} class="btn btn-primary">New view</a>
       </div>
       <p class="hint">Embed in markdown using <code>{"{{view:slug}}"}</code>. You can include multiple views per page.</p>
       {views.length === 0 ? (
@@ -28,7 +27,7 @@ const views = await listContentViews(db, DEFAULT_TENANT_ID);
           <tbody>
             {views.map((view) => (
               <tr>
-                <td><a href={`/admin/views/${view.id}`}>{view.title}</a></td>
+                <td><a href={`${viewsBase}/${view.id}`}>{view.title}</a></td>
                 <td class="cell-slug">{view.slug}</td>
                 <td>{view.kind}</td>
                 <td class="cell-status">

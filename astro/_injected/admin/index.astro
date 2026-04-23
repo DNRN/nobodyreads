@@ -1,45 +1,45 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { guardAuth } from "../../../src/admin/server/auth.js";
+import { requireAdminContext } from "nobodyreads/astro/context";
 
-if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
+const ctx = requireAdminContext(Astro.locals);
 ---
-<AdminLayout title="Admin">
+<AdminLayout title="Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="dashboard-header">
       <h2>Dashboard</h2>
       <p>Manage your site content, layout, and settings.</p>
     </div>
     <div class="dashboard-grid">
-      <a href="/admin/editor" class="dashboard-card">
+      <a href={`${ctx.adminBase}/editor`} class="dashboard-card">
         <div class="dashboard-card-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         </div>
         <h3>Content</h3>
         <p>Create and edit pages, posts, and your home page.</p>
       </a>
-      <a href="/admin/layout" class="dashboard-card">
+      <a href={`${ctx.adminBase}/layout`} class="dashboard-card">
         <div class="dashboard-card-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
         </div>
         <h3>Layout</h3>
         <p>Edit your site template, colors, and structure.</p>
       </a>
-      <a href="/admin/media" class="dashboard-card">
+      <a href={`${ctx.adminBase}/media`} class="dashboard-card">
         <div class="dashboard-card-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
         </div>
         <h3>Media</h3>
         <p>Upload and manage images and files.</p>
       </a>
-      <a href="/admin/views" class="dashboard-card">
+      <a href={`${ctx.adminBase}/views`} class="dashboard-card">
         <div class="dashboard-card-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18"/><path d="M3 9h18"/><path d="M3 15h12"/><path d="M3 21h6"/></svg>
         </div>
         <h3>Views</h3>
         <p>Reusable content views embedded in pages.</p>
       </a>
-      <a href="/admin/settings" class="dashboard-card">
+      <a href={`${ctx.adminBase}/settings`} class="dashboard-card">
         <div class="dashboard-card-icon">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>

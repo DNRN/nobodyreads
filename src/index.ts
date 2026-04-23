@@ -45,7 +45,10 @@ export {
   getContentViewById,
   deleteContentView,
   upsertContentView,
+  listMedia,
 } from "./content/db.js";
+export { listAllSubscribers } from "./subscription/db.js";
+export { isEmailEnabled } from "./subscription/email.js";
 
 // Validation schemas
 export {
@@ -126,6 +129,7 @@ export type {
   ContentView,
   ContentViewKind,
   PostListViewConfig,
+  CustomViewConfig,
   LayoutOptions,
   PageMeta,
   PageKind,

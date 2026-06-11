@@ -7,9 +7,6 @@ import { getDbClient } from "../lib/db.js";
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const urlPrefix = process.env.URL_PREFIX || "";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
-const siteTagline =
-  process.env.SITE_TAGLINE ||
-  "Another simple blog engine. For writing mostly to yourself.";
 
 const db = await getDbClient();
 const navItems = await getNavItems(db, tenantId);
@@ -22,7 +19,6 @@ const options = {
   seo: { noIndex: true },
   urlPrefix,
   siteName,
-  siteTagline,
 };
 ---
 <SiteLayout options={options}>

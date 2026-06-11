@@ -17,9 +17,6 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai")
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const previewUrlPrefix = "/preview";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
-const siteTagline =
-  process.env.SITE_TAGLINE ||
-  "Sovereign publishing, not a platform. For writing mostly to yourself.";
 
 const db = await getDbClient();
 const [siteTemplate, latestRevisionId, page, navItems] = await Promise.all([
@@ -94,7 +91,6 @@ const options = page
       page,
       urlPrefix: previewUrlPrefix,
       siteName,
-      siteTagline,
     }
   : {
       title: `404 — ${siteName}`,
@@ -102,7 +98,6 @@ const options = page
       seo: { noIndex: true },
       urlPrefix: previewUrlPrefix,
       siteName,
-      siteTagline,
     };
 ---
 <SiteLayout options={options} templateOverride={siteTemplate}>

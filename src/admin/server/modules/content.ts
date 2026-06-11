@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { pageFormSchema } from "../../../db/validation.js";
-import { getPageById, deletePage, upsertPage } from "../../../content/db.js";
+import { getPageById, findPageByKind, deletePage, upsertPage } from "../../../content/db.js";
 import type { Page, PageKind } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
 import type { AdminModuleContext } from "./types.js";
@@ -24,6 +24,17 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       const isNew = !data.id || data.id.trim() === "";
       const pageId = isNew ? randomUUID() : data.id!.trim();
       const now = new Date().toISOString();
+
+      // A site has exactly one home page.
+      if (data.kind === "home") {
+        const existingHome = await findPageByKind(db, "home", tenantId);
+        if (existingHome && existingHome.id !== pageId) {
+          return c.json(
+            { error: "A home page already exists", id: existingHome.id },
+            409
+          );
+        }
+      }
 
       let wasPreviouslyPublished = false;
       let content = data.content;

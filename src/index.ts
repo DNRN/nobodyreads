@@ -34,6 +34,7 @@ export {
   listPostsForView,
   getPageBySlug,
   getPageByKind,
+  findPageByKind,
   getNavItems,
   resolvePageLinks,
   listAllPages,

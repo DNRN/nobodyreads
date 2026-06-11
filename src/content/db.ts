@@ -325,6 +325,20 @@ export async function getPageByKind(
   return rows.length > 0 ? toPage(rows[0]) : null;
 }
 
+/** Fetch the first page of a given kind regardless of publish state (used to enforce a single home page). */
+export async function findPageByKind(
+  db: Database,
+  kind: PageKind,
+  tenantId: string
+): Promise<Page | null> {
+  const rows = await db
+    .select()
+    .from(page)
+    .where(and(eq(page.kind, kind), eq(page.tenantId, tenantId)))
+    .limit(1);
+  return rows.length > 0 ? toPage(rows[0]) : null;
+}
+
 /** Fetch all published navigation items, ordered by nav.order. */
 export async function getNavItems(db: Database, tenantId: string): Promise<NavItem[]> {
   const rows = await db

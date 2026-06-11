@@ -544,6 +544,108 @@
   font-weight: 700;
 }
 
+.nr-admin .editor-home {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--nr-border);
+  border-radius: var(--nr-radius);
+  background: var(--nr-surface);
+}
+
+.nr-admin .editor-home-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.nr-admin .editor-home-label {
+  font-size: 0.72rem;
+  font-family: var(--nr-font-mono);
+  color: var(--nr-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nr-admin .editor-home-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--nr-text);
+  text-decoration: none;
+}
+
+.nr-admin .editor-home-title:hover {
+  color: var(--nr-accent);
+}
+
+.nr-admin .editor-home-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--nr-muted);
+  line-height: 1.45;
+}
+
+.nr-admin .editor-home-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.nr-admin .editor-home-date {
+  font-family: var(--nr-font-mono);
+  font-size: 0.78rem;
+  color: var(--nr-muted);
+  white-space: nowrap;
+}
+
+/* Create-content cards (overview of content kinds) */
+.nr-admin .editor-create {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 2.25rem;
+}
+
+.nr-admin .editor-create-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--nr-border);
+  border-radius: var(--nr-radius);
+  background: var(--nr-surface);
+  text-decoration: none;
+  color: var(--nr-text);
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+
+.nr-admin .editor-create-card:hover {
+  border-color: var(--nr-accent);
+  box-shadow: var(--nr-shadow);
+}
+
+.nr-admin .editor-create-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.nr-admin .editor-create-desc {
+  font-size: 0.8rem;
+  color: var(--nr-muted);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.nr-admin .editor-create-cta {
+  align-self: flex-start;
+  margin-top: 0.35rem;
+}
+
 .nr-admin .editor-list-section {
   margin-bottom: 2rem;
 }
@@ -732,6 +834,12 @@
 .nr-admin .editor-sidebar .field {
   display: flex;
   flex-direction: column;
+}
+
+.nr-admin .editor-kind-display {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .nr-admin .editor-sidebar label {

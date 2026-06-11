@@ -2,14 +2,28 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, findPageByKind, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+
+const requested = Astro.url.searchParams.get("kind");
+const kind: PageKind =
+  requested === "home" || requested === "page" || requested === "post" ? requested : "post";
+
+// Only one home page per site — if it already exists, edit it instead.
+if (kind === "home") {
+  const db = await initDb();
+  const existing = await findPageByKind(db, "home", ctx.tenantId);
+  if (existing) return Astro.redirect(`${ctx.editorBase}/${existing.id}`);
+}
+
+const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
 ---
 <AdminLayout
-  title="New Page — Admin"
+  title={`New ${kindLabel} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
   scripts={`<script src="/page-editor.js"></script>`}
 >
-  <PageEditorForm editorBase={ctx.editorBase} />
+  <PageEditorForm editorBase={ctx.editorBase} kind={kind} />
 </AdminLayout>

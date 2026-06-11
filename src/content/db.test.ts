@@ -14,6 +14,7 @@ import {
   listPostsForView,
   deletePage,
   getPageByKind,
+  findPageByKind,
   getNavItems,
   resolvePageLinks,
   listAllPages,
@@ -180,6 +181,24 @@ describe("getPageByKind", () => {
 
   it("returns null if no published page of that kind", async () => {
     const page = await getPageByKind(t.db, "home", TENANT);
+    expect(page).toBeNull();
+  });
+});
+
+describe("findPageByKind", () => {
+  it("returns a page of the kind even if it is a draft", async () => {
+    await upsertPage(
+      t.db,
+      makePage({ id: "home1", slug: "home", kind: "home", title: "Draft Home", published: false }),
+      TENANT,
+    );
+    const page = await findPageByKind(t.db, "home", TENANT);
+    expect(page).not.toBeNull();
+    expect(page!.title).toBe("Draft Home");
+  });
+
+  it("returns null if no page of that kind exists", async () => {
+    const page = await findPageByKind(t.db, "home", TENANT);
     expect(page).toBeNull();
   });
 });

@@ -1,24 +1,29 @@
 ---
-import type { Page } from "nobodyreads";
+import type { Page, PageKind } from "nobodyreads";
 
-const { page, editorBase = "/admin/editor" } = Astro.props as {
+const { page, editorBase = "/admin/editor", kind: kindProp } = Astro.props as {
   page?: Page;
   editorBase?: string;
+  kind?: PageKind;
 };
 
 const isNew = !page;
-const title = isNew ? "New Page" : `Edit: ${page?.title ?? ""}`;
+
+// Kind is decided when the content is created (from the content overview) and never changes.
+const kind: PageKind = page?.kind ?? kindProp ?? "post";
+const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
+const title = isNew ? `New ${kindLabel}` : `Edit: ${page?.title ?? ""}`;
 
 const p = page ?? {
   id: "",
-  slug: "",
+  slug: kind === "home" ? "home" : "",
   title: "",
   content: "",
   excerpt: "",
   tags: [] as string[],
   date: new Date().toISOString().slice(0, 10),
   published: false,
-  kind: "post" as const,
+  kind,
   nav: undefined,
 };
 ---
@@ -62,26 +67,27 @@ const p = page ?? {
         <input type="text" id="title" name="title" value={p.title} required />
       </div>
 
-      <div class="field">
-        <label for="slug">Slug</label>
-        <input
-          type="text"
-          id="slug"
-          name="slug"
-          value={p.slug}
-          required
-          pattern="[a-z0-9-]+"
-          title="Lowercase letters, numbers, and hyphens only"
-        />
-      </div>
+      {kind === "home" ? (
+        <input type="hidden" name="slug" value={p.slug || "home"} />
+      ) : (
+        <div class="field">
+          <label for="slug">Slug</label>
+          <input
+            type="text"
+            id="slug"
+            name="slug"
+            value={p.slug}
+            required
+            pattern="[a-z0-9-]+"
+            title="Lowercase letters, numbers, and hyphens only"
+          />
+        </div>
+      )}
 
+      <input type="hidden" name="kind" value={kind} />
       <div class="field">
-        <label for="kind">Kind</label>
-        <select id="kind" name="kind">
-          <option value="post" selected={p.kind === "post"}>Post</option>
-          <option value="page" selected={p.kind === "page"}>Page</option>
-          <option value="home" selected={p.kind === "home"}>Home</option>
-        </select>
+        <label>Kind</label>
+        <p class="editor-kind-display">{kindLabel}</p>
       </div>
 
       <div class="field">

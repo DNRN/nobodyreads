@@ -35,18 +35,68 @@ function viewUrl(p: Page): string {
   if (p.kind === "home") return ctx.siteBase;
   return `${ctx.siteBase.replace(/\/$/, "")}/${p.slug}`;
 }
+
+// Only one home page per site — if it exists, offer editing instead of creating.
+const homePage = groups.home[0];
+
+const createOptions = [
+  {
+    kind: "post",
+    label: "Post",
+    description: "A blog post. Shows up in your feed and is sent to subscribers when published.",
+    href: `${ctx.editorBase}/new?kind=post`,
+    cta: "New post",
+  },
+  {
+    kind: "page",
+    label: "Page",
+    description: "A standalone page like About or Contact. Can be added to the navigation.",
+    href: `${ctx.editorBase}/new?kind=page`,
+    cta: "New page",
+  },
+];
 ---
 <AdminLayout title="Content — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
         <h2>Content</h2>
-        <a href={`${ctx.editorBase}/new`} class="btn btn-primary">New page</a>
       </div>
+      <div class="editor-create">
+        {createOptions.map((opt) => (
+          <a href={opt.href} class="editor-create-card" data-kind={opt.kind}>
+            <strong class="editor-create-title">{opt.label}</strong>
+            <span class="editor-create-desc">{opt.description}</span>
+            <span class="btn btn-sm btn-primary editor-create-cta">{opt.cta}</span>
+          </a>
+        ))}
+      </div>
+      <section class="editor-home" aria-label="Home page">
+        <div class="editor-home-main">
+          <span class="editor-home-label">Home</span>
+          {homePage ? (
+            <a href={`${ctx.editorBase}/${homePage.id}`} class="editor-home-title">{homePage.title}</a>
+          ) : (
+            <p class="editor-home-empty">The front page of your site. Every site has exactly one.</p>
+          )}
+        </div>
+        <div class="editor-home-meta">
+          {homePage ? (
+            <>
+              {homePage.published
+                ? <span class="badge badge-published">published</span>
+                : <span class="badge badge-draft">draft</span>}
+              <span class="editor-home-date">Last edited {formatDate(homePage.date)}</span>
+            </>
+          ) : (
+            <a href={`${ctx.editorBase}/new?kind=home`} class="btn btn-sm btn-primary">Create home</a>
+          )}
+        </div>
+      </section>
       {pages.length === 0 ? (
         <p class="editor-empty">No pages yet. Create your first one!</p>
       ) : null}
-      {(["home", "page", "post"] as const).map((kind) => {
+      {(["page", "post"] as const).map((kind) => {
         const items = groups[kind];
         if (items.length === 0) return null;
         return (

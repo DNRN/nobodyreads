@@ -1,0 +1,257 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, listMedia } from "nobodyreads";
+import { createMediaStorage } from "nobodyreads/storage";
+
+const ctx = requireAdminContext(Astro.locals);
+const mediaBase = `${ctx.adminBase}/media`;
+
+const db = await initDb();
+const storage = createMediaStorage();
+const items = await listMedia(db, ctx.tenantId, (key) => storage.url(key));
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function isImage(mimeType: string): boolean {
+  return mimeType.startsWith("image/");
+}
+---
+<AdminLayout title="Media — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <h2>Media</h2>
+      </div>
+
+      <!-- Upload form -->
+      <div class="editor-list-section">
+        <div class="media-upload-area" id="media-upload-area">
+          <form
+            method="POST"
+            action={`${mediaBase}/upload`}
+            enctype="multipart/form-data"
+            id="media-upload-form"
+          >
+            <label class="media-upload-label" for="media-file-input">
+              <span class="media-upload-icon">+</span>
+              <span class="media-upload-text">Click to upload or drag &amp; drop files here</span>
+              <span class="media-upload-hint">Images, video, audio, PDF &mdash; max 50 MB</span>
+            </label>
+            <input
+              type="file"
+              id="media-file-input"
+              name="file"
+              accept="image/*,video/*,audio/*,.pdf"
+              class="media-file-input"
+              multiple
+            />
+            <button type="submit" class="btn btn-primary media-upload-btn" id="media-upload-btn" style="display:none">
+              Upload
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Media grid -->
+      {items.length === 0 ? (
+        <p class="editor-empty">No media uploaded yet.</p>
+      ) : (
+        <div class="media-grid">
+          {items.map((m) => (
+            <div class="media-card">
+              <div class="media-card-preview">
+                {isImage(m.mimeType) ? (
+                  <img src={m.url} alt={m.originalName} loading="lazy" />
+                ) : (
+                  <div class="media-card-icon">{m.mimeType.split("/")[0]}</div>
+                )}
+              </div>
+              <div class="media-card-info">
+                <span class="media-card-name" title={m.originalName}>{m.originalName}</span>
+                <span class="media-card-meta">{formatSize(m.size)} &middot; {formatDate(m.createdAt)}</span>
+              </div>
+              <div class="media-card-actions">
+                <button
+                  type="button"
+                  class="btn btn-ghost media-copy-btn"
+                  data-url={m.url}
+                  title="Copy URL"
+                >
+                  Copy URL
+                </button>
+                <form
+                  method="POST"
+                  action={`${mediaBase}/delete/${m.id}`}
+                  onsubmit="return confirm('Delete this file permanently?')"
+                  style="display:inline"
+                >
+                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </main>
+
+  <style>
+    .media-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .media-upload-area.dragover {
+      border-color: var(--accent, #4f46e5);
+      background: var(--bg-hover, rgba(79, 70, 229, 0.05));
+    }
+    .media-upload-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      cursor: pointer;
+    }
+    .media-upload-icon {
+      font-size: 2rem;
+      line-height: 1;
+      opacity: 0.5;
+    }
+    .media-upload-text {
+      font-weight: 500;
+    }
+    .media-upload-hint {
+      font-size: 0.85em;
+      opacity: 0.6;
+    }
+    .media-file-input {
+      display: none;
+    }
+    .media-upload-btn {
+      margin-top: 1rem;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .media-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .media-card-preview {
+      aspect-ratio: 1;
+      background: var(--bg-secondary, #f5f5f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .media-card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .media-card-icon {
+      font-size: 1.5rem;
+      text-transform: uppercase;
+      opacity: 0.4;
+      font-weight: 600;
+    }
+    .media-card-info {
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+    .media-card-name {
+      font-size: 0.85em;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .media-card-meta {
+      font-size: 0.75em;
+      opacity: 0.6;
+    }
+    .media-card-actions {
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      gap: 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .btn-sm {
+      font-size: 0.8em;
+      padding: 0.2em 0.5em;
+    }
+  </style>
+
+  <script is:inline>
+    // --- Drag-and-drop ---
+    const area = document.getElementById("media-upload-area");
+    const input = document.getElementById("media-file-input");
+    const form = document.getElementById("media-upload-form");
+    const btn = document.getElementById("media-upload-btn");
+
+    if (area && input && form) {
+      area.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        area.classList.add("dragover");
+      });
+      area.addEventListener("dragleave", () => {
+        area.classList.remove("dragover");
+      });
+      area.addEventListener("drop", (e) => {
+        e.preventDefault();
+        area.classList.remove("dragover");
+        if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+          input.files = e.dataTransfer.files;
+          form.submit();
+        }
+      });
+
+      // Show upload button when files are selected
+      input.addEventListener("change", () => {
+        if (input.files && input.files.length > 0 && btn) {
+          btn.style.display = "";
+        }
+      });
+    }
+
+    // --- Copy URL ---
+    document.querySelectorAll(".media-copy-btn").forEach((el) => {
+      el.addEventListener("click", () => {
+        const url = el.dataset.url;
+        if (url) {
+          navigator.clipboard.writeText(url).then(() => {
+            const orig = el.textContent;
+            el.textContent = "Copied!";
+            setTimeout(() => { el.textContent = orig; }, 1500);
+          });
+        }
+      });
+    });
+  </script>
+</AdminLayout>

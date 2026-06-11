@@ -1,4 +1,4 @@
-import { initDb, getDb } from "../src/shared/db.js";
+import { initDb, getDb, getRawClient } from "../src/shared/db.js";
 import { DEFAULT_TEMPLATE } from "../src/template/defaults.js";
 import {
   addSiteTemplateRevision,
@@ -42,4 +42,4 @@ if (!latestPostsView) {
   console.log(`Default content view already exists for tenant ${TENANT_ID}.`);
 }
 
-db.close();
+getRawClient().close();

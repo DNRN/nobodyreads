@@ -4,6 +4,8 @@ import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { replaceTextarea } from "./core/create-editor.js";
+import { generateCss } from "../../template/generate.js";
+import type { ComponentMap, SiteTemplateDefinition } from "../../template/types.js";
 import type { EditorInstance } from "./types.js";
 import type { SiteEditorOptions, SiteEditorInstance } from "./types.js";
 
@@ -25,12 +27,14 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     preview,
     saveStatus,
     customTokensEditor,
+    componentsPane,
     addTokenBtn,
   } = options;
   const tokenSaveUrl = options.tokenSaveUrl ?? "/admin/settings/tokens";
 
   let isDirty = false;
   let editMode: "tabs" | "advanced" = "tabs";
+  let previewDebounce: number | undefined;
 
   function setSaveStatus(state: string) {
     if (!saveStatus) return;
@@ -99,6 +103,54 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     return tokens;
   }
 
+  function getComponentsFromUI(): ComponentMap {
+    const pane = componentsPane ?? document.getElementById("components-editor");
+    if (!pane) return {};
+
+    const components: ComponentMap = {};
+    const cards = pane.querySelectorAll("[data-component]");
+
+    for (const card of cards) {
+      const name = card.getAttribute("data-component") ?? "";
+      if (!name) continue;
+
+      const config: ComponentMap[string] = {};
+
+      const variantSelect = pane.querySelector(
+        `select[name="component:${name}:variant"]`,
+      ) as HTMLSelectElement | null;
+      if (variantSelect) {
+        const defaultVariant = variantSelect.dataset.default ?? "";
+        if (variantSelect.value !== defaultVariant) {
+          config.variant = variantSelect.value;
+        }
+      }
+
+      const tokenInputs = pane.querySelectorAll(
+        `input[name^="component:${name}:token:"]`,
+      ) as NodeListOf<HTMLInputElement>;
+      const tokens: Record<string, string> = {};
+      for (const input of tokenInputs) {
+        const prefix = `component:${name}:token:`;
+        const key = input.name.slice(prefix.length);
+        const defaultValue = input.dataset.default ?? "";
+        const value = input.value.trim();
+        if (value && value !== defaultValue) {
+          tokens[key] = value;
+        }
+      }
+      if (Object.keys(tokens).length > 0) {
+        config.tokens = tokens;
+      }
+
+      if (config.variant || config.tokens) {
+        components[name] = config;
+      }
+    }
+
+    return components;
+  }
+
   function getTokenValuesFromUI(): Record<string, string> {
     const values: Record<string, string> = {};
     const inputs = document.querySelectorAll('input[name^="tokenval:"]') as NodeListOf<HTMLInputElement>;
@@ -132,7 +184,29 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     if (customTokens.length > 0) base.customTokens = customTokens;
     else delete base.customTokens;
 
+    base.components = getComponentsFromUI();
+
     return JSON.stringify(base, null, 2);
+  }
+
+  function applyLivePreviewCss() {
+    try {
+      const template = JSON.parse(buildTemplateJson()) as SiteTemplateDefinition;
+      const css = generateCss(template);
+      const doc = preview.contentDocument;
+      if (!doc) return;
+      const styleEl = doc.getElementById("nr-generated-css");
+      if (styleEl) {
+        styleEl.textContent = css;
+      }
+    } catch (error) {
+      console.error("Live preview CSS update failed:", error);
+    }
+  }
+
+  function scheduleLivePreview() {
+    if (previewDebounce) window.clearTimeout(previewDebounce);
+    previewDebounce = window.setTimeout(applyLivePreviewCss, 150);
   }
 
   function activateTab(target: string) {
@@ -157,7 +231,10 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
       });
     }
 
-    if (target === "preview") refreshPreview();
+    if (target === "preview") {
+      refreshPreview();
+      applyLivePreviewCss();
+    }
   }
 
   tabs.addEventListener("click", (e) => {
@@ -236,6 +313,46 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     }
   };
   document.addEventListener("click", onRemoveToken);
+
+  const componentsContainer = componentsPane ?? document.getElementById("components-editor");
+  if (componentsContainer) {
+    componentsContainer.addEventListener("input", () => {
+      markDirty();
+      scheduleLivePreview();
+    });
+    componentsContainer.addEventListener("change", () => {
+      markDirty();
+      scheduleLivePreview();
+    });
+    componentsContainer.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement)?.closest("[data-reset-component]");
+      if (!btn) return;
+
+      const name = btn.getAttribute("data-reset-component") ?? "";
+      if (!name) return;
+
+      const variantSelect = componentsContainer.querySelector(
+        `select[name="component:${name}:variant"]`,
+      ) as HTMLSelectElement | null;
+      if (variantSelect) {
+        variantSelect.value = variantSelect.dataset.default ?? variantSelect.value;
+      }
+
+      const tokenInputs = componentsContainer.querySelectorAll(
+        `input[name^="component:${name}:token:"]`,
+      ) as NodeListOf<HTMLInputElement>;
+      for (const input of tokenInputs) {
+        input.value = input.dataset.default ?? "";
+      }
+
+      markDirty();
+      scheduleLivePreview();
+    });
+  }
+
+  preview.addEventListener("load", () => {
+    applyLivePreviewCss();
+  });
 
   async function saveTokenValues() {
     const values = getTokenValuesFromUI();
@@ -319,6 +436,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
   return {
     destroy() {
+      if (previewDebounce) window.clearTimeout(previewDebounce);
       document.removeEventListener("click", onRemoveToken);
       htmlEditor.destroy();
       cssEditor.destroy();

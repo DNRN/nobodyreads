@@ -90,6 +90,24 @@ describe("template system", () => {
     expect(css).toContain("--post-preview-title-size: 2rem");
   });
 
+  it("generateCss applies variant and token overrides together", () => {
+    const base = generateCss(DEFAULT_TEMPLATE);
+    const css = generateCss({
+      ...DEFAULT_TEMPLATE,
+      components: {
+        postPreview: {
+          variant: "card",
+          tokens: { titleSize: "1.5rem", excerptColor: "#ff0000" },
+        },
+        nav: { variant: "inline" },
+      },
+    });
+    expect(css).not.toBe(base);
+    expect(css).toContain("border-radius: 10px");
+    expect(css).toContain("--post-preview-title-size: 1.5rem");
+    expect(css).toContain("--post-preview-excerpt-color: #ff0000");
+  });
+
   it("normalizeComponents converts legacy shape", () => {
     expect(
       normalizeComponents({ postPreview: "compact", nav: "dropdown" }),

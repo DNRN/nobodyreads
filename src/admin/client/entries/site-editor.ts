@@ -21,6 +21,7 @@ if (form && tabs && htmlInput && cssInput && tsInput && templateHidden && previe
     preview,
     saveStatus: document.getElementById("site-save-status") ?? undefined,
     customTokensEditor: document.getElementById("custom-tokens-editor") ?? undefined,
+    componentsPane: document.getElementById("components-editor") ?? undefined,
     addTokenBtn: document.getElementById("add-token-btn") ?? undefined,
   });
 }

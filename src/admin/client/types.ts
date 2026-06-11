@@ -61,6 +61,8 @@ export interface SiteEditorOptions {
   saveStatus?: HTMLElement;
   /** Container for the custom token editor table. */
   customTokensEditor?: HTMLElement;
+  /** Components tab pane for variant/token controls. */
+  componentsPane?: HTMLElement;
   /** "Add token" button. */
   addTokenBtn?: HTMLElement;
   /** URL for saving token values (default: "/admin/settings/tokens"). */

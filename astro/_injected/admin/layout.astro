@@ -9,7 +9,10 @@ import {
   getSiteTemplate,
   listSiteTemplateRevisions,
   getCurrentSiteTemplateRevisionId,
+  serializeRegistry,
+  normalizeComponents,
 } from "nobodyreads";
+import type { ComponentMap } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 const layoutBase = `${ctx.adminBase}/layout`;
@@ -28,6 +31,12 @@ const customJs = template.customJs ?? "";
 const customTokens = template.customTokens ?? [];
 const themeMeta = template.themeMeta ?? null;
 const templateJson = JSON.stringify(template, null, 2);
+const componentRegistry = serializeRegistry();
+const componentConfigs: ComponentMap = normalizeComponents(template.components);
+
+function isHexColor(value: string): boolean {
+  return /^#[0-9a-fA-F]{3,8}$/.test(value);
+}
 
 const generatedHtml = generateHtml({ ...template, layoutHtml: undefined });
 
@@ -78,6 +87,7 @@ function formatDateTime(iso: string): string {
         <button type="button" class="editor-tab" data-tab="css">CSS</button>
         <button type="button" class="editor-tab" data-tab="js">JS</button>
         <button type="button" class="editor-tab" data-tab="tokens">Tokens</button>
+        <button type="button" class="editor-tab" data-tab="components">Components</button>
         <button type="button" class="editor-tab" data-tab="advanced">Advanced</button>
         <button type="button" class="editor-tab" data-tab="preview">Preview</button>
       </div>
@@ -185,6 +195,81 @@ function formatDateTime(iso: string): string {
               </div>
               <button type="button" class="btn btn-ghost" id="add-token-btn">Add token</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Components tab -->
+        <div class="site-editor-pane hidden" data-pane="components">
+          <label>Components</label>
+          <p class="hint">Customize layout component variants and design tokens. Changes update the preview instantly.</p>
+
+          <div id="components-editor" class="components-editor">
+            {componentRegistry.map((component) => {
+              const config = componentConfigs[component.name] ?? {};
+              const currentVariant = config.variant ?? component.defaultVariant;
+              const hasMultipleVariants = component.variants.length > 1;
+              const tokenOverrides = config.tokens ?? {};
+
+              return (
+                <details class="component-card" data-component={component.name}>
+                  <summary class="component-card__summary">
+                    <span class="component-card__label">{component.label}</span>
+                    <code class="component-card__name">{component.name}</code>
+                  </summary>
+                  <div class="component-card__body">
+                    {hasMultipleVariants ? (
+                      <div class="component-field">
+                        <label class="editor-label--sm" for={`component-${component.name}-variant`}>Variant</label>
+                        <select
+                          id={`component-${component.name}-variant`}
+                          name={`component:${component.name}:variant`}
+                          data-default={component.defaultVariant}
+                          class="editor-input editor-input--sm"
+                        >
+                          {component.variants.map((variant) => (
+                            <option value={variant.id} selected={variant.id === currentVariant}>
+                              {variant.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+
+                    {component.tokens.length > 0 ? (
+                      <div class="component-tokens">
+                        {component.tokens.map((token) => {
+                          const tokenValue = tokenOverrides[token.key] ?? token.defaultValue;
+                          const useColorPicker = token.type === "color" && isHexColor(token.defaultValue);
+
+                          return (
+                            <div class="component-field">
+                              <label class="editor-label--sm" for={`component-${component.name}-token-${token.key}`}>
+                                {token.label}
+                              </label>
+                              <input
+                                id={`component-${component.name}-token-${token.key}`}
+                                type={useColorPicker ? "color" : "text"}
+                                name={`component:${component.name}:token:${token.key}`}
+                                data-default={token.defaultValue}
+                                value={tokenValue}
+                                placeholder={token.defaultValue}
+                                class="editor-input editor-input--sm"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p class="hint component-card__empty">No customizable tokens for this component.</p>
+                    )}
+
+                    <button type="button" class="btn btn-ghost btn-sm" data-reset-component={component.name}>
+                      Reset to defaults
+                    </button>
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </div>
 

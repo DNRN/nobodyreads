@@ -32,7 +32,12 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ error: "Invalid JSON" }, 400);
     }
 
-    await addSiteTemplateRevision(db, template as import("../../../template/types.js").SiteTemplateDefinition, tenantId);
+    const validation = validateTheme(template);
+    if (!validation.ok) {
+      return c.json({ error: validation.error }, 400);
+    }
+
+    await addSiteTemplateRevision(db, validation.theme, tenantId);
     return c.redirect(`${adminBase}/layout`);
   };
   app.post("/site/save", saveSiteTemplate);

@@ -140,7 +140,7 @@ const customJs = templateDef.customJs?.trim() || "";
         height: auto;
       }
     </style>
-    <style set:html={generatedCss} />
+    <style id="nr-generated-css" set:html={generatedCss} />
     <Fragment set:html={scriptTags} />
     <Fragment set:html={devReload} />
   </head>

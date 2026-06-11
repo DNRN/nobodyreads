@@ -1,5 +1,6 @@
-export function pageBodyCss(): string {
-  return `.page-body p {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `.page-body p {
   margin-bottom: 1.2rem;
 }
 
@@ -28,4 +29,19 @@ export function pageBodyCss(): string {
 .home-intro a {
   color: var(--text);
 }`;
+
+export const pageBodyComponent = defineComponent({
+  name: "pageBody",
+  label: "Page body",
+  defaultVariant: "default",
+  tokens: [],
+  variants: {
+    default: { label: "Default", css: "" },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use pageBodyComponent.css() via the registry */
+export function pageBodyCss(): string {
+  return pageBodyComponent.css("default");
 }

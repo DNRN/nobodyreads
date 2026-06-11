@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { SiteTemplateDefinition } from "./types.js";
+import type { ComponentMap, LegacyComponentVariants, SiteTemplateDefinition } from "./types.js";
+import { validateComponentsAgainstRegistry } from "./registry.js";
 
 const tokenSetSchema = z.object({
   bg: z.string(),
@@ -49,10 +50,20 @@ const sectionConfigSchema = z.discriminatedUnion("type", [
   footerSectionSchema,
 ]);
 
-const componentVariantsSchema = z.object({
+const legacyComponentVariantsSchema = z.object({
   postPreview: z.enum(["default", "compact", "card"]),
   nav: z.enum(["inline", "dropdown"]),
 });
+
+const componentConfigSchema = z.object({
+  variant: z.string().optional(),
+  tokens: z.record(z.string(), z.string()).optional(),
+});
+
+const componentsSchema = z.union([
+  legacyComponentVariantsSchema,
+  z.record(z.string(), componentConfigSchema),
+]);
 
 const customTokenSchema = z.object({
   key: z
@@ -77,13 +88,34 @@ export const siteTemplateDefinitionSchema = z.object({
     dark: tokenSetSchema.partial(),
   }),
   sections: z.array(sectionConfigSchema),
-  components: componentVariantsSchema,
+  components: componentsSchema,
   customCss: z.string().optional(),
   customJs: z.string().optional(),
   layoutHtml: z.string().optional(),
   customTokens: z.array(customTokenSchema).optional(),
   themeMeta: themeMetaSchema.optional(),
 });
+
+function isLegacyComponents(components: unknown): components is LegacyComponentVariants {
+  if (!components || typeof components !== "object") return false;
+  const record = components as Record<string, unknown>;
+  return typeof record.postPreview === "string" && typeof record.nav === "string";
+}
+
+export function normalizeComponents(components: unknown): ComponentMap {
+  if (!components || typeof components !== "object") {
+    return {};
+  }
+
+  if (isLegacyComponents(components)) {
+    return {
+      postPreview: { variant: components.postPreview },
+      nav: { variant: components.nav },
+    };
+  }
+
+  return components as ComponentMap;
+}
 
 export function validateTheme(
   data: unknown,
@@ -95,7 +127,19 @@ export function validateTheme(
       .join("; ");
     return { ok: false, error: messages };
   }
-  return { ok: true, theme: result.data as SiteTemplateDefinition };
+
+  const components = normalizeComponents(result.data.components);
+  const registryError = validateComponentsAgainstRegistry(components);
+  if (registryError) {
+    return { ok: false, error: registryError };
+  }
+
+  const theme: SiteTemplateDefinition = {
+    ...(result.data as SiteTemplateDefinition),
+    components,
+  };
+
+  return { ok: true, theme };
 }
 
 export function themeHasScripts(theme: SiteTemplateDefinition): boolean {

@@ -660,6 +660,10 @@
   overflow: hidden;
 }
 
+.nr-admin-content:has(.editor-main--site) {
+  overflow-y: auto;
+}
+
 .nr-admin .editor-main--site {
   height: auto;
   overflow: auto;

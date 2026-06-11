@@ -110,14 +110,25 @@ export {
   generateCss,
   generateHtml,
   DEFAULT_TEMPLATE,
+  componentRegistry,
+  getComponentByName,
+  serializeRegistry,
+  validateTheme,
+  normalizeComponents,
 } from "./template/index.js";
 export type {
   SiteTemplateDefinition,
   TokenSet,
   SectionConfig,
+  ComponentConfig,
+  ComponentMap,
   ComponentVariants,
+  LegacyComponentVariants,
   CustomToken,
   ThemeMeta,
+  ComponentTokenDef,
+  ComponentDefinition,
+  SerializableComponentDefinition,
 } from "./template/index.js";
 
 // Types

@@ -1,5 +1,6 @@
-export function navCss(): string {
-  return `.nav-actions {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `.nav-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -125,7 +126,15 @@ body.nav-open .site-menu {
   color: var(--text);
 }
 
-.site-nav-inline {
+.site-nav .nav-auth,
+.site-menu .nav-auth {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}`;
+
+const INLINE_CSS = `.site-nav-inline {
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -142,13 +151,58 @@ body.nav-open .site-menu {
 .site-nav-inline a:hover,
 .site-nav-inline a.active {
   color: var(--text);
+}`;
+
+const DROPDOWN_CSS = `.site-nav-inline {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 0.2s, transform 0.2s;
 }
 
-.site-nav .nav-auth,
-.site-menu .nav-auth {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.6rem;
+body.nav-open .site-nav-inline {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.site-nav-inline a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  transition: color 0.15s;
+}
+
+.site-nav-inline a:hover,
+.site-nav-inline a.active {
+  color: var(--text);
 }`;
+
+export const navComponent = defineComponent({
+  name: "nav",
+  label: "Navigation",
+  defaultVariant: "inline",
+  tokens: [],
+  variants: {
+    inline: { label: "Inline", css: INLINE_CSS },
+    dropdown: { label: "Dropdown", css: DROPDOWN_CSS },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use navComponent.css() via the registry */
+export function navCss(): string {
+  return navComponent.css("inline");
 }

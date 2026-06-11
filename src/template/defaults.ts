@@ -56,7 +56,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     },
   ],
   components: {
-    postPreview: "default",
-    nav: "inline",
+    postPreview: { variant: "default" },
+    nav: { variant: "inline" },
   },
 };

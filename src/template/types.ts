@@ -45,10 +45,21 @@ export type SectionConfig =
   | ContentSectionConfig
   | FooterSectionConfig;
 
-export interface ComponentVariants {
+export interface ComponentConfig {
+  variant?: string;
+  tokens?: Record<string, string>;
+}
+
+export type ComponentMap = Record<string, ComponentConfig>;
+
+/** @deprecated Legacy theme shape stored in older revisions. */
+export interface LegacyComponentVariants {
   postPreview: "default" | "compact" | "card";
   nav: "inline" | "dropdown";
 }
+
+/** @deprecated Use ComponentMap instead. */
+export type ComponentVariants = LegacyComponentVariants;
 
 export interface CustomToken {
   key: string;
@@ -70,7 +81,7 @@ export interface SiteTemplateDefinition {
     dark: Partial<TokenSet>;
   };
   sections: SectionConfig[];
-  components: ComponentVariants;
+  components: ComponentMap;
   customCss?: string;
   customJs?: string;
   layoutHtml?: string;

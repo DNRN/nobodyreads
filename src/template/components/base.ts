@@ -1,5 +1,6 @@
-export function baseCss(): string {
-  return `*, *::before, *::after {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -46,4 +47,19 @@ main {
   font-style: italic;
   font-size: 0.9rem;
 }`;
+
+export const baseComponent = defineComponent({
+  name: "base",
+  label: "Base styles",
+  defaultVariant: "default",
+  tokens: [],
+  variants: {
+    default: { label: "Default", css: "" },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use baseComponent.css() via the registry */
+export function baseCss(): string {
+  return baseComponent.css("default");
 }

@@ -1,5 +1,6 @@
-export function platformCss(): string {
-  return `.platform-hero {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `.platform-hero {
   padding: 3rem 0 2.5rem;
 }
 
@@ -352,4 +353,19 @@ export function platformCss(): string {
   color: #b44;
   line-height: 1.5;
 }`;
+
+export const platformComponent = defineComponent({
+  name: "platform",
+  label: "Platform pages",
+  defaultVariant: "default",
+  tokens: [],
+  variants: {
+    default: { label: "Default", css: "" },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use platformComponent.css() via the registry */
+export function platformCss(): string {
+  return platformComponent.css("default");
 }

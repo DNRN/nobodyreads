@@ -1,5 +1,6 @@
-export function responsiveCss(): string {
-  return `@media (max-width: 480px) {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `@media (max-width: 480px) {
   html {
     font-size: 16px;
   }
@@ -76,4 +77,19 @@ export function responsiveCss(): string {
     grid-template-columns: repeat(2, 1fr);
   }
 }`;
+
+export const responsiveComponent = defineComponent({
+  name: "responsive",
+  label: "Responsive rules",
+  defaultVariant: "default",
+  tokens: [],
+  variants: {
+    default: { label: "Default", css: "" },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use responsiveComponent.css() via the registry */
+export function responsiveCss(): string {
+  return responsiveComponent.css("default");
 }

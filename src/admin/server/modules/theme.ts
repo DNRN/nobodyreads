@@ -10,6 +10,7 @@ import {
 } from "../../../shared/site-bundle.js";
 import { getSiteSettings, setSiteSetting, deleteSiteSetting } from "../../../shared/site-settings.js";
 import { validateTheme, themeHasScripts } from "../../../template/theme-io.js";
+import { serializeRegistry } from "../../../template/registry.js";
 import { DEFAULT_TEMPLATE } from "../../../template/defaults.js";
 import type { AdminModuleContext } from "./types.js";
 
@@ -119,6 +120,10 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ ok: true });
     }
     return c.redirect(`${adminBase}/layout`);
+  });
+
+  app.get("/design/registry", (c) => {
+    return c.json(serializeRegistry());
   });
 
   app.get("/settings/tokens", async (c) => {

@@ -61,6 +61,10 @@ import {
   generateCss,
   generateHtml,
   DEFAULT_TEMPLATE,
+  componentRegistry,
+  serializeRegistry,
+  validateTheme,
+  normalizeComponents,
 
   // Media storage
   createMediaStorage,
@@ -167,6 +171,10 @@ describe("public API exports", () => {
     expect(DEFAULT_TEMPLATE).toBeDefined();
     expect(DEFAULT_TEMPLATE.tokens).toBeDefined();
     expect(DEFAULT_TEMPLATE.sections).toBeInstanceOf(Array);
+    expect(componentRegistry).toBeInstanceOf(Array);
+    expect(serializeRegistry).toBeTypeOf("function");
+    expect(validateTheme).toBeTypeOf("function");
+    expect(normalizeComponents).toBeTypeOf("function");
   });
 
   it("exports media storage", () => {

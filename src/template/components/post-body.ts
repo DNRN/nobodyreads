@@ -1,5 +1,6 @@
-export function postBodyCss(): string {
-  return `.post-header {
+import { defineComponent } from "../component-definition.js";
+
+const BASE_CSS = `.post-header {
   margin-bottom: 2rem;
 }
 
@@ -70,4 +71,19 @@ export function postBodyCss(): string {
 .back-link:hover {
   color: var(--text);
 }`;
+
+export const postBodyComponent = defineComponent({
+  name: "postBody",
+  label: "Post body",
+  defaultVariant: "default",
+  tokens: [],
+  variants: {
+    default: { label: "Default", css: "" },
+  },
+  baseCss: BASE_CSS,
+});
+
+/** @deprecated Use postBodyComponent.css() via the registry */
+export function postBodyCss(): string {
+  return postBodyComponent.css("default");
 }

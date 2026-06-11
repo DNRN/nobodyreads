@@ -28,6 +28,34 @@ multi-tenant platforms).
   middleware before any injected page renders.
 - **Standalone server** — `src/standalone.ts` wires everything together for
   the `npx nobodyreads` CLI use case.
+- **Documentation** — `docs/` holds architecture notes and recorded design
+  decisions. Start with `docs/overview.md` for how the system is composed.
+  The README covers setup and usage; `docs/` is for durable context that
+  outlives a single PR.
+
+## Documentation
+
+Keep `docs/` in sync when you change how the system works — not for every
+bugfix or cosmetic tweak, but whenever a contributor would be misled by
+stale architecture notes.
+
+**Update `docs/` when you:**
+
+- Add, remove, or rename a major module, route factory, or package export
+- Change request routing, the dev/prod split, or how Astro and Hono interact
+- Alter the data model, content pipeline, template system, or admin context contract
+- Introduce or retire a design invariant (auth split, tenant model, config shape, etc.)
+- Move admin pages, change the `nobodyreadsAdmin` integration, or shift what hosts must wire
+
+**Prefer updating an existing doc** (usually `docs/overview.md`) over adding a
+new file. Add a new doc only when the topic is large enough to stand alone
+(e.g. a future `docs/embedding.md` for multi-tenant hosts).
+
+**Do not duplicate the README.** `docs/` explains *why* and *how things fit
+together; the README explains *how to run and configure* the project.
+
+If you are unsure whether a change warrants a doc update, update
+`docs/overview.md` — stale docs are worse than slightly verbose ones.
 
 ## Invariants this package must preserve
 
@@ -60,6 +88,8 @@ astro/
   _injected/admin/        # admin pages (not auto-routed — injected)
   layouts/, components/   # shared Astro building blocks
   pages/                  # only non-admin file-system routes (e.g. login)
+docs/
+  overview.md             # architecture overview and design decisions
 ```
 
 ## Common commands

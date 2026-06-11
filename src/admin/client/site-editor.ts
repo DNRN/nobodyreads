@@ -30,8 +30,6 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     componentsPane,
     addTokenBtn,
   } = options;
-  const tokenSaveUrl = options.tokenSaveUrl ?? "/admin/settings/tokens";
-
   let isDirty = false;
   let editMode: "tabs" | "advanced" = "tabs";
   let previewDebounce: number | undefined;
@@ -103,8 +101,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
       const key = row.getAttribute("data-token-key") ?? "";
       const label = row.querySelector("td:nth-child(2)")?.textContent?.trim() ?? key;
       const type = row.querySelector("td:nth-child(3)")?.textContent?.trim() ?? "text";
-      const input = row.querySelector(`input[name="tokenval:${key}"]`) as HTMLInputElement | null;
-      const defaultValue = input?.value ?? "";
+      const defaultValue = row.getAttribute("data-token-default") ?? "";
       tokens.push({ key, label, type, defaultValue });
     }
     return tokens;
@@ -156,16 +153,6 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     }
 
     return components;
-  }
-
-  function getTokenValuesFromUI(): Record<string, string> {
-    const values: Record<string, string> = {};
-    const inputs = document.querySelectorAll('input[name^="tokenval:"]') as NodeListOf<HTMLInputElement>;
-    for (const input of inputs) {
-      const key = input.name.slice("tokenval:".length);
-      values[key] = input.value;
-    }
-    return values;
   }
 
   function buildTemplateJson(): string {
@@ -284,7 +271,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
         if (emptyMsg) {
           const table = document.createElement("table");
           table.className = "editor-table";
-          table.innerHTML = `<thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Value</th><th></th></tr></thead><tbody></tbody>`;
+          table.innerHTML = `<thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Default</th><th></th></tr></thead><tbody></tbody>`;
           emptyMsg.replaceWith(table);
         }
         tbody = container?.querySelector("tbody") ?? null;
@@ -294,12 +281,12 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
       const tr = document.createElement("tr");
       tr.setAttribute("data-token-key", key);
-      const inputType = type === "color" ? "color" : "text";
+      tr.setAttribute("data-token-default", defaultValue);
       tr.innerHTML = `
         <td><code>{{${key}}}</code></td>
         <td>${label}</td>
         <td>${type}</td>
-        <td><input type="${inputType}" class="editor-input editor-input--sm" name="tokenval:${key}" value="${defaultValue}" /></td>
+        <td class="cell-slug">${defaultValue || '<span class="hint">—</span>'}</td>
         <td><button type="button" class="btn btn-danger btn-sm" data-remove-token="${key}">Remove</button></td>
       `;
       tbody.appendChild(tr);
@@ -362,28 +349,6 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     applyLivePreviewCss();
   });
 
-  async function saveTokenValues() {
-    const values = getTokenValuesFromUI();
-    const body = new URLSearchParams();
-    for (const [key, value] of Object.entries(values)) {
-      body.append(`token:${key}`, value);
-    }
-
-    try {
-      await fetch(tokenSaveUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-        body,
-      });
-    } catch (err) {
-      console.error("Failed to save token values:", err);
-    }
-  }
-
   formElement.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -426,8 +391,6 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
         }
         throw new Error(`Save failed: ${response.status}`);
       }
-
-      await saveTokenValues();
 
       isDirty = false;
       setSaveStatus("saved");

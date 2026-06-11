@@ -142,6 +142,8 @@ export interface LayoutOptions {
   urlPrefix?: string;
   siteName?: string;
   siteTagline?: string;
+  /** Site-wide default social image, used when a page has no `seo.ogImage`. */
+  defaultOgImage?: string;
 }
 
 /**

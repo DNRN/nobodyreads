@@ -52,6 +52,7 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
       return c.json({
         id: mediaId,
         url: stored.url,
+        storageKey: stored.key,
         filename: file.name,
       });
     }

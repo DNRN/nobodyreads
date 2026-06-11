@@ -52,6 +52,10 @@ export function nobodyreadsAdmin(
           entrypoint: entry("editor/[id].astro"),
         });
         injectRoute({
+          pattern: `${pattern}/editor/site`,
+          entrypoint: entry("editor/site.astro"),
+        });
+        injectRoute({
           pattern: `${pattern}/views`,
           entrypoint: entry("views/index.astro"),
         });

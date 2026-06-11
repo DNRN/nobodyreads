@@ -51,6 +51,8 @@ const builtinTokens = [
   { token: "{{subscribe}}", description: "Email subscribe form" },
   { token: "{{siteName}}", description: "Site name" },
   { token: "{{siteTagline}}", description: "Site tagline" },
+  { token: "{{siteBranding}}", description: "Logo image, or site name when no logo is set" },
+  { token: "{{siteLogo}}", description: "Logo image URL (empty when unset)" },
   { token: "{{homeHref}}", description: "Home page URL" },
   { token: "{{year}}", description: "Current year" },
 ];
@@ -138,30 +140,26 @@ function formatDateTime(iso: string): string {
         <!-- Custom Tokens tab -->
         <div class="site-editor-pane hidden" data-pane="tokens">
           <label>Custom Tokens</label>
-          <p class="hint">Define reusable variables for your layout. Token keys become <code>{"{{key}}"}</code> placeholders in your HTML.</p>
+          <p class="hint">
+            Define reusable text slots for your layout. Token keys become <code>{"{{key}}"}</code> placeholders in your HTML.
+            Token <strong>values</strong> are edited under <a href={`${ctx.adminBase}/editor/site`}>Content → Site identity</a>.
+          </p>
 
-          <div id="custom-tokens-editor" data-tokens={JSON.stringify(customTokens)} data-values={JSON.stringify(tokenValues)}>
+          <div id="custom-tokens-editor" data-tokens={JSON.stringify(customTokens)}>
             {customTokens.length === 0 ? (
               <p class="editor-empty">No custom tokens defined. Add one below.</p>
             ) : (
               <table class="editor-table">
                 <thead>
-                  <tr><th>Key</th><th>Label</th><th>Type</th><th>Value</th><th></th></tr>
+                  <tr><th>Key</th><th>Label</th><th>Type</th><th>Default</th><th></th></tr>
                 </thead>
                 <tbody>
                   {customTokens.map((t) => (
-                    <tr data-token-key={t.key}>
+                    <tr data-token-key={t.key} data-token-default={t.defaultValue}>
                       <td><code>{`{{${t.key}}}`}</code></td>
                       <td>{t.label}</td>
                       <td>{t.type}</td>
-                      <td>
-                        <input
-                          type={t.type === "color" ? "color" : "text"}
-                          class="editor-input editor-input--sm"
-                          name={`tokenval:${t.key}`}
-                          value={tokenValues[t.key] ?? t.defaultValue}
-                        />
-                      </td>
+                      <td class="cell-slug">{t.defaultValue || <span class="hint">—</span>}</td>
                       <td>
                         <button type="button" class="btn btn-danger btn-sm" data-remove-token={t.key}>Remove</button>
                       </td>

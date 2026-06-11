@@ -5,7 +5,12 @@ import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/se
 import { initDb } from "../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getSiteTemplate } from "../../src/shared/site-bundle.js";
-import { getSiteSettings } from "../../src/shared/site-settings.js";
+import {
+  getSiteSettings,
+  resolveSiteIdentity,
+  resolveMediaValue,
+} from "../../src/shared/site-settings.js";
+import { createMediaStorage } from "../../src/media/storage.js";
 import type { SiteTemplateDefinition } from "../../src/template/types.js";
 import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
@@ -17,17 +22,39 @@ const { options, authLinksHtml, templateOverride } = Astro.props as {
   templateOverride?: SiteTemplateDefinition | null;
 };
 
-const siteName = options.siteName ?? (process.env.SITE_NAME || "nobodyreads.me");
-const siteTagline =
-  options.siteTagline ??
-  (process.env.SITE_TAGLINE ||
-    "Another simple blog engine. For writing mostly to yourself.");
+const db = await initDb();
+const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
+const templateDef: SiteTemplateDefinition =
+  templateOverride ?? (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
+
+const identity = resolveSiteIdentity(settings, {
+  siteName: "nobodyreads.me",
+  siteTagline: "Another simple blog engine. For writing mostly to yourself.",
+});
+const siteName = options.siteName ?? identity.siteName;
+const siteTagline = options.siteTagline ?? identity.siteTagline;
+
+const storage = createMediaStorage();
+const mediaUrl = (key: string) => storage.url(key);
+const logoUrl = resolveMediaValue(identity.logo, mediaUrl);
+const faviconUrl = resolveMediaValue(identity.favicon, mediaUrl);
+const ogImageUrl = resolveMediaValue(identity.ogImage, mediaUrl);
+
 const homeHref = options.urlPrefix || "/";
 const navItems = options.navItems ?? [];
 const activePageId = options.activePageId;
 
-const metaTags = buildMetaTags({ ...options, siteName, siteTagline });
-const structuredData = buildStructuredData({ ...options, siteName, siteTagline });
+const metaOptions = { ...options, siteName, siteTagline, defaultOgImage: ogImageUrl ?? undefined };
+const metaTags = buildMetaTags(metaOptions);
+const structuredData = buildStructuredData(metaOptions);
+
+const faviconTags = faviconUrl
+  ? `  <link rel="icon" href="${escapeHtml(faviconUrl)}">\n  <link rel="apple-touch-icon" href="${escapeHtml(faviconUrl)}">`
+  : "";
+
+const brandingHtml = logoUrl
+  ? `<img class="site-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(siteName)}">`
+  : escapeHtml(siteName);
 
 const scriptTags = (options.scripts ?? [])
   .map((s) => `  <script type="module" src="${escapeHtml(s)}"></script>`)
@@ -36,10 +63,6 @@ const scriptTags = (options.scripts ?? [])
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
-
-const db = await initDb();
-const templateDef: SiteTemplateDefinition =
-  templateOverride ?? (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
 
 const emailEnabled = isEmailEnabled();
 
@@ -78,6 +101,8 @@ let bodyHtml = templateHtml
   .replaceAll("{{navToggle}}", navToggle)
   .replaceAll("{{siteName}}", escapeHtml(siteName))
   .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
+  .replaceAll("{{siteBranding}}", brandingHtml)
+  .replaceAll("{{siteLogo}}", logoUrl ? escapeHtml(logoUrl) : "")
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))
   .replaceAll("{{year}}", `${new Date().getFullYear()}`)
   .replaceAll("{{subscribe}}", subscribeFormHtml);
@@ -91,7 +116,6 @@ bodyHtml = bodyHtml.includes("{{content}}")
   : `${bodyHtml}\n${contentHtml}`;
 
 if (templateDef.customTokens?.length) {
-  const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
   for (const token of templateDef.customTokens) {
     const value = settings[`custom_token:${token.key}`] ?? token.defaultValue;
     const rendered = token.type === "html" ? value : escapeHtml(value);
@@ -124,6 +148,7 @@ const customJs = templateDef.customJs?.trim() || "";
         }
       })();
     </script>
+    {faviconTags ? <Fragment set:html={faviconTags} /> : null}
     <Fragment set:html={metaTags} />
     <Fragment set:html={structuredData} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

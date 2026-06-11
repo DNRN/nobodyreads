@@ -119,6 +119,19 @@ export {
   getSiteSetting,
   setSiteSetting,
   deleteSiteSetting,
+  resolveMediaValue,
+  resolveSiteIdentity,
+  SITE_IDENTITY_FIELDS,
+  SETTING_SITE_NAME,
+  SETTING_SITE_TAGLINE,
+  SETTING_SITE_LOGO,
+  SETTING_SITE_FAVICON,
+  SETTING_SITE_OG_IMAGE,
+} from "./shared/site-settings.js";
+export type {
+  SiteIdentityField,
+  SiteIdentityFieldType,
+  ResolvedSiteIdentity,
 } from "./shared/site-settings.js";
 
 // Template system

@@ -34,6 +34,9 @@ export function buildMetaTags(options: LayoutOptions): string {
     lines.push(`  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">`);
   }
 
+  // Social image: page-level override, else site-wide default.
+  const ogImage = seo?.ogImage || options.defaultOgImage;
+
   // Open Graph tags
   lines.push(`  <meta property="og:site_name" content="${escapeHtml(options.siteName || SITE_NAME)}">`);
   lines.push(
@@ -48,10 +51,10 @@ export function buildMetaTags(options: LayoutOptions): string {
   if (canonicalUrl) {
     lines.push(`  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">`);
   }
-  if (seo?.ogImage) {
-    const imgUrl = seo.ogImage.startsWith("http")
-      ? seo.ogImage
-      : `${SITE_URL}${seo.ogImage}`;
+  if (ogImage) {
+    const imgUrl = ogImage.startsWith("http")
+      ? ogImage
+      : `${SITE_URL}${ogImage}`;
     lines.push(`  <meta property="og:image" content="${escapeHtml(imgUrl)}">`);
   }
 
@@ -64,10 +67,10 @@ export function buildMetaTags(options: LayoutOptions): string {
       `  <meta name="twitter:description" content="${escapeHtml(description)}">`
     );
   }
-  if (seo?.ogImage) {
-    const imgUrl = seo.ogImage.startsWith("http")
-      ? seo.ogImage
-      : `${SITE_URL}${seo.ogImage}`;
+  if (ogImage) {
+    const imgUrl = ogImage.startsWith("http")
+      ? ogImage
+      : `${SITE_URL}${ogImage}`;
     lines.push(`  <meta name="twitter:image" content="${escapeHtml(imgUrl)}">`);
   }
 

@@ -1,0 +1,393 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import {
+  initDb,
+  getSiteSettings,
+  getSiteTemplate,
+  DEFAULT_TEMPLATE,
+  SITE_IDENTITY_FIELDS,
+  resolveMediaValue,
+} from "nobodyreads";
+import type { CustomToken } from "nobodyreads";
+import { createMediaStorage } from "nobodyreads/storage";
+
+const ctx = requireAdminContext(Astro.locals);
+const mediaBase = `${ctx.adminBase}/media`;
+
+const db = await initDb();
+const storage = createMediaStorage();
+const mediaUrl = (key: string) => storage.url(key);
+
+const [settings, template] = await Promise.all([
+  getSiteSettings(db, ctx.tenantId),
+  getSiteTemplate(db, ctx.tenantId),
+]);
+const templateDef = template ?? DEFAULT_TEMPLATE;
+const customTokens: CustomToken[] = templateDef.customTokens ?? [];
+
+const identityFields = SITE_IDENTITY_FIELDS.map((field) => {
+  const value = settings[field.key] ?? "";
+  return {
+    ...field,
+    value,
+    previewUrl: field.type === "image" ? resolveMediaValue(value, mediaUrl) : null,
+    placeholder: field.envFallback ? process.env[field.envFallback] ?? "" : "",
+  };
+});
+
+const tokenValues: Record<string, string> = {};
+for (const token of customTokens) {
+  tokenValues[token.key] = settings[`custom_token:${token.key}`] ?? token.defaultValue;
+}
+
+const saved = Astro.url.searchParams.has("saved");
+---
+<AdminLayout title="Site identity — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <main class="container">
+    <div class="editor-list" data-media-base={mediaBase}>
+      <div class="editor-list-header">
+        <h2>Site identity</h2>
+      </div>
+      <p class="hint" style="margin-bottom: 1.5rem;">
+        Name, tagline, logo, favicon and the default social image for your site. To add or remove
+        text slots, define custom tokens in
+        <a href={`${ctx.adminBase}/layout`}>Theme Editor → Tokens</a>.
+      </p>
+
+      {saved ? (
+        <p class="badge badge-published" style="margin-bottom: 1rem; display: inline-block;">Saved</p>
+      ) : null}
+
+      <form method="POST" action={`${ctx.adminBase}/editor/site/save`}>
+        <section class="editor-section">
+          <h3>Site</h3>
+          {identityFields.map((field) => (
+            <div class="editor-field">
+              <label for={`field-${field.key}`} class="editor-label">{field.label}</label>
+              {field.type === "image" ? (
+                <div class="site-image-field" data-image-field data-name={field.formName}>
+                  <div class="site-image-preview" data-preview>
+                    {field.previewUrl ? (
+                      <img src={field.previewUrl} alt={field.label} />
+                    ) : (
+                      <span class="hint">No image set</span>
+                    )}
+                  </div>
+                  <input type="hidden" name={field.formName} value={field.value} data-value />
+                  <input type="file" accept="image/*" data-file hidden />
+                  <div class="site-image-actions">
+                    <button type="button" class="btn btn-sm btn-ghost" data-action="upload">Upload</button>
+                    <button type="button" class="btn btn-sm btn-ghost" data-action="library">Choose from library</button>
+                    <button type="button" class="btn btn-sm btn-ghost" data-action="remove" hidden={!field.value}>Remove</button>
+                  </div>
+                  <p class="site-image-status hint" data-status></p>
+                </div>
+              ) : field.type === "html" ? (
+                <textarea
+                  id={`field-${field.key}`}
+                  name={field.formName}
+                  class="editor-textarea editor-textarea--sm"
+                  rows={4}
+                  placeholder={field.placeholder}
+                >{field.value}</textarea>
+              ) : (
+                <input
+                  type={field.type === "url" ? "url" : "text"}
+                  id={`field-${field.key}`}
+                  name={field.formName}
+                  class="editor-input"
+                  value={field.value}
+                  placeholder={field.placeholder}
+                />
+              )}
+              {field.hint ? <p class="hint">{field.hint}</p> : null}
+            </div>
+          ))}
+        </section>
+
+        {customTokens.length > 0 ? (
+          <section class="editor-section" style="margin-top: 2rem;">
+            <h3>Theme text slots</h3>
+            <p class="hint" style="margin-bottom: 1rem;">
+              Slots defined by your current theme. Change the slots themselves in
+              <a href={`${ctx.adminBase}/layout`}>Theme Editor → Tokens</a>.
+            </p>
+            {customTokens.map((t) => (
+              <div class="editor-field">
+                <label for={`token-${t.key}`} class="editor-label">{t.label}</label>
+                {t.type === "html" ? (
+                  <textarea
+                    id={`token-${t.key}`}
+                    name={`token:${t.key}`}
+                    class="editor-textarea editor-textarea--sm"
+                    rows={4}
+                  >{tokenValues[t.key]}</textarea>
+                ) : (
+                  <input
+                    type={t.type === "color" ? "color" : t.type === "url" ? "url" : "text"}
+                    id={`token-${t.key}`}
+                    name={`token:${t.key}`}
+                    class="editor-input"
+                    value={tokenValues[t.key]}
+                    placeholder={t.defaultValue}
+                  />
+                )}
+                <p class="hint">Token: <code>{`{{${t.key}}}`}</code></p>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        <div class="editor-actions" style="margin-top: 2rem;">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Media library picker -->
+    <div class="media-picker" id="media-picker" hidden>
+      <div class="media-picker-backdrop" data-picker-close></div>
+      <div class="media-picker-dialog" role="dialog" aria-modal="true" aria-label="Choose media">
+        <div class="media-picker-header">
+          <h3>Choose from library</h3>
+          <button type="button" class="btn btn-sm btn-ghost" data-picker-close>Close</button>
+        </div>
+        <div class="media-picker-grid" id="media-picker-grid"></div>
+        <p class="media-picker-empty hint" id="media-picker-empty" hidden>No images uploaded yet.</p>
+      </div>
+    </div>
+  </main>
+
+  <style is:global>
+    .site-image-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+    .site-image-preview {
+      width: 120px;
+      height: 120px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: var(--bg-secondary, #f5f5f5);
+      text-align: center;
+      padding: 0.25rem;
+    }
+    .site-image-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .site-image-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .site-image-status {
+      margin: 0;
+      min-height: 1em;
+    }
+    .site-image-status.error {
+      color: var(--danger, #dc2626);
+    }
+
+    .media-picker {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .media-picker[hidden] {
+      display: none;
+    }
+    .media-picker-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .media-picker-dialog {
+      position: relative;
+      background: var(--bg, #fff);
+      border-radius: 10px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    .media-picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .media-picker-header h3 {
+      margin: 0;
+    }
+    .media-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 0.75rem;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .media-picker-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      aspect-ratio: 1;
+      background: var(--bg-secondary, #f5f5f5);
+      padding: 0;
+    }
+    .media-picker-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .media-picker-item:hover {
+      border-color: var(--accent, #4f46e5);
+    }
+    .media-picker-empty {
+      padding: 1.5rem;
+      text-align: center;
+    }
+  </style>
+
+  <script is:inline>
+    (function () {
+      const root = document.querySelector("[data-media-base]");
+      if (!root) return;
+      const mediaBase = root.getAttribute("data-media-base");
+      const uploadUrl = mediaBase + "/upload";
+      const listUrl = mediaBase + "/list";
+
+      const picker = document.getElementById("media-picker");
+      const pickerGrid = document.getElementById("media-picker-grid");
+      const pickerEmpty = document.getElementById("media-picker-empty");
+      let pickerTarget = null;
+
+      function escapeAttr(s) {
+        return String(s).replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      function setFieldValue(field, key, url) {
+        const hidden = field.querySelector("[data-value]");
+        const preview = field.querySelector("[data-preview]");
+        const removeBtn = field.querySelector('[data-action="remove"]');
+        if (hidden) hidden.value = key;
+        if (preview) {
+          preview.innerHTML = url
+            ? '<img src="' + escapeAttr(url) + '" alt="" />'
+            : '<span class="hint">No image set</span>';
+        }
+        if (removeBtn) removeBtn.hidden = !key;
+      }
+
+      function setStatus(field, msg, isError) {
+        const status = field.querySelector("[data-status]");
+        if (!status) return;
+        status.textContent = msg || "";
+        status.classList.toggle("error", !!isError);
+      }
+
+      async function uploadFile(field, file) {
+        setStatus(field, "Uploading…", false);
+        const fd = new FormData();
+        fd.append("file", file);
+        try {
+          const res = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { accept: "application/json" },
+            credentials: "same-origin",
+            body: fd,
+          });
+          if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+          const data = await res.json();
+          const key = data.storageKey || data.url;
+          setFieldValue(field, key, data.url);
+          setStatus(field, "", false);
+        } catch (err) {
+          setStatus(field, (err && err.message) || "Upload failed", true);
+        }
+      }
+
+      async function openPicker(field) {
+        pickerTarget = field;
+        pickerGrid.innerHTML = "";
+        pickerEmpty.hidden = true;
+        picker.hidden = false;
+        try {
+          const res = await fetch(listUrl, { headers: { accept: "application/json" } });
+          if (!res.ok) throw new Error("Failed to load media");
+          const items = (await res.json()).filter(
+            (m) => m.mimeType && m.mimeType.indexOf("image/") === 0
+          );
+          if (items.length === 0) {
+            pickerEmpty.hidden = false;
+            return;
+          }
+          for (const m of items) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "media-picker-item";
+            btn.title = m.originalName;
+            btn.innerHTML = '<img src="' + escapeAttr(m.url) + '" alt="" loading="lazy" />';
+            btn.addEventListener("click", () => {
+              if (pickerTarget) setFieldValue(pickerTarget, m.storageKey || m.url, m.url);
+              closePicker();
+            });
+            pickerGrid.appendChild(btn);
+          }
+        } catch (err) {
+          pickerEmpty.textContent = (err && err.message) || "Failed to load media";
+          pickerEmpty.hidden = false;
+        }
+      }
+
+      function closePicker() {
+        picker.hidden = true;
+        pickerTarget = null;
+      }
+
+      picker.querySelectorAll("[data-picker-close]").forEach((el) =>
+        el.addEventListener("click", closePicker)
+      );
+
+      document.querySelectorAll("[data-image-field]").forEach((field) => {
+        const fileInput = field.querySelector("[data-file]");
+        field.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-action]");
+          if (!btn) return;
+          const action = btn.getAttribute("data-action");
+          if (action === "upload") {
+            fileInput.click();
+          } else if (action === "library") {
+            openPicker(field);
+          } else if (action === "remove") {
+            setFieldValue(field, "", null);
+          }
+        });
+        fileInput.addEventListener("change", () => {
+          if (fileInput.files && fileInput.files[0]) {
+            uploadFile(field, fileInput.files[0]);
+            fileInput.value = "";
+          }
+        });
+      });
+    })();
+  </script>
+</AdminLayout>

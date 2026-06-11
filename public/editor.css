@@ -1328,13 +1328,80 @@
   color: var(--nr-text);
 }
 
-.nr-admin .editor-input--sm {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.82rem;
+/* ========================================
+   Form field primitives
+   Single source for input/label/field styling
+   outside the editor sidebar context.
+   ======================================== */
+
+.nr-admin .editor-input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  font-family: var(--nr-font);
   border: 1px solid var(--nr-border);
   border-radius: var(--nr-radius);
   background: var(--nr-bg);
   color: var(--nr-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nr-admin .editor-input:focus {
+  outline: none;
+  border-color: var(--nr-accent);
+  box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .editor-input--sm {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.nr-admin .editor-textarea--sm {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  font-family: var(--nr-font);
+  border: 1px solid var(--nr-border);
+  border-radius: var(--nr-radius);
+  background: var(--nr-bg);
+  color: var(--nr-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.nr-admin .editor-textarea--sm:focus {
+  outline: none;
+  border-color: var(--nr-accent);
+  box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.nr-admin .editor-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--nr-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.nr-admin .editor-section {
+  margin-bottom: 2rem;
+}
+
+.nr-admin .editor-section > h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--nr-border);
 }
 
 .nr-admin .editor-label--sm {

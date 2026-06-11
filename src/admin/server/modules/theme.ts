@@ -8,14 +8,19 @@ import {
   deleteSiteTemplateRevision,
   setCurrentSiteTemplateRevision,
 } from "../../../shared/site-bundle.js";
-import { getSiteSettings, setSiteSetting, deleteSiteSetting } from "../../../shared/site-settings.js";
+import {
+  getSiteSettings,
+  setSiteSetting,
+  deleteSiteSetting,
+  SITE_IDENTITY_FIELDS,
+} from "../../../shared/site-settings.js";
 import { validateTheme, themeHasScripts } from "../../../template/theme-io.js";
 import { serializeRegistry } from "../../../template/registry.js";
 import { DEFAULT_TEMPLATE } from "../../../template/defaults.js";
 import type { AdminModuleContext } from "./types.js";
 
 export function createThemeRoutes(ctx: AdminModuleContext): Hono {
-  const { db, tenantId, adminBase } = ctx;
+  const { db, tenantId, adminBase, editorBase } = ctx;
   const app = new Hono();
 
   const saveSiteTemplate = async (c: Context) => {
@@ -125,6 +130,38 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ ok: true });
     }
     return c.redirect(`${adminBase}/layout`);
+  });
+
+  app.post("/editor/site/save", async (c) => {
+    const body = await c.req.parseBody();
+
+    for (const field of SITE_IDENTITY_FIELDS) {
+      const raw = body[field.formName];
+      if (typeof raw !== "string") continue;
+      const value = raw.trim();
+      if (value === "") {
+        await deleteSiteSetting(db, tenantId, field.key);
+      } else {
+        await setSiteSetting(db, tenantId, field.key, value);
+      }
+    }
+
+    for (const [key, value] of Object.entries(body)) {
+      if (!key.startsWith("token:") || typeof value !== "string") continue;
+      const tokenKey = key.slice("token:".length);
+      const settingKey = `custom_token:${tokenKey}`;
+      if (value.trim() === "") {
+        await deleteSiteSetting(db, tenantId, settingKey);
+      } else {
+        await setSiteSetting(db, tenantId, settingKey, value);
+      }
+    }
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) {
+      return c.json({ ok: true });
+    }
+    return c.redirect(`${editorBase}/site?saved`);
   });
 
   app.get("/design/registry", (c) => {

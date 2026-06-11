@@ -1,3 +1,7 @@
+import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { z } from "zod";
+
 import type { Subscriber } from "./types.js";
 
 // --- Email provider abstraction ---
@@ -13,30 +17,48 @@ export interface EmailProvider {
   sendEmail(message: EmailMessage): Promise<void>;
 }
 
+/** Sender identity shared across providers. */
+export interface EmailFrom {
+  name: string;
+  email: string;
+}
+
+/** Context handed to a provider factory, derived from the email config file. */
+export interface EmailProviderContext {
+  /** Sender identity from the `from` section of the config. */
+  from: EmailFrom;
+  /** Provider-specific options from the `options` section of the config. */
+  options: Record<string, unknown>;
+}
+
+export type EmailProviderFactory = (
+  ctx: EmailProviderContext
+) => EmailProvider | null;
+
 // --- Provider registry ---
 
 /**
  * Registry for email providers.
  *
  * To add a custom provider, call `registerEmailProvider` with a name and a
- * factory function. The factory receives no arguments — it should read its own
- * configuration from `process.env` and return an `EmailProvider` instance, or
- * `null` if the required env vars are missing.
+ * factory function. The factory receives the resolved {@link EmailProviderContext}
+ * (sender identity + provider-specific `options` from the config file) and
+ * returns an `EmailProvider` instance, or `null` if required options are missing.
  *
  * Example:
  * ```ts
- * registerEmailProvider("sendgrid", () => {
- *   const apiKey = process.env.SENDGRID_API_KEY;
- *   if (!apiKey) return null;
- *   return new SendgridProvider(apiKey, getFromAddress());
+ * registerEmailProvider("sendgrid", ({ from, options }) => {
+ *   const apiKey = options.apiKey;
+ *   if (typeof apiKey !== "string") return null;
+ *   return new SendgridProvider(apiKey, from);
  * });
  * ```
  */
-const providers = new Map<string, () => EmailProvider | null>();
+const providers = new Map<string, EmailProviderFactory>();
 
 export function registerEmailProvider(
   name: string,
-  factory: () => EmailProvider | null
+  factory: EmailProviderFactory
 ): void {
   providers.set(name.toLowerCase(), factory);
 }
@@ -91,35 +113,104 @@ class MailjetProvider implements EmailProvider {
 }
 
 // Register the built-in Mailjet provider
-registerEmailProvider("mailjet", () => {
-  const apiKey = process.env.MAILJET_API_KEY;
-  const apiSecret = process.env.MAILJET_API_SECRET;
-  const fromEmail = process.env.EMAIL_FROM_EMAIL;
-  const fromName = process.env.EMAIL_FROM_NAME || "";
+registerEmailProvider("mailjet", ({ from, options }) => {
+  const apiKey = typeof options.apiKey === "string" ? options.apiKey : undefined;
+  const apiSecret =
+    typeof options.apiSecret === "string" ? options.apiSecret : undefined;
 
-  if (!apiKey || !apiSecret || !fromEmail) return null;
-  return new MailjetProvider(apiKey, apiSecret, fromName, fromEmail);
+  if (!apiKey || !apiSecret || !from.email) return null;
+  return new MailjetProvider(apiKey, apiSecret, from.name, from.email);
 });
 
-// --- Env helpers ---
+// --- Configuration ---
 
-/** Check whether email subscriptions are enabled via env. */
-export function isEmailEnabled(): boolean {
-  return process.env.EMAIL_ENABLED === "true";
+export const emailConfigSchema = z.object({
+  /** Master switch for email subscriptions. */
+  enabled: z.boolean().optional().default(false),
+  /** Registered provider name (e.g. "mailjet"). */
+  provider: z.string().optional(),
+  /** Sender identity used by providers. */
+  from: z
+    .object({
+      name: z.string().optional().default(""),
+      email: z.string().optional().default(""),
+    })
+    .optional(),
+  /** Provider-specific options (e.g. API keys). */
+  options: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
+export type EmailConfig = z.infer<typeof emailConfigSchema>;
+
+/** Default path (relative to cwd) where the email config file is looked up. */
+export const DEFAULT_EMAIL_CONFIG_PATH = join("config", "email.config.json");
+
+/**
+ * Load and validate the email configuration from disk.
+ *
+ * Looks at `EMAIL_CONFIG` (if set) or `config/email.config.json` relative to the
+ * current working directory. When no file is present, email is disabled.
+ */
+export function loadEmailConfig(): EmailConfig {
+  const configPath =
+    process.env.EMAIL_CONFIG || join(process.cwd(), DEFAULT_EMAIL_CONFIG_PATH);
+
+  if (!existsSync(configPath)) {
+    return { enabled: false, options: {} };
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(configPath, "utf8"));
+  } catch (err) {
+    throw new Error(
+      `Failed to parse email config at ${configPath}: ${(err as Error).message}`
+    );
+  }
+
+  const result = emailConfigSchema.safeParse(raw);
+  if (!result.success) {
+    throw new Error(
+      `Invalid email config at ${configPath}: ${result.error.message}`
+    );
+  }
+  return result.data;
 }
 
-/** Create an email provider based on the EMAIL_PROVIDER env var. */
-export function createEmailProvider(): EmailProvider | null {
-  const name = (process.env.EMAIL_PROVIDER || "").toLowerCase();
+// --- Helpers ---
+
+/**
+ * Check whether email subscriptions are enabled. Reads
+ * `config/email.config.json` unless an explicit config is provided.
+ */
+export function isEmailEnabled(config?: EmailConfig): boolean {
+  return (config ?? loadEmailConfig()).enabled === true;
+}
+
+/**
+ * Create an email provider from the email config file (or an explicit config).
+ * Returns `null` when email is disabled, no provider is set, the provider is
+ * unknown, or the provider's required options are missing.
+ */
+export function createEmailProvider(config?: EmailConfig): EmailProvider | null {
+  const cfg = config ?? loadEmailConfig();
+  if (!cfg.enabled) return null;
+
+  const name = (cfg.provider ?? "").toLowerCase();
   if (!name) return null;
 
   const factory = providers.get(name);
   if (!factory) {
-    console.warn(`Unknown email provider "${name}". Registered providers: ${[...providers.keys()].join(", ")}`);
+    console.warn(
+      `Unknown email provider "${name}". Registered providers: ${[...providers.keys()].join(", ")}`
+    );
     return null;
   }
 
-  return factory();
+  return factory({
+    from: { name: cfg.from?.name ?? "", email: cfg.from?.email ?? "" },
+    options: cfg.options,
+  });
 }
 
 // --- Email templates ---

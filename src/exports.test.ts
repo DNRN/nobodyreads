@@ -8,6 +8,13 @@ import {
   createSubscriptionAdminRoutes,
   notifySubscribers,
 
+  // Email
+  isEmailEnabled,
+  createEmailProvider,
+  registerEmailProvider,
+  loadEmailConfig,
+  emailConfigSchema,
+
   // Database
   initDb,
   getDb,
@@ -68,8 +75,11 @@ import {
 
   // Media storage
   createMediaStorage,
+  loadStorageConfig,
+  storageConfigSchema,
   LocalMediaStorage,
   GcsMediaStorage,
+  S3MediaStorage,
 
   // Auth
   editorRequiresAuth,
@@ -92,12 +102,17 @@ describe("public API exports", () => {
   it("supports documented package subpath imports", async () => {
     const schemaModule = await import("nobodyreads/schema");
     const storageModule = await import("nobodyreads/storage");
+    const emailModule = await import("nobodyreads/email");
 
     expect(schemaModule.tenant).toBeDefined();
     expect(schemaModule.page).toBeDefined();
     expect(storageModule.createMediaStorage).toBeTypeOf("function");
     expect(storageModule.LocalMediaStorage).toBeTypeOf("function");
     expect(storageModule.GcsMediaStorage).toBeTypeOf("function");
+    expect(storageModule.S3MediaStorage).toBeTypeOf("function");
+    expect(emailModule.createEmailProvider).toBeTypeOf("function");
+    expect(emailModule.registerEmailProvider).toBeTypeOf("function");
+    expect(emailModule.loadEmailConfig).toBeTypeOf("function");
   });
 
   it("exports route factories", () => {
@@ -177,10 +192,21 @@ describe("public API exports", () => {
     expect(normalizeComponents).toBeTypeOf("function");
   });
 
+  it("exports email utilities", () => {
+    expect(isEmailEnabled).toBeTypeOf("function");
+    expect(createEmailProvider).toBeTypeOf("function");
+    expect(registerEmailProvider).toBeTypeOf("function");
+    expect(loadEmailConfig).toBeTypeOf("function");
+    expect(emailConfigSchema).toBeDefined();
+  });
+
   it("exports media storage", () => {
     expect(createMediaStorage).toBeTypeOf("function");
+    expect(loadStorageConfig).toBeTypeOf("function");
+    expect(storageConfigSchema).toBeDefined();
     expect(LocalMediaStorage).toBeTypeOf("function");
     expect(GcsMediaStorage).toBeTypeOf("function");
+    expect(S3MediaStorage).toBeTypeOf("function");
   });
 
   it("exports auth utilities", () => {

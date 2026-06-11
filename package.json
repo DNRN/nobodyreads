@@ -16,6 +16,10 @@
       "types": "./dist/media/storage.d.ts",
       "import": "./dist/media/storage.js"
     },
+    "./email": {
+      "types": "./dist/subscription/email.d.ts",
+      "import": "./dist/subscription/email.js"
+    },
     "./editor": {
       "types": "./dist/admin/client/index.d.ts",
       "import": "./dist/admin/client/index.js"
@@ -39,6 +43,8 @@
     "astro/_injected",
     "astro/layouts",
     "astro/components/admin",
+    "config/storage.config.example.json",
+    "config/email.config.example.json",
     "schema.sql",
     "robots.txt"
   ],
@@ -70,6 +76,7 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.5.2",
+    "@google-cloud/storage": "^7.21.0",
     "@hono/node-server": "^1.19.12",
     "@hono/zod-validator": "^0.7.6",
     "@libsql/client": "^0.14.0",

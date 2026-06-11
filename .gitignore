@@ -6,6 +6,8 @@ data
 .env
 .env.*
 !.env.example
+/config/storage.config.json
+/config/email.config.json
 .DS_Store
 *.log
 .cursor

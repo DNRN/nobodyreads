@@ -1,0 +1,35 @@
+{
+  "$schema_note": "Copy this file to config/storage.config.json and edit. Pick ONE backend: local | gcs | s3. The real file is git-ignored because it may contain credentials.",
+
+  "_example_local": {
+    "backend": "local",
+    "dir": "media"
+  },
+
+  "_example_gcs": {
+    "backend": "gcs",
+    "bucket": "my-bucket",
+    "keyFile": "/path/to/service-account.json",
+    "publicUrl": "https://storage.googleapis.com/my-bucket"
+  },
+
+  "_example_s3": {
+    "backend": "s3",
+    "bucket": "my-bucket",
+    "region": "us-east-1",
+    "accessKeyId": "AKIA...",
+    "secretAccessKey": "..."
+  },
+
+  "_example_s3_compatible": {
+    "backend": "s3",
+    "bucket": "my-bucket",
+    "endpoint": "https://<account>.r2.cloudflarestorage.com",
+    "accessKeyId": "...",
+    "secretAccessKey": "...",
+    "publicUrl": "https://cdn.example.com"
+  },
+
+  "backend": "local",
+  "dir": "media"
+}

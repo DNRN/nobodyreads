@@ -1,0 +1,14 @@
+{
+  "$schema_note": "Copy this file to config/email.config.json and edit. The real file is git-ignored because it contains credentials. Set enabled to true to activate subscriptions. 'options' holds provider-specific keys; for custom providers registered via registerEmailProvider(), put their settings here too.",
+
+  "enabled": false,
+  "provider": "mailjet",
+  "from": {
+    "name": "My Blog",
+    "email": "noreply@yourdomain.com"
+  },
+  "options": {
+    "apiKey": "",
+    "apiSecret": ""
+  }
+}

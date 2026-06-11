@@ -48,7 +48,22 @@ export {
   listMedia,
 } from "./content/db.js";
 export { listAllSubscribers } from "./subscription/db.js";
-export { isEmailEnabled } from "./subscription/email.js";
+export {
+  isEmailEnabled,
+  createEmailProvider,
+  registerEmailProvider,
+  loadEmailConfig,
+  emailConfigSchema,
+  DEFAULT_EMAIL_CONFIG_PATH,
+} from "./subscription/email.js";
+export type {
+  EmailProvider,
+  EmailMessage,
+  EmailFrom,
+  EmailProviderContext,
+  EmailProviderFactory,
+  EmailConfig,
+} from "./subscription/email.js";
 
 // Validation schemas
 export {
@@ -153,10 +168,18 @@ export type { Tenant } from "./shared/types.js";
 // Media storage
 export {
   createMediaStorage,
+  loadStorageConfig,
+  storageConfigSchema,
+  DEFAULT_STORAGE_CONFIG_PATH,
   LocalMediaStorage,
   GcsMediaStorage,
+  S3MediaStorage,
 } from "./media/storage.js";
-export type { MediaStorage, StoredFile } from "./media/storage.js";
+export type {
+  MediaStorage,
+  StoredFile,
+  StorageConfig,
+} from "./media/storage.js";
 
 // Editor auth
 export {

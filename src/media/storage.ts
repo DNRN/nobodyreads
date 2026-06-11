@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
-import { join, extname } from "node:path";
+import { join, extname, isAbsolute } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
 import {
   readFile as readFileAsync,
   writeFile,
@@ -7,6 +8,7 @@ import {
   mkdir,
   stat as statAsync,
 } from "node:fs/promises";
+import { z } from "zod";
 
 // --- MIME types (subset for media serving) ---
 
@@ -110,6 +112,7 @@ export class LocalMediaStorage implements MediaStorage {
 export class GcsMediaStorage implements MediaStorage {
   private bucket: string;
   private publicUrl: string;
+  private keyFile?: string;
   private storageClient: unknown | null = null;
 
   constructor(options: {
@@ -118,6 +121,7 @@ export class GcsMediaStorage implements MediaStorage {
     publicUrl?: string;
   }) {
     this.bucket = options.bucket;
+    this.keyFile = options.keyFile;
     this.publicUrl =
       options.publicUrl ||
       `https://storage.googleapis.com/${options.bucket}`;
@@ -133,8 +137,9 @@ export class GcsMediaStorage implements MediaStorage {
     const moduleName = "@google-cloud/" + "storage";
     const mod = await import(/* webpackIgnore: true */ moduleName);
     const Storage = mod.Storage;
-    const keyFile = process.env.GCS_KEY_FILE;
-    this.storageClient = keyFile ? new Storage({ keyFilename: keyFile }) : new Storage();
+    this.storageClient = this.keyFile
+      ? new Storage({ keyFilename: this.keyFile })
+      : new Storage();
     return this.storageClient;
   }
 
@@ -167,24 +172,221 @@ export class GcsMediaStorage implements MediaStorage {
   }
 }
 
-// --- Factory ---
+// --- Amazon S3 (and S3-compatible) implementation ---
 
-export function createMediaStorage(): MediaStorage {
-  const backend = (process.env.MEDIA_STORAGE || "local").toLowerCase();
+export class S3MediaStorage implements MediaStorage {
+  private bucket: string;
+  private region?: string;
+  private endpoint?: string;
+  private forcePathStyle?: boolean;
+  private accessKeyId?: string;
+  private secretAccessKey?: string;
+  private publicUrl?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private sdk: any | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any | null = null;
 
-  if (backend === "gcs") {
-    const bucket = process.env.GCS_BUCKET;
-    if (!bucket) {
-      throw new Error("GCS_BUCKET environment variable is required when MEDIA_STORAGE=gcs");
-    }
-    return new GcsMediaStorage({
-      bucket,
-      keyFile: process.env.GCS_KEY_FILE,
-      publicUrl: process.env.GCS_PUBLIC_URL,
-    });
+  constructor(options: {
+    bucket: string;
+    region?: string;
+    endpoint?: string;
+    forcePathStyle?: boolean;
+    accessKeyId?: string;
+    secretAccessKey?: string;
+    publicUrl?: string;
+  }) {
+    this.bucket = options.bucket;
+    this.region = options.region;
+    this.endpoint = options.endpoint;
+    this.forcePathStyle = options.forcePathStyle;
+    this.accessKeyId = options.accessKeyId;
+    this.secretAccessKey = options.secretAccessKey;
+    this.publicUrl = options.publicUrl;
   }
 
-  // Default: local filesystem
-  const dir = process.env.MEDIA_DIR || join(process.cwd(), "media");
-  return new LocalMediaStorage(dir);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async getClient(): Promise<any> {
+    if (this.client) return this.client;
+
+    // Dynamic import — @aws-sdk/client-s3 is only needed when the S3 backend is
+    // active. The module name is constructed at runtime so the optional
+    // dependency does not break builds when it is not installed.
+    const moduleName = "@aws-sdk/" + "client-s3";
+    this.sdk = await import(/* webpackIgnore: true */ moduleName);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config: Record<string, any> = {};
+    if (this.region) config.region = this.region;
+    if (this.endpoint) {
+      config.endpoint = this.endpoint;
+      // Custom endpoints (R2, MinIO, Spaces, ...) generally need path-style URLs.
+      config.forcePathStyle = this.forcePathStyle ?? true;
+    } else if (this.forcePathStyle !== undefined) {
+      config.forcePathStyle = this.forcePathStyle;
+    }
+    if (this.accessKeyId && this.secretAccessKey) {
+      config.credentials = {
+        accessKeyId: this.accessKeyId,
+        secretAccessKey: this.secretAccessKey,
+      };
+    }
+
+    this.client = new this.sdk.S3Client(config);
+    return this.client;
+  }
+
+  async put(key: string, data: Buffer, mimeType: string): Promise<StoredFile> {
+    const client = await this.getClient();
+    await client.send(
+      new this.sdk.PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: data,
+        ContentType: mimeType,
+      }),
+    );
+    return { key, url: this.url(key) };
+  }
+
+  async delete(key: string): Promise<void> {
+    try {
+      const client = await this.getClient();
+      await client.send(
+        new this.sdk.DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+    } catch {
+      // Ignore not-found errors
+    }
+  }
+
+  url(key: string): string {
+    if (this.publicUrl) return `${this.publicUrl}/${key}`;
+    if (this.endpoint) {
+      return `${this.endpoint.replace(/\/$/, "")}/${this.bucket}/${key}`;
+    }
+    const region = this.region || "us-east-1";
+    return `https://${this.bucket}.s3.${region}.amazonaws.com/${key}`;
+  }
+
+  async serve(key: string, res: ServerResponse): Promise<boolean> {
+    // For S3-backed storage, redirect to the public URL.
+    res.writeHead(302, { Location: this.url(key) });
+    res.end();
+    return true;
+  }
+}
+
+// --- Configuration ---
+
+const localStorageConfigSchema = z.object({
+  backend: z.literal("local"),
+  /** Directory for uploads. Relative paths resolve from the working directory. */
+  dir: z.string().optional(),
+});
+
+const gcsStorageConfigSchema = z.object({
+  backend: z.literal("gcs"),
+  bucket: z.string().min(1, "bucket is required for the gcs backend"),
+  keyFile: z.string().optional(),
+  publicUrl: z.string().optional(),
+});
+
+const s3StorageConfigSchema = z.object({
+  backend: z.literal("s3"),
+  bucket: z.string().min(1, "bucket is required for the s3 backend"),
+  region: z.string().optional(),
+  /** Custom endpoint for S3-compatible providers (R2, MinIO, Spaces, ...). */
+  endpoint: z.string().optional(),
+  forcePathStyle: z.boolean().optional(),
+  accessKeyId: z.string().optional(),
+  secretAccessKey: z.string().optional(),
+  publicUrl: z.string().optional(),
+});
+
+export const storageConfigSchema = z.discriminatedUnion("backend", [
+  localStorageConfigSchema,
+  gcsStorageConfigSchema,
+  s3StorageConfigSchema,
+]);
+
+export type StorageConfig = z.infer<typeof storageConfigSchema>;
+
+/** Default path (relative to cwd) where the storage config file is looked up. */
+export const DEFAULT_STORAGE_CONFIG_PATH = join(
+  "config",
+  "storage.config.json",
+);
+
+/**
+ * Load and validate the storage configuration from disk.
+ *
+ * Looks at `STORAGE_CONFIG` (if set) or `config/storage.config.json` relative to
+ * the current working directory. When no file is present, falls back to the
+ * local filesystem backend.
+ */
+export function loadStorageConfig(): StorageConfig {
+  const configPath =
+    process.env.STORAGE_CONFIG ||
+    join(process.cwd(), DEFAULT_STORAGE_CONFIG_PATH);
+
+  if (!existsSync(configPath)) {
+    return { backend: "local" };
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(configPath, "utf8"));
+  } catch (err) {
+    throw new Error(
+      `Failed to parse storage config at ${configPath}: ${(err as Error).message}`,
+    );
+  }
+
+  const result = storageConfigSchema.safeParse(raw);
+  if (!result.success) {
+    throw new Error(
+      `Invalid storage config at ${configPath}: ${result.error.message}`,
+    );
+  }
+  return result.data;
+}
+
+// --- Factory ---
+
+/**
+ * Build a {@link MediaStorage} from an explicit config or the on-disk
+ * `config/storage.config.json`. With no config the local filesystem is used.
+ */
+export function createMediaStorage(config?: StorageConfig): MediaStorage {
+  const cfg = config ?? loadStorageConfig();
+
+  switch (cfg.backend) {
+    case "gcs":
+      return new GcsMediaStorage({
+        bucket: cfg.bucket,
+        keyFile: cfg.keyFile,
+        publicUrl: cfg.publicUrl,
+      });
+    case "s3":
+      return new S3MediaStorage({
+        bucket: cfg.bucket,
+        region: cfg.region,
+        endpoint: cfg.endpoint,
+        forcePathStyle: cfg.forcePathStyle,
+        accessKeyId: cfg.accessKeyId,
+        secretAccessKey: cfg.secretAccessKey,
+        publicUrl: cfg.publicUrl,
+      });
+    case "local":
+    default: {
+      const configuredDir = cfg.backend === "local" ? cfg.dir : undefined;
+      const dir = configuredDir
+        ? isAbsolute(configuredDir)
+          ? configuredDir
+          : join(process.cwd(), configuredDir)
+        : join(process.cwd(), "media");
+      return new LocalMediaStorage(dir);
+    }
+  }
 }

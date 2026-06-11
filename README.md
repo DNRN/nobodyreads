@@ -97,21 +97,111 @@ SITE_NAME=My Blog
 # Editor password (leave empty for open access)
 EDITOR_PASSWORD=
 
-# Media storage — "local" (default) or "gcs"
-MEDIA_STORAGE=local
-MEDIA_DIR=media
-# GCS_BUCKET=
-# GCS_KEY_FILE=
-# GCS_PUBLIC_URL=https://storage.googleapis.com/your-bucket
+# Media storage is configured via config/storage.config.json (see below),
+# not environment variables. Without that file, uploads are stored locally.
 
-# Email subscriptions (optional)
-EMAIL_ENABLED=false
-EMAIL_PROVIDER=mailjet
-EMAIL_FROM_NAME=My Blog
-EMAIL_FROM_EMAIL=noreply@yourdomain.com
-MAILJET_API_KEY=
-MAILJET_API_SECRET=
+# Email subscriptions are configured via config/email.config.json (see below),
+# not environment variables. Without that file, subscriptions stay off.
 ```
+
+## Media storage
+
+By default, uploaded media is stored on the local filesystem (in `media/`). To
+use an external destination instead, create a config file at
+`config/storage.config.json`. The path can be overridden with the
+`STORAGE_CONFIG` environment variable. If no file is present, storage stays
+local — nothing else is required.
+
+The file is git-ignored because it may hold credentials. A starting point is
+provided at `config/storage.config.example.json`.
+
+**Local (default):**
+
+```json
+{ "backend": "local", "dir": "media" }
+```
+
+**Google Cloud Storage** (install `@google-cloud/storage`):
+
+```json
+{
+  "backend": "gcs",
+  "bucket": "my-bucket",
+  "keyFile": "/path/to/service-account.json",
+  "publicUrl": "https://storage.googleapis.com/my-bucket"
+}
+```
+
+`keyFile` is optional on GCP when using default credentials. `publicUrl`
+defaults to `https://storage.googleapis.com/<bucket>`.
+
+**Amazon S3** (install `@aws-sdk/client-s3`):
+
+```json
+{
+  "backend": "s3",
+  "bucket": "my-bucket",
+  "region": "us-east-1",
+  "accessKeyId": "...",
+  "secretAccessKey": "..."
+}
+```
+
+Omit `accessKeyId`/`secretAccessKey` to use the AWS default credential chain
+(env, shared config, instance role). The same backend works with any
+S3-compatible provider (Cloudflare R2, MinIO, DigitalOcean Spaces) by setting
+`endpoint` (and optionally `forcePathStyle` / `publicUrl`):
+
+```json
+{
+  "backend": "s3",
+  "bucket": "my-bucket",
+  "endpoint": "https://<account>.r2.cloudflarestorage.com",
+  "accessKeyId": "...",
+  "secretAccessKey": "...",
+  "publicUrl": "https://cdn.example.com"
+}
+```
+
+## Email subscriptions
+
+Email is off by default. To enable double opt-in subscriptions and new-post
+notifications, create a config file at `config/email.config.json` (override the
+location with the `EMAIL_CONFIG` environment variable). The file is git-ignored
+because it holds credentials; a starting point lives at
+`config/email.config.example.json`.
+
+```json
+{
+  "enabled": true,
+  "provider": "mailjet",
+  "from": { "name": "My Blog", "email": "noreply@yourdomain.com" },
+  "options": { "apiKey": "...", "apiSecret": "..." }
+}
+```
+
+- `enabled` — master switch; when `false` (or the file is missing) the subscribe
+  form is hidden and notifications are skipped.
+- `provider` — a registered provider name. `mailjet` is built in.
+- `from` — sender identity used in outgoing email.
+- `options` — provider-specific settings (for Mailjet: `apiKey`, `apiSecret`).
+
+### Custom providers
+
+Register your own provider before routes run. The factory receives the resolved
+`from` identity and the `options` object from the config file:
+
+```ts
+import { registerEmailProvider } from "nobodyreads";
+
+registerEmailProvider("sendgrid", ({ from, options }) => {
+  if (typeof options.apiKey !== "string") return null;
+  return new SendgridProvider(options.apiKey, from);
+});
+```
+
+Then set `"provider": "sendgrid"` and the relevant `options` in
+`config/email.config.json`.
 
 ## Publishing content
 
@@ -240,7 +330,9 @@ serve({ fetch: app.fetch, port: 3000 });
 
 **Site settings**: `getSiteSettings`, `getSiteSetting`, `setSiteSetting`, `deleteSiteSetting`
 
-**Media storage**: `createMediaStorage`, `LocalMediaStorage`, `GcsMediaStorage`
+**Media storage**: `createMediaStorage`, `loadStorageConfig`, `LocalMediaStorage`, `GcsMediaStorage`, `S3MediaStorage`
+
+**Email**: `isEmailEnabled`, `createEmailProvider`, `registerEmailProvider`, `loadEmailConfig`, `listAllSubscribers`
 
 **Editor auth**: `editorRequiresAuth`, `isAuthenticatedRequest`, `buildSessionCookie`, `verifyEditorPassword`
 
@@ -259,7 +351,7 @@ nobodyreads/
 │   ├── content/              # Blog API routes, rendering, content DB queries
 │   ├── db/                   # Drizzle schema, Zod validation
 │   ├── editor/               # Admin routes, auth, browser editor bundles
-│   ├── media/                # Media storage backends (local, GCS)
+│   ├── media/                # Media storage backends (local, GCS, S3)
 │   ├── shared/               # DB init, HTTP helpers, SEO, site settings/template
 │   ├── subscription/         # Email subscription routes and DB
 │   └── template/             # Theme tokens, CSS/HTML generation, section components

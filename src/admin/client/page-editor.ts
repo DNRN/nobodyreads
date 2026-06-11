@@ -19,30 +19,14 @@ import {
   attachDragDrop,
   createMediaModal,
 } from "./core/media.js";
+import { renderImage } from "../../shared/image-markdown.js";
 import type { PageEditorOptions, PageEditorInstance } from "./types.js";
 
 const markedInstance = new Marked({ gfm: true, breaks: false });
 
 markedInstance.use({
   renderer: {
-    image({ href, title, text }) {
-      const sizeMatch = text.match(/^(.*?)\|(\d+(?:px|%|em|rem|vw))$/);
-      const dimMatch = text.match(/^(.*?)\|(\d+)x(\d+)$/);
-
-      let alt = text;
-      let style = "";
-
-      if (dimMatch) {
-        alt = dimMatch[1];
-        style = ` style="width: ${dimMatch[2]}px; height: ${dimMatch[3]}px; object-fit: cover"`;
-      } else if (sizeMatch) {
-        alt = sizeMatch[1];
-        style = ` style="max-width: ${sizeMatch[2]}"`;
-      }
-
-      const titleAttr = title ? ` title="${title}"` : "";
-      return `<img src="${href}" alt="${alt}"${titleAttr}${style} />`;
-    },
+    image: ({ href, title, text }) => renderImage({ href, title, text }),
   },
 });
 
@@ -73,6 +57,9 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
     toolbar,
     tabs,
     contentField,
+    publishedField,
+    publishStatus,
+    publishToggle,
     initialValue = "",
     isNewPage = false,
   } = options;
@@ -149,6 +136,20 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
       if (contentField) {
         (contentField as HTMLInputElement).value = editor.getValue();
       }
+    });
+  }
+
+  // Publish / unpublish: flip the hidden flag and submit. A disabled hidden
+  // input is omitted from the POST body (draft); enabling it sends "on".
+  if (publishToggle && publishedField && formElement) {
+    publishToggle.addEventListener("click", () => {
+      const willPublish = publishedField.disabled; // currently draft → publish
+      publishedField.disabled = !willPublish;
+      if (publishStatus) {
+        publishStatus.textContent = willPublish ? "Publishing…" : "Unpublishing…";
+      }
+      publishToggle.disabled = true;
+      formElement.requestSubmit();
     });
   }
 

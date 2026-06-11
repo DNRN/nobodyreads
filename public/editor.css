@@ -326,6 +326,18 @@
   color: var(--nr-muted);
 }
 
+/* Publish status control (editor sidebar) */
+.nr-admin .publish-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nr-admin .publish-control .badge {
+  flex: 1;
+  text-align: center;
+}
+
 /* ========================================
    Auth form (login page)
    ======================================== */
@@ -786,6 +798,13 @@
   letter-spacing: 0.04em;
 }
 
+.nr-admin .editor-help-note {
+  font-size: 0.72rem;
+  color: var(--nr-muted);
+  margin: 0 0 0.4rem;
+  line-height: 1.5;
+}
+
 .nr-admin .editor-help-table {
   width: 100%;
   font-size: 0.72rem;
@@ -970,6 +989,34 @@
   min-height: 0;
   font-size: 0.9rem;
   line-height: 1.7;
+  display: flow-root;
+}
+
+/* Preview images: mirror the published-site image sizing/alignment so the
+   author sees an accurate preview while writing. */
+.nr-admin .editor-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+  margin: 0 auto 1.2rem;
+}
+
+.nr-admin .editor-preview img.nbr-img-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.nr-admin .editor-preview img.nbr-img-left {
+  float: left;
+  max-width: 50%;
+  margin: 0.3rem 1.4rem 0.8rem 0;
+}
+
+.nr-admin .editor-preview img.nbr-img-right {
+  float: right;
+  max-width: 50%;
+  margin: 0.3rem 0 0.8rem 1.4rem;
 }
 
 /* ----- Mobile tabs ----- */

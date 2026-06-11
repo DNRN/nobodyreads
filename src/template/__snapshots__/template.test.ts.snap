@@ -348,6 +348,12 @@ body.nav-open .site-menu {
   margin-bottom: 2rem;
 }
 
+.post-body,
+.page-body,
+.home-intro {
+  display: flow-root;
+}
+
 .post-header .post-title {
   font-size: 1.6rem;
 }
@@ -393,6 +399,43 @@ body.nav-open .site-menu {
   border-radius: 4px;
   display: block;
   margin: 0 auto 1.2rem;
+}
+
+.post-body img.nbr-img-center,
+.page-body img.nbr-img-center,
+.home-intro img.nbr-img-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.post-body img.nbr-img-left,
+.page-body img.nbr-img-left,
+.home-intro img.nbr-img-left {
+  float: left;
+  max-width: 50%;
+  margin: 0.3rem 1.4rem 0.8rem 0;
+}
+
+.post-body img.nbr-img-right,
+.page-body img.nbr-img-right,
+.home-intro img.nbr-img-right {
+  float: right;
+  max-width: 50%;
+  margin: 0.3rem 0 0.8rem 1.4rem;
+}
+
+@media (max-width: 640px) {
+  .post-body img.nbr-img-left,
+  .page-body img.nbr-img-left,
+  .home-intro img.nbr-img-left,
+  .post-body img.nbr-img-right,
+  .page-body img.nbr-img-right,
+  .home-intro img.nbr-img-right {
+    float: none;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .post-body blockquote {

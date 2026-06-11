@@ -1,5 +1,21 @@
 import type { EditorView } from "@codemirror/view";
 import { insertTextAtCursor } from "./toolbar.js";
+import { DEFAULT_IMAGE_WIDTH } from "../../../shared/image-markdown.js";
+
+/** Strip the file extension from a filename for use as alt text. */
+function altFromName(name: string): string {
+  return name.replace(/\.[^.]+$/, "");
+}
+
+/**
+ * Build the markdown snippet inserted when an image is added. We pre-fill a
+ * sensible default width so the author immediately sees the size syntax and
+ * can tweak the number (or add `|left` / `|right` to wrap text) without
+ * having to remember it.
+ */
+function imageMarkdown(alt: string, url: string): string {
+  return `![${alt}|${DEFAULT_IMAGE_WIDTH}](${url})`;
+}
 
 /**
  * Upload a file and insert a markdown image link into the editor.
@@ -27,7 +43,7 @@ export async function uploadFile(
     const data = await resp.json();
 
     const content = view.state.doc.toString();
-    const md = `![${file.name}](${data.url})`;
+    const md = imageMarkdown(altFromName(file.name), data.url);
     const idx = content.indexOf(placeholder);
     if (idx !== -1) {
       view.dispatch({
@@ -222,8 +238,7 @@ export function createMediaModal(options: MediaModalOptions): {
         `;
 
         card.addEventListener("click", () => {
-          const alt = item.originalName.replace(/\.[^.]+$/, "");
-          insertTextAtCursor(view, `![${alt}](${item.url})`);
+          insertTextAtCursor(view, imageMarkdown(altFromName(item.originalName), item.url));
           close();
         });
 

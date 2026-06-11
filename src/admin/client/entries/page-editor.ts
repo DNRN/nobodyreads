@@ -15,6 +15,9 @@ if (textarea && preview) {
     toolbar: document.getElementById("editor-toolbar") ?? undefined,
     tabs: document.getElementById("editor-tabs") ?? undefined,
     contentField: (document.getElementById("content-field") as HTMLInputElement) ?? undefined,
+    publishedField: (document.getElementById("published") as HTMLInputElement) ?? undefined,
+    publishStatus: document.getElementById("publish-status") ?? undefined,
+    publishToggle: (document.getElementById("publish-toggle") as HTMLButtonElement) ?? undefined,
     initialValue: textarea.value,
     isNewPage: isNewPage?.value === "",
   });

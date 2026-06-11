@@ -39,14 +39,20 @@ function isImage(mimeType: string): boolean {
 
       <!-- Upload form -->
       <div class="editor-list-section">
-        <div class="media-upload-area" id="media-upload-area">
+        <div
+          class="media-upload-area"
+          id="media-upload-area"
+          data-upload-url={`${mediaBase}/upload`}
+          data-list-url={`${mediaBase}/list`}
+          data-media-base={mediaBase}
+        >
           <form
             method="POST"
             action={`${mediaBase}/upload`}
             enctype="multipart/form-data"
             id="media-upload-form"
           >
-            <label class="media-upload-label" for="media-file-input">
+            <label class="media-upload-label" for="media-file-input" id="media-upload-label">
               <span class="media-upload-icon">+</span>
               <span class="media-upload-text">Click to upload or drag &amp; drop files here</span>
               <span class="media-upload-hint">Images, video, audio, PDF &mdash; max 50 MB</span>
@@ -59,57 +65,66 @@ function isImage(mimeType: string): boolean {
               class="media-file-input"
               multiple
             />
-            <button type="submit" class="btn btn-primary media-upload-btn" id="media-upload-btn" style="display:none">
-              Upload
-            </button>
           </form>
+
+          <!-- Selection / progress panel -->
+          <div class="media-upload-selection" id="media-upload-selection" hidden>
+            <ul class="media-upload-files" id="media-upload-files"></ul>
+
+            <div class="media-upload-progress" id="media-upload-progress" hidden>
+              <div class="media-upload-progress-bar" id="media-upload-progress-bar"></div>
+            </div>
+            <p class="media-upload-status" id="media-upload-status" role="status" aria-live="polite"></p>
+
+            <div class="media-upload-buttons">
+              <button type="button" class="btn btn-primary" id="media-upload-btn">Upload</button>
+              <button type="button" class="btn btn-ghost" id="media-cancel-btn">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Media grid -->
-      {items.length === 0 ? (
-        <p class="editor-empty">No media uploaded yet.</p>
-      ) : (
-        <div class="media-grid">
-          {items.map((m) => (
-            <div class="media-card">
-              <div class="media-card-preview">
-                {isImage(m.mimeType) ? (
-                  <img src={m.url} alt={m.originalName} loading="lazy" />
-                ) : (
-                  <div class="media-card-icon">{m.mimeType.split("/")[0]}</div>
-                )}
-              </div>
-              <div class="media-card-info">
-                <span class="media-card-name" title={m.originalName}>{m.originalName}</span>
-                <span class="media-card-meta">{formatSize(m.size)} &middot; {formatDate(m.createdAt)}</span>
-              </div>
-              <div class="media-card-actions">
-                <button
-                  type="button"
-                  class="btn btn-ghost media-copy-btn"
-                  data-url={m.url}
-                  title="Copy URL"
-                >
-                  Copy URL
-                </button>
-                <form
-                  method="POST"
-                  action={`${mediaBase}/delete/${m.id}`}
-                  onsubmit="return confirm('Delete this file permanently?')"
-                  style="display:inline"
-                >
-                  <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                </form>
-              </div>
+      <p class="editor-empty" id="media-empty" hidden={items.length !== 0}>No media uploaded yet.</p>
+      <div class="media-grid" id="media-grid" hidden={items.length === 0}>
+        {items.map((m) => (
+          <div class="media-card" data-id={m.id}>
+            <div class="media-card-preview">
+              {isImage(m.mimeType) ? (
+                <img src={m.url} alt={m.originalName} loading="lazy" />
+              ) : (
+                <div class="media-card-icon">{m.mimeType.split("/")[0]}</div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+            <div class="media-card-info">
+              <span class="media-card-name" title={m.originalName}>{m.originalName}</span>
+              <span class="media-card-meta">{formatSize(m.size)} &middot; {formatDate(m.createdAt)}</span>
+            </div>
+            <div class="media-card-actions">
+              <button
+                type="button"
+                class="btn btn-ghost media-copy-btn"
+                data-url={m.url}
+                title="Copy URL"
+              >
+                Copy URL
+              </button>
+              <form
+                method="POST"
+                action={`${mediaBase}/delete/${m.id}`}
+                onsubmit="return confirm('Delete this file permanently?')"
+                style="display:inline"
+              >
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   </main>
 
-  <style>
+  <style is:global>
     .media-upload-area {
       border: 2px dashed var(--border);
       border-radius: 8px;
@@ -143,8 +158,67 @@ function isImage(mimeType: string): boolean {
     .media-file-input {
       display: none;
     }
-    .media-upload-btn {
-      margin-top: 1rem;
+
+    /* Selection / progress panel */
+    .media-upload-selection {
+      text-align: left;
+    }
+    .media-upload-files {
+      list-style: none;
+      margin: 0 0 1rem;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .media-upload-file {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary, #f5f5f5);
+    }
+    .media-upload-file-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .media-upload-file-size {
+      font-size: 0.8em;
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+    .media-upload-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--bg-secondary, #eee);
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .media-upload-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent, #4f46e5);
+      border-radius: 999px;
+      transition: width 0.15s ease;
+    }
+    .media-upload-status {
+      margin: 0 0 0.75rem;
+      font-size: 0.85em;
+      opacity: 0.75;
+      min-height: 1.2em;
+    }
+    .media-upload-status.error {
+      color: var(--danger, #dc2626);
+      opacity: 1;
+    }
+    .media-upload-buttons {
+      display: flex;
+      gap: 0.5rem;
     }
 
     .media-grid {
@@ -209,49 +283,286 @@ function isImage(mimeType: string): boolean {
   </style>
 
   <script is:inline>
-    // --- Drag-and-drop ---
-    const area = document.getElementById("media-upload-area");
-    const input = document.getElementById("media-file-input");
-    const form = document.getElementById("media-upload-form");
-    const btn = document.getElementById("media-upload-btn");
+    (function () {
+      const area = document.getElementById("media-upload-area");
+      const input = document.getElementById("media-file-input");
+      const label = document.getElementById("media-upload-label");
+      const selection = document.getElementById("media-upload-selection");
+      const fileList = document.getElementById("media-upload-files");
+      const progress = document.getElementById("media-upload-progress");
+      const progressBar = document.getElementById("media-upload-progress-bar");
+      const status = document.getElementById("media-upload-status");
+      const uploadBtn = document.getElementById("media-upload-btn");
+      const cancelBtn = document.getElementById("media-cancel-btn");
+      const grid = document.getElementById("media-grid");
+      const empty = document.getElementById("media-empty");
 
-    if (area && input && form) {
+      if (!area || !input) return;
+
+      const uploadUrl = area.dataset.uploadUrl;
+      const listUrl = area.dataset.listUrl;
+      const mediaBase = area.dataset.mediaBase;
+
+      /** @type {File[]} */
+      let selected = [];
+      let activeXhr = null;
+      let uploading = false;
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+      }
+
+      function formatDate(iso) {
+        const d = new Date(iso);
+        return d.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function setStatus(msg, isError) {
+        status.textContent = msg || "";
+        status.classList.toggle("error", !!isError);
+      }
+
+      function resetSelection() {
+        selected = [];
+        input.value = "";
+        selection.hidden = true;
+        label.hidden = false;
+        fileList.innerHTML = "";
+        progress.hidden = true;
+        progressBar.style.width = "0%";
+        setStatus("", false);
+      }
+
+      function renderSelection() {
+        fileList.innerHTML = "";
+        selected.forEach((file) => {
+          const li = document.createElement("li");
+          li.className = "media-upload-file";
+          li.innerHTML =
+            '<span class="media-upload-file-name">' +
+            escapeHtml(file.name) +
+            '</span><span class="media-upload-file-size">' +
+            formatSize(file.size) +
+            "</span>";
+          fileList.appendChild(li);
+        });
+        const total = selected.reduce((s, f) => s + f.size, 0);
+        setStatus(
+          selected.length +
+            " file" +
+            (selected.length === 1 ? "" : "s") +
+            " selected \u00b7 " +
+            formatSize(total),
+          false
+        );
+      }
+
+      function showSelection(files) {
+        selected = Array.from(files);
+        if (selected.length === 0) {
+          resetSelection();
+          return;
+        }
+        label.hidden = true;
+        selection.hidden = false;
+        progress.hidden = true;
+        progressBar.style.width = "0%";
+        uploadBtn.disabled = false;
+        cancelBtn.disabled = false;
+        renderSelection();
+      }
+
+      function mediaCardHtml(m) {
+        const isImg = m.mimeType && m.mimeType.indexOf("image/") === 0;
+        const preview = isImg
+          ? '<img src="' + escapeHtml(m.url) + '" alt="' + escapeHtml(m.originalName) + '" loading="lazy" />'
+          : '<div class="media-card-icon">' + escapeHtml((m.mimeType || "file").split("/")[0]) + "</div>";
+        return (
+          '<div class="media-card" data-id="' + escapeHtml(m.id) + '">' +
+          '<div class="media-card-preview">' + preview + "</div>" +
+          '<div class="media-card-info">' +
+          '<span class="media-card-name" title="' + escapeHtml(m.originalName) + '">' + escapeHtml(m.originalName) + "</span>" +
+          '<span class="media-card-meta">' + formatSize(m.size) + " \u00b7 " + formatDate(m.createdAt) + "</span>" +
+          "</div>" +
+          '<div class="media-card-actions">' +
+          '<button type="button" class="btn btn-ghost media-copy-btn" data-url="' + escapeHtml(m.url) + '" title="Copy URL">Copy URL</button>' +
+          '<form method="POST" action="' + escapeHtml(mediaBase + "/delete/" + m.id) + '" onsubmit="return confirm(\'Delete this file permanently?\')" style="display:inline">' +
+          '<button type="submit" class="btn btn-danger btn-sm">Delete</button>' +
+          "</form>" +
+          "</div>" +
+          "</div>"
+        );
+      }
+
+      async function refreshGrid() {
+        try {
+          const res = await fetch(listUrl, {
+            headers: { accept: "application/json" },
+          });
+          if (!res.ok) return;
+          const items = await res.json();
+          grid.innerHTML = items.map(mediaCardHtml).join("");
+          const hasItems = items.length > 0;
+          grid.hidden = !hasItems;
+          if (empty) empty.hidden = hasItems;
+          bindCardActions();
+        } catch (err) {
+          /* keep existing grid on failure */
+        }
+      }
+
+      function uploadFile(file, onProgress) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          activeXhr = xhr;
+          const fd = new FormData();
+          fd.append("file", file);
+          xhr.open("POST", uploadUrl);
+          xhr.setRequestHeader("accept", "application/json");
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) onProgress(e.loaded, e.total);
+          });
+          xhr.addEventListener("load", () => {
+            activeXhr = null;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              let msg = "Upload failed (" + xhr.status + ")";
+              try {
+                const data = JSON.parse(xhr.responseText);
+                if (data && data.error) msg = data.error;
+              } catch (e) {}
+              reject(new Error(msg));
+            }
+          });
+          xhr.addEventListener("error", () => {
+            activeXhr = null;
+            reject(new Error("Network error during upload"));
+          });
+          xhr.addEventListener("abort", () => {
+            activeXhr = null;
+            reject(new Error("aborted"));
+          });
+          xhr.send(fd);
+        });
+      }
+
+      async function startUpload() {
+        if (uploading || selected.length === 0) return;
+        uploading = true;
+        uploadBtn.disabled = true;
+        cancelBtn.textContent = "Cancel";
+        progress.hidden = false;
+
+        const totalBytes = selected.reduce((s, f) => s + f.size, 0);
+        let uploadedBytes = 0;
+
+        try {
+          for (let i = 0; i < selected.length; i++) {
+            const file = selected[i];
+            setStatus(
+              "Uploading " + (i + 1) + " of " + selected.length + " \u2014 " + file.name,
+              false
+            );
+            await uploadFile(file, (loaded, total) => {
+              const overall = uploadedBytes + loaded;
+              const pct = totalBytes > 0 ? Math.round((overall / totalBytes) * 100) : 0;
+              progressBar.style.width = pct + "%";
+            });
+            uploadedBytes += file.size;
+            progressBar.style.width =
+              (totalBytes > 0 ? Math.round((uploadedBytes / totalBytes) * 100) : 100) + "%";
+          }
+          setStatus("Upload complete", false);
+          await refreshGrid();
+          resetSelection();
+        } catch (err) {
+          uploading = false;
+          if (err && err.message === "aborted") {
+            setStatus("Upload cancelled", false);
+          } else {
+            setStatus((err && err.message) || "Upload failed", true);
+            uploadBtn.disabled = false;
+          }
+          return;
+        }
+        uploading = false;
+      }
+
+      function cancel() {
+        if (uploading && activeXhr) {
+          activeXhr.abort();
+          uploading = false;
+          uploadBtn.disabled = false;
+          progress.hidden = true;
+          progressBar.style.width = "0%";
+          return;
+        }
+        resetSelection();
+      }
+
+      // --- Drag and drop ---
       area.addEventListener("dragover", (e) => {
         e.preventDefault();
         area.classList.add("dragover");
       });
-      area.addEventListener("dragleave", () => {
-        area.classList.remove("dragover");
+      area.addEventListener("dragleave", (e) => {
+        if (e.target === area) area.classList.remove("dragover");
       });
       area.addEventListener("drop", (e) => {
         e.preventDefault();
         area.classList.remove("dragover");
+        if (uploading) return;
         if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-          input.files = e.dataTransfer.files;
-          form.submit();
+          showSelection(e.dataTransfer.files);
         }
       });
 
-      // Show upload button when files are selected
       input.addEventListener("change", () => {
-        if (input.files && input.files.length > 0 && btn) {
-          btn.style.display = "";
+        if (input.files && input.files.length > 0) {
+          showSelection(input.files);
         }
       });
-    }
 
-    // --- Copy URL ---
-    document.querySelectorAll(".media-copy-btn").forEach((el) => {
-      el.addEventListener("click", () => {
-        const url = el.dataset.url;
-        if (url) {
-          navigator.clipboard.writeText(url).then(() => {
-            const orig = el.textContent;
-            el.textContent = "Copied!";
-            setTimeout(() => { el.textContent = orig; }, 1500);
+      uploadBtn.addEventListener("click", startUpload);
+      cancelBtn.addEventListener("click", cancel);
+
+      // --- Copy URL (delegated so it works for re-rendered cards) ---
+      function bindCardActions() {
+        document.querySelectorAll(".media-copy-btn").forEach((el) => {
+          if (el.dataset.bound) return;
+          el.dataset.bound = "1";
+          el.addEventListener("click", () => {
+            const url = el.dataset.url;
+            if (url) {
+              navigator.clipboard.writeText(url).then(() => {
+                const orig = el.textContent;
+                el.textContent = "Copied!";
+                setTimeout(() => {
+                  el.textContent = orig;
+                }, 1500);
+              });
+            }
           });
-        }
-      });
-    });
+        });
+      }
+
+      bindCardActions();
+    })();
   </script>
 </AdminLayout>

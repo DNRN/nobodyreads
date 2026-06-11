@@ -3,39 +3,17 @@ import { Marked, type MarkedExtension } from "marked";
 import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustomViewQuery } from "./db.js";
 import { renderPostListView } from "./templates.js";
 import { escapeHtml } from "../shared/http.js";
+import { renderImage } from "../shared/image-markdown.js";
 import type { LinkTarget, CustomViewConfig } from "./types.js";
 
 /**
- * Custom image renderer that supports size hints in the alt text.
- *
- * Syntax:  ![alt|size](url)
- *
- * Examples:
- *   ![photo|50%](/media/img.jpg)      → max-width: 50%
- *   ![photo|400px](/media/img.jpg)    → max-width: 400px
- *   ![photo|200x150](/media/img.jpg)  → width: 200px; height: 150px
- *   ![photo](/media/img.jpg)          → no inline style (uses CSS defaults)
+ * Custom image renderer that supports size and alignment hints in the alt
+ * text (see `renderImage` for the full syntax). The same renderer powers the
+ * live editor preview so authors get a faithful preview.
  */
 const imageSizeExtension: MarkedExtension = {
   renderer: {
-    image({ href, title, text }) {
-      const sizeMatch = text.match(/^(.*?)\|(\d+(?:px|%|em|rem|vw))$/);
-      const dimMatch = text.match(/^(.*?)\|(\d+)x(\d+)$/);
-
-      let alt = text;
-      let style = "";
-
-      if (dimMatch) {
-        alt = dimMatch[1];
-        style = ` style="width: ${dimMatch[2]}px; height: ${dimMatch[3]}px; object-fit: cover"`;
-      } else if (sizeMatch) {
-        alt = sizeMatch[1];
-        style = ` style="max-width: ${sizeMatch[2]}"`;
-      }
-
-      const titleAttr = title ? ` title="${title}"` : "";
-      return `<img src="${href}" alt="${alt}"${titleAttr}${style} />`;
-    },
+    image: ({ href, title, text }) => renderImage({ href, title, text }),
   },
 };
 

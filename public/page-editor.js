@@ -12310,7 +12310,7 @@
     updateDeco(update, deco) {
       let changeFrom = 1e9, changeTo = -1;
       if (update.docChanged)
-        update.changes.iterChanges((_f, _t, from, to) => {
+        update.changes.iterChanges((_f2, _t, from, to) => {
           if (to >= update.view.viewport.from && from <= update.view.viewport.to) {
             changeFrom = Math.min(from, changeFrom);
             changeTo = Math.max(to, changeTo);
@@ -34194,7 +34194,7 @@ ${text}</tr>
   function isAdjacent(a, b) {
     let ranges = [], isAdjacent2 = false;
     a.iterChangedRanges((f, t2) => ranges.push(f, t2));
-    b.iterChangedRanges((_f, _t, f, t2) => {
+    b.iterChangedRanges((_f2, _t, f, t2) => {
       for (let i = 0; i < ranges.length; ) {
         let from = ranges[i++], to = ranges[i++];
         if (t2 >= from && f <= to)
@@ -38495,7 +38495,49 @@ ${text}</tr>
     });
   }
 
+  // src/shared/image-markdown.ts
+  var DEFAULT_IMAGE_WIDTH = "600px";
+  var SIZE_RE = /^\d+(?:px|%|em|rem|vw)$/;
+  var DIM_RE = /^(\d+)x(\d+)$/;
+  var ALIGNMENTS = /* @__PURE__ */ new Set(["left", "right", "center"]);
+  function escapeAttr(value) {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function renderImage({ href, title, text }) {
+    var _a4;
+    const segments = text.split("|").map((s) => s.trim());
+    const alt = (_a4 = segments[0]) != null ? _a4 : "";
+    const styles = [];
+    const classes = [];
+    for (const hint of segments.slice(1)) {
+      const dim = hint.match(DIM_RE);
+      if (dim) {
+        styles.push(`width: ${dim[1]}px`, `height: ${dim[2]}px`, "object-fit: cover");
+        continue;
+      }
+      if (SIZE_RE.test(hint)) {
+        styles.push(`max-width: ${hint}`);
+        continue;
+      }
+      const align = hint.toLowerCase();
+      if (ALIGNMENTS.has(align)) {
+        classes.push(`nbr-img-${align}`);
+      }
+    }
+    const altAttr = ` alt="${escapeAttr(alt)}"`;
+    const titleAttr = title ? ` title="${escapeAttr(title)}"` : "";
+    const classAttr = classes.length ? ` class="${classes.join(" ")}"` : "";
+    const styleAttr = styles.length ? ` style="${styles.join("; ")}"` : "";
+    return `<img src="${escapeAttr(href)}"${altAttr}${titleAttr}${classAttr}${styleAttr} />`;
+  }
+
   // src/admin/client/core/media.ts
+  function altFromName(name2) {
+    return name2.replace(/\.[^.]+$/, "");
+  }
+  function imageMarkdown(alt, url) {
+    return `![${alt}|${DEFAULT_IMAGE_WIDTH}](${url})`;
+  }
   async function uploadFile(view, file, uploadUrl) {
     const formData = new FormData();
     formData.append("file", file);
@@ -38510,7 +38552,7 @@ ${text}</tr>
       if (!resp.ok) throw new Error("Upload failed");
       const data2 = await resp.json();
       const content2 = view.state.doc.toString();
-      const md = `![${file.name}](${data2.url})`;
+      const md = imageMarkdown(altFromName(file.name), data2.url);
       const idx = content2.indexOf(placeholder);
       if (idx !== -1) {
         view.dispatch({
@@ -38657,8 +38699,7 @@ ${text}</tr>
           <span class="media-modal-card-name">${item.originalName}</span>
         `;
           card.addEventListener("click", () => {
-            const alt = item.originalName.replace(/\.[^.]+$/, "");
-            insertTextAtCursor(view, `![${alt}](${item.url})`);
+            insertTextAtCursor(view, imageMarkdown(altFromName(item.originalName), item.url));
             close();
           });
           grid.appendChild(card);
@@ -38692,21 +38733,7 @@ ${text}</tr>
   var markedInstance2 = new Marked({ gfm: true, breaks: false });
   markedInstance2.use({
     renderer: {
-      image({ href, title, text }) {
-        const sizeMatch = text.match(/^(.*?)\|(\d+(?:px|%|em|rem|vw))$/);
-        const dimMatch = text.match(/^(.*?)\|(\d+)x(\d+)$/);
-        let alt = text;
-        let style = "";
-        if (dimMatch) {
-          alt = dimMatch[1];
-          style = ` style="width: ${dimMatch[2]}px; height: ${dimMatch[3]}px; object-fit: cover"`;
-        } else if (sizeMatch) {
-          alt = sizeMatch[1];
-          style = ` style="max-width: ${sizeMatch[2]}"`;
-        }
-        const titleAttr = title ? ` title="${title}"` : "";
-        return `<img src="${href}" alt="${alt}"${titleAttr}${style} />`;
-      }
+      image: ({ href, title, text }) => renderImage({ href, title, text })
     }
   });
   function toSlug(text) {
@@ -38723,6 +38750,9 @@ ${text}</tr>
       toolbar,
       tabs,
       contentField,
+      publishedField,
+      publishStatus,
+      publishToggle,
       initialValue = "",
       isNewPage = false
     } = options2;
@@ -38792,6 +38822,17 @@ ${text}</tr>
         }
       });
     }
+    if (publishToggle && publishedField && formElement) {
+      publishToggle.addEventListener("click", () => {
+        const willPublish = publishedField.disabled;
+        publishedField.disabled = !willPublish;
+        if (publishStatus) {
+          publishStatus.textContent = willPublish ? "Publishing\u2026" : "Unpublishing\u2026";
+        }
+        publishToggle.disabled = true;
+        formElement.requestSubmit();
+      });
+    }
     if (isNewPage && titleInput && slugInput) {
       let slugManuallyEdited = false;
       slugInput.addEventListener("input", () => {
@@ -38855,7 +38896,7 @@ ${text}</tr>
   // src/admin/client/entries/page-editor.ts
   var textarea = document.getElementById("content");
   var preview = document.getElementById("preview");
-  var _a3, _b, _c, _d, _e;
+  var _a3, _b, _c, _d, _e, _f, _g, _h;
   if (textarea && preview) {
     const form = document.getElementById("editor-form");
     const isNewPage = form == null ? void 0 : form.querySelector('input[name="id"]');
@@ -38868,6 +38909,9 @@ ${text}</tr>
       toolbar: (_c = document.getElementById("editor-toolbar")) != null ? _c : void 0,
       tabs: (_d = document.getElementById("editor-tabs")) != null ? _d : void 0,
       contentField: (_e = document.getElementById("content-field")) != null ? _e : void 0,
+      publishedField: (_f = document.getElementById("published")) != null ? _f : void 0,
+      publishStatus: (_g = document.getElementById("publish-status")) != null ? _g : void 0,
+      publishToggle: (_h = document.getElementById("publish-toggle")) != null ? _h : void 0,
       initialValue: textarea.value,
       isNewPage: (isNewPage == null ? void 0 : isNewPage.value) === ""
     });

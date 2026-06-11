@@ -99,11 +99,20 @@ const p = page ?? {
         <input type="date" id="date" name="date" value={p.date.slice(0, 10)} />
       </div>
 
-      <div class="field field-row">
-        <label for="published">
-          <input type="checkbox" id="published" name="published" checked={p.published} />
-          Published
-        </label>
+      <div class="field">
+        <label>Status</label>
+        <div class="publish-control">
+          <span
+            class={`badge ${p.published ? "badge-published" : "badge-draft"}`}
+            id="publish-status"
+            data-published={p.published ? "true" : "false"}
+          >{p.published ? "Published" : "Draft"}</span>
+          <input type="hidden" name="published" id="published" value="on" disabled={!p.published} />
+          <button type="button" class="btn btn-sm" id="publish-toggle">
+            {p.published ? "Unpublish" : "Publish"}
+          </button>
+        </div>
+        <p class="hint">{p.published ? "Live and visible to readers." : "Saved as a draft. Not visible to readers."}</p>
       </div>
 
       <details class="field">
@@ -134,12 +143,17 @@ const p = page ?? {
             </tbody>
           </table>
           <p class="editor-help-heading">Images</p>
+          <p class="editor-help-note">Inserting an image pre-fills a default width &mdash; just change the number, or add an alignment to wrap text around it.</p>
           <table class="editor-help-table">
             <tbody>
               <tr><td><code>![alt](/media/img.jpg)</code></td><td>Full width (default)</td></tr>
-              <tr><td><code>![alt|50%](/media/img.jpg)</code></td><td>50% width</td></tr>
-              <tr><td><code>![alt|400px](/media/img.jpg)</code></td><td>Max 400px</td></tr>
+              <tr><td><code>![alt|400px](/media/img.jpg)</code></td><td>Max 400px wide</td></tr>
+              <tr><td><code>![alt|50%](/media/img.jpg)</code></td><td>50% of column</td></tr>
               <tr><td><code>![alt|300x200](/media/img.jpg)</code></td><td>Fixed 300&times;200</td></tr>
+              <tr><td><code>![alt|left](/media/img.jpg)</code></td><td>Float left, text wraps right</td></tr>
+              <tr><td><code>![alt|right](/media/img.jpg)</code></td><td>Float right, text wraps left</td></tr>
+              <tr><td><code>![alt|center](/media/img.jpg)</code></td><td>Centered (default)</td></tr>
+              <tr><td><code>![alt|300px|right](/media/img.jpg)</code></td><td>Combine size &amp; alignment</td></tr>
             </tbody>
           </table>
           <p class="editor-help-heading">Special tokens</p>

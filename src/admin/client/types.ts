@@ -23,6 +23,12 @@ export interface PageEditorOptions {
   tabs?: HTMLElement;
   /** Hidden input that receives the content on form submit. */
   contentField?: HTMLInputElement;
+  /** Hidden input carrying the published flag (disabled = draft). */
+  publishedField?: HTMLInputElement;
+  /** Badge element reflecting the current published status. */
+  publishStatus?: HTMLElement;
+  /** Button that toggles published state and submits the form. */
+  publishToggle?: HTMLButtonElement;
   /** URL for media uploads (default: "/admin/media/upload"). */
   uploadUrl?: string;
   /** URL for media list API (default: "/admin/media/list"). */

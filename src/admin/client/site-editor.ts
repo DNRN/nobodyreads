@@ -35,6 +35,13 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   let isDirty = false;
   let editMode: "tabs" | "advanced" = "tabs";
   let previewDebounce: number | undefined;
+  let previewLoaded = false;
+
+  function ensurePreviewLoaded() {
+    if (previewLoaded) return;
+    previewLoaded = true;
+    refreshPreview();
+  }
 
   function setSaveStatus(state: string) {
     if (!saveStatus) return;
@@ -205,6 +212,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   }
 
   function scheduleLivePreview() {
+    ensurePreviewLoaded();
     if (previewDebounce) window.clearTimeout(previewDebounce);
     previewDebounce = window.setTimeout(applyLivePreviewCss, 150);
   }
@@ -232,7 +240,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     }
 
     if (target === "preview") {
-      refreshPreview();
+      ensurePreviewLoaded();
       applyLivePreviewCss();
     }
   }
@@ -431,7 +439,6 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   });
 
   setSaveStatus("ready");
-  refreshPreview();
   activateTab("html");
 
   return {

@@ -70,7 +70,7 @@ function formatDateTime(iso: string): string {
   title="Theme Editor — Admin"
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/site-editor.js"></script>`}
+  scripts={`<script src="/site-editor.js" defer></script>`}
 >
   <main class="editor-main editor-main--site">
     <form method="POST" action={`${layoutBase}/save`} class="editor-form editor-form--site" id="site-editor-form">
@@ -286,7 +286,7 @@ function formatDateTime(iso: string): string {
             Preview
             <a href={previewUrl} target="_blank" rel="noreferrer" class="btn btn-ghost">Open in new tab</a>
           </div>
-          <iframe id="site-preview" title="Site preview" src={previewUrl} data-preview-url={previewUrl}></iframe>
+          <iframe id="site-preview" title="Site preview" data-preview-url={previewUrl}></iframe>
         </div>
       </div>
     </form>

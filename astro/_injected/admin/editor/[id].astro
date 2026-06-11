@@ -21,7 +21,7 @@ if (!page) {
   title={`Edit: ${page.title} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/page-editor.js"></script>`}
+  scripts={`<script src="/page-editor.js" defer></script>`}
 >
   <PageEditorForm page={page} editorBase={ctx.editorBase} />
 </AdminLayout>

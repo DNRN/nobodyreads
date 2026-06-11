@@ -10,7 +10,7 @@ const viewsBase = `${ctx.adminBase}/views`;
   title="New View — Admin"
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/view-editor.js"></script>`}
+  scripts={`<script src="/view-editor.js" defer></script>`}
 >
   <ViewEditorForm viewsBase={viewsBase} />
 </AdminLayout>

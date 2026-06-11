@@ -39,6 +39,9 @@ export async function initDb(): Promise<Database> {
       authToken: process.env.TURSO_AUTH_TOKEN || undefined,
     });
 
+    // Avoid indefinite hangs when standalone and Astro dev share the same SQLite file.
+    await client.execute("PRAGMA busy_timeout = 5000");
+
     const schemaSql = readFileSync(resolveSchemaPath(), "utf-8");
     await client.executeMultiple(schemaSql);
 

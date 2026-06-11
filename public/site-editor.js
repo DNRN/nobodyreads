@@ -48322,6 +48322,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     let isDirty = false;
     let editMode = "tabs";
     let previewDebounce;
+    let previewLoaded = false;
+    function ensurePreviewLoaded() {
+      if (previewLoaded) return;
+      previewLoaded = true;
+      refreshPreview();
+    }
     function setSaveStatus(state) {
       if (!saveStatus) return;
       saveStatus.dataset.state = state;
@@ -48464,6 +48470,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     }
     function scheduleLivePreview() {
+      ensurePreviewLoaded();
       if (previewDebounce) window.clearTimeout(previewDebounce);
       previewDebounce = window.setTimeout(applyLivePreviewCss, 150);
     }
@@ -48488,7 +48495,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         });
       }
       if (target === "preview") {
-        refreshPreview();
+        ensurePreviewLoaded();
         applyLivePreviewCss();
       }
     }
@@ -48662,7 +48669,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     });
     setSaveStatus("ready");
-    refreshPreview();
     activateTab("html");
     return {
       destroy() {

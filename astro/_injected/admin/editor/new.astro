@@ -23,7 +23,7 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
   title={`New ${kindLabel} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/page-editor.js"></script>`}
+  scripts={`<script src="/page-editor.js" defer></script>`}
 >
   <PageEditorForm editorBase={ctx.editorBase} kind={kind} />
 </AdminLayout>

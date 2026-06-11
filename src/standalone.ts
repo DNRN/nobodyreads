@@ -100,13 +100,18 @@ async function getAstroHandler(): Promise<
 // --- Live-reload (dev only) ---
 
 const reloadEmitter = new EventEmitter();
+let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
 
 function initLiveReload(): void {
   if (!IS_DEV) return;
   const dirs = [PUBLIC_DIR, import.meta.dirname];
   for (const dir of dirs) {
     watch(dir, { recursive: true }, () => {
-      reloadEmitter.emit("reload");
+      if (reloadDebounce) clearTimeout(reloadDebounce);
+      reloadDebounce = setTimeout(() => {
+        reloadDebounce = null;
+        reloadEmitter.emit("reload");
+      }, 300);
     });
   }
   console.log("live-reload watching public/ and src/");

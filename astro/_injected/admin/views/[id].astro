@@ -22,7 +22,7 @@ if (!view) {
   title={`Edit: ${view.title} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/view-editor.js"></script>`}
+  scripts={`<script src="/view-editor.js" defer></script>`}
 >
   <ViewEditorForm view={view} viewsBase={viewsBase} />
 </AdminLayout>

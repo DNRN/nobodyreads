@@ -8,6 +8,10 @@ const r = (p) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
   output: "server",
+  server: {
+    host: true,
+    port: 4321,
+  },
   adapter: node({ mode: "middleware" }),
   srcDir: "./astro",
   outDir: "./dist/astro",

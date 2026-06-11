@@ -13,16 +13,45 @@ import {
   deleteSubscriber,
 } from "./db.js";
 import {
-  isEmailEnabled,
-  createEmailProvider,
+  resolveEmailProvider,
   sendVerificationEmail,
   sendNewPostNotification,
 } from "./email.js";
+import type { EmailResolvable } from "./email.js";
 
 export interface SubscriptionRouterOptions {
   db: Database;
   tenantId?: string;
   urlPrefix?: string;
+  /**
+   * Email provider or config to use for this (sub-)site. When omitted, the
+   * file-based config (`config/email.config.json` / `EMAIL_CONFIG`) is used.
+   * Multi-tenant hosts pass a per-tenant config here.
+   */
+  email?: EmailResolvable;
+  /** Absolute base URL for links in emails/responses (e.g. per-tenant site URL). */
+  siteUrl?: string;
+  /** Display name used in email subjects/branding. */
+  siteName?: string;
+}
+
+/** Options for {@link notifySubscribers}. */
+export interface NotifyOptions {
+  email?: EmailResolvable;
+  siteUrl?: string;
+  siteName?: string;
+}
+
+function resolveSiteUrl(siteUrl?: string): string {
+  return (
+    siteUrl ||
+    process.env.SITE_URL ||
+    `http://localhost:${process.env.PORT || 3000}`
+  );
+}
+
+function resolveSiteName(siteName?: string): string {
+  return siteName || process.env.SITE_NAME || "nobodyreads.me";
 }
 
 /**
@@ -38,6 +67,9 @@ export function createSubscriptionApiRoutes(
 ): Hono {
   const { db } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
+  const emailOption = options.email;
+  const siteUrl = resolveSiteUrl(options.siteUrl);
+  const siteName = resolveSiteName(options.siteName);
 
   const app = new Hono();
 
@@ -45,9 +77,6 @@ export function createSubscriptionApiRoutes(
     "/subscribe",
     zValidator("form", subscribeFormSchema, (result, c) => {
       if (!result.success) {
-        const siteUrl =
-          process.env.SITE_URL ||
-          `http://localhost:${process.env.PORT || 3000}`;
         return respondHtml(
           c,
           400,
@@ -58,13 +87,10 @@ export function createSubscriptionApiRoutes(
       }
     }),
     async (c) => {
-      const siteUrl =
-        process.env.SITE_URL ||
-        `http://localhost:${process.env.PORT || 3000}`;
-      const siteName = process.env.SITE_NAME || "nobodyreads.me";
       const { email } = c.req.valid("form");
 
-      if (!isEmailEnabled()) {
+      const provider = resolveEmailProvider(emailOption);
+      if (!provider) {
         return respondHtml(
           c,
           403,
@@ -90,8 +116,7 @@ export function createSubscriptionApiRoutes(
         );
       }
 
-      const provider = createEmailProvider();
-      if (provider && token) {
+      if (token) {
         try {
           await sendVerificationEmail(
             provider,
@@ -123,9 +148,6 @@ export function createSubscriptionApiRoutes(
   );
 
   app.get("/subscribe/verify", async (c) => {
-    const siteUrl =
-      process.env.SITE_URL ||
-      `http://localhost:${process.env.PORT || 3000}`;
     const token = c.req.query("token") || "";
 
     if (!token) {
@@ -159,9 +181,6 @@ export function createSubscriptionApiRoutes(
   });
 
   app.get("/unsubscribe", async (c) => {
-    const siteUrl =
-      process.env.SITE_URL ||
-      `http://localhost:${process.env.PORT || 3000}`;
     const id = c.req.query("id") || "";
 
     if (!id) {
@@ -229,21 +248,18 @@ export function createSubscriptionAdminRoutes(
 export async function notifySubscribers(
   db: Database,
   tenantId: string,
-  post: { title: string; slug: string; excerpt: string }
+  post: { title: string; slug: string; excerpt: string },
+  options: NotifyOptions = {}
 ): Promise<void> {
   try {
-    if (!isEmailEnabled()) return;
-
-    const provider = createEmailProvider();
+    const provider = resolveEmailProvider(options.email);
     if (!provider) return;
 
     const subscribers = await listVerifiedSubscribers(db, tenantId);
     if (subscribers.length === 0) return;
 
-    const siteUrl =
-      process.env.SITE_URL ||
-      `http://localhost:${process.env.PORT || 3000}`;
-    const siteName = process.env.SITE_NAME || "nobodyreads.me";
+    const siteUrl = resolveSiteUrl(options.siteUrl);
+    const siteName = resolveSiteName(options.siteName);
 
     await sendNewPostNotification(
       provider,

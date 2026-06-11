@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { DEFAULT_TENANT_ID } from "../../shared/types.js";
 import type { Database } from "../../db/index.js";
 import type { MediaStorage } from "../../media/storage.js";
+import type { EmailResolvable } from "../../subscription/email.js";
 import type { AdminModuleContext } from "./modules/types.js";
 import { mountAuthRoutes } from "./modules/auth-routes.js";
 import { createContentRoutes } from "./modules/content.js";
@@ -14,6 +15,21 @@ export interface AdminRouterOptions {
   storage?: MediaStorage;
   tenantId?: string;
   urlPrefix?: string;
+  /**
+   * Prefix prepended to generated media storage keys. Lets a host organize
+   * uploads into per-tenant folders within a shared bucket, e.g.
+   * `tenants/<id>/`. Defaults to "" (no prefix).
+   */
+  keyPrefix?: string;
+  /**
+   * Email provider/config used for new-post notifications. When omitted, the
+   * file-based config is used. Multi-tenant hosts pass a per-tenant config.
+   */
+  email?: EmailResolvable;
+  /** Absolute base URL used in notification emails (e.g. per-tenant site URL). */
+  siteUrl?: string;
+  /** Display name used in notification email branding. */
+  siteName?: string;
 }
 
 /** @deprecated Use AdminRouterOptions */
@@ -24,7 +40,17 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
   const urlPrefix = options.urlPrefix ?? "";
   const adminBase = `${urlPrefix}/admin`;
   const editorBase = `${adminBase}/editor`;
-  return { db: options.db, storage: options.storage, tenantId, adminBase, editorBase };
+  return {
+    db: options.db,
+    storage: options.storage,
+    tenantId,
+    adminBase,
+    editorBase,
+    keyPrefix: options.keyPrefix,
+    email: options.email,
+    siteUrl: options.siteUrl,
+    siteName: options.siteName,
+  };
 }
 
 export function createAdminRoutes(options: AdminRouterOptions): Hono {

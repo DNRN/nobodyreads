@@ -11,6 +11,7 @@ import type { AdminModuleContext } from "./types.js";
 
 export function createMediaRoutes(ctx: AdminModuleContext): Hono {
   const { db, storage, tenantId, adminBase } = ctx;
+  const keyPrefix = ctx.keyPrefix ?? "";
   const app = new Hono();
 
   if (!storage) return app;
@@ -30,7 +31,7 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
 
     const mediaId = randomUUID();
     const ext = extname(file.name).toLowerCase() || "";
-    const storageKey = `${mediaId}${ext}`;
+    const storageKey = `${keyPrefix}${mediaId}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const stored = await storage.put(storageKey, buffer, file.type);

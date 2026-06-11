@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { join, extname, isAbsolute } from "node:path";
+import { join, dirname, extname, isAbsolute } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
 import {
   readFile as readFileAsync,
@@ -65,8 +65,9 @@ export class LocalMediaStorage implements MediaStorage {
   }
 
   async put(key: string, data: Buffer, _mimeType: string): Promise<StoredFile> {
-    await mkdir(this.dir, { recursive: true });
     const filePath = join(this.dir, key);
+    // Keys may contain "/" (e.g. per-tenant prefixes); ensure the parent exists.
+    await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, data);
     return { key, url: this.url(key) };
   }

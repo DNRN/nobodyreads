@@ -70,11 +70,16 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       await upsertPage(db, p, tenantId);
 
       if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
-        notifySubscribers(db, tenantId, {
-          title: p.title,
-          slug: p.slug,
-          excerpt: p.excerpt,
-        }).catch((err) => console.error("Subscriber notification error:", err));
+        notifySubscribers(
+          db,
+          tenantId,
+          {
+            title: p.title,
+            slug: p.slug,
+            excerpt: p.excerpt,
+          },
+          { email: ctx.email, siteUrl: ctx.siteUrl, siteName: ctx.siteName }
+        ).catch((err) => console.error("Subscriber notification error:", err));
       }
 
       return c.redirect(`${editorBase}/${pageId}`);

@@ -21,6 +21,9 @@ export interface EmailProvider {
 export interface EmailFrom {
   name: string;
   email: string;
+  /** Optional Reply-To address. Useful when the verified sender differs from
+   * the address replies should go to (e.g. a per-tenant contact address). */
+  replyTo?: string;
 }
 
 /** Context handed to a provider factory, derived from the email config file. */
@@ -34,6 +37,36 @@ export interface EmailProviderContext {
 export type EmailProviderFactory = (
   ctx: EmailProviderContext
 ) => EmailProvider | null;
+
+/**
+ * Something that can be resolved into an email provider at request time:
+ * an already-built {@link EmailProvider}, an {@link EmailConfig} to build one
+ * from, or `null`/`undefined` to fall back to the file-based config.
+ */
+export type EmailResolvable = EmailProvider | EmailConfig | null | undefined;
+
+/** Type guard: is this an already-built provider instance? */
+export function isEmailProvider(value: unknown): value is EmailProvider {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as EmailProvider).sendEmail === "function"
+  );
+}
+
+/**
+ * Resolve an {@link EmailResolvable} into a concrete provider.
+ *
+ * - An {@link EmailProvider} instance is returned as-is (always enabled).
+ * - An {@link EmailConfig} is passed to {@link createEmailProvider}.
+ * - `null`/`undefined` falls back to the file-based config on disk.
+ */
+export function resolveEmailProvider(
+  email?: EmailResolvable
+): EmailProvider | null {
+  if (isEmailProvider(email)) return email;
+  return createEmailProvider(email ?? undefined);
+}
 
 // --- Provider registry ---
 
@@ -70,12 +103,20 @@ class MailjetProvider implements EmailProvider {
   private apiSecret: string;
   private fromName: string;
   private fromEmail: string;
+  private replyTo?: string;
 
-  constructor(apiKey: string, apiSecret: string, fromName: string, fromEmail: string) {
+  constructor(
+    apiKey: string,
+    apiSecret: string,
+    fromName: string,
+    fromEmail: string,
+    replyTo?: string
+  ) {
     this.apiKey = apiKey;
     this.apiSecret = apiSecret;
     this.fromName = fromName;
     this.fromEmail = fromEmail;
+    this.replyTo = replyTo;
   }
 
   async sendEmail(message: EmailMessage): Promise<void> {
@@ -88,6 +129,7 @@ class MailjetProvider implements EmailProvider {
             Email: this.fromEmail,
             Name: this.fromName,
           },
+          ...(this.replyTo ? { ReplyTo: { Email: this.replyTo } } : {}),
           To: [{ Email: message.to }],
           Subject: message.subject,
           HTMLPart: message.html,
@@ -119,7 +161,13 @@ registerEmailProvider("mailjet", ({ from, options }) => {
     typeof options.apiSecret === "string" ? options.apiSecret : undefined;
 
   if (!apiKey || !apiSecret || !from.email) return null;
-  return new MailjetProvider(apiKey, apiSecret, from.name, from.email);
+  return new MailjetProvider(
+    apiKey,
+    apiSecret,
+    from.name,
+    from.email,
+    from.replyTo
+  );
 });
 
 // --- Configuration ---
@@ -134,6 +182,7 @@ export const emailConfigSchema = z.object({
     .object({
       name: z.string().optional().default(""),
       email: z.string().optional().default(""),
+      replyTo: z.string().optional(),
     })
     .optional(),
   /** Provider-specific options (e.g. API keys). */
@@ -208,7 +257,11 @@ export function createEmailProvider(config?: EmailConfig): EmailProvider | null 
   }
 
   return factory({
-    from: { name: cfg.from?.name ?? "", email: cfg.from?.email ?? "" },
+    from: {
+      name: cfg.from?.name ?? "",
+      email: cfg.from?.email ?? "",
+      replyTo: cfg.from?.replyTo,
+    },
     options: cfg.options,
   });
 }

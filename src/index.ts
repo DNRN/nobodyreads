@@ -14,7 +14,10 @@ export {
   createSubscriptionAdminRoutes,
   notifySubscribers,
 } from "./subscription/index.js";
-export type { SubscriptionRouterOptions } from "./subscription/index.js";
+export type {
+  SubscriptionRouterOptions,
+  NotifyOptions,
+} from "./subscription/index.js";
 
 // Database
 export { initDb, getDb, getRawClient } from "./shared/db.js";
@@ -53,6 +56,8 @@ export {
   isEmailEnabled,
   createEmailProvider,
   registerEmailProvider,
+  resolveEmailProvider,
+  isEmailProvider,
   loadEmailConfig,
   emailConfigSchema,
   DEFAULT_EMAIL_CONFIG_PATH,
@@ -64,6 +69,7 @@ export type {
   EmailProviderContext,
   EmailProviderFactory,
   EmailConfig,
+  EmailResolvable,
 } from "./subscription/email.js";
 
 // Validation schemas

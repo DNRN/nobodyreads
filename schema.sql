@@ -83,6 +83,37 @@ CREATE TABLE IF NOT EXISTS media (
   PRIMARY KEY (media_id, tenant_id)
 );
 
+-- Members (local accounts; self-hosted mode)
+CREATE TABLE IF NOT EXISTS member (
+  member_id     TEXT PRIMARY KEY,
+  email         TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  display_name  TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Space memberships
+-- Members are identified by (issuer, subject) so identities can come from
+-- local accounts, a hosting platform, or (later) federated sign-in.
+CREATE TABLE IF NOT EXISTS space_membership (
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  display_name   TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, member_issuer, member_subject)
+);
+
+-- Post likes
+CREATE TABLE IF NOT EXISTS post_like (
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  page_id        TEXT NOT NULL,
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, page_id, member_issuer, member_subject)
+);
+
 -- Email subscribers
 CREATE TABLE IF NOT EXISTS subscriber (
   subscriber_id   TEXT NOT NULL,

@@ -59,6 +59,14 @@ const options = page
         <h2 class="post-title">{page.title}</h2>
       </div>
       <div class="post-body" set:html={htmlBody} />
+      <div
+        class="nb-community"
+        data-community
+        data-api-base={`${urlPrefix}/api`}
+        data-login-href={`${urlPrefix}/login`}
+        data-slug={page.slug}
+      ></div>
+      <script src="/community.js" defer is:inline></script>
     </>
   ) : (
     <>

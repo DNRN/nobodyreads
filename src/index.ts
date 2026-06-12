@@ -19,6 +19,36 @@ export type {
   NotifyOptions,
 } from "./subscription/index.js";
 
+// Community (memberships, likes, local member accounts)
+export {
+  createCommunityRoutes,
+  createMemberAuthRoutes,
+  resolveLocalMember,
+  getLocalMemberIdentity,
+  getMemberIdFromRequest,
+  buildMemberSessionCookie,
+  buildClearMemberSessionCookie,
+  createMember,
+  getMemberById,
+  verifyMemberCredentials,
+  joinSpace,
+  leaveSpace,
+  isSpaceMember,
+  countSpaceMembers,
+  likePost,
+  unlikePost,
+  countPostLikes,
+  hasLikedPost,
+  LOCAL_MEMBER_ISSUER,
+} from "./community/index.js";
+export type {
+  CommunityRouterOptions,
+  MemberAuthRouterOptions,
+  MemberRecord,
+  MemberIdentity,
+  ResolveMember,
+} from "./community/index.js";
+
 // Database
 export { initDb, getDb, getRawClient } from "./shared/db.js";
 export type { Database } from "./db/index.js";
@@ -31,6 +61,9 @@ export {
   siteSettings,
   media,
   subscriber,
+  member,
+  spaceMembership,
+  postLike,
 } from "./db/schema.js";
 export {
   listPosts,
@@ -80,6 +113,8 @@ export {
   siteTemplateFormSchema,
   subscribeFormSchema,
   loginFormSchema,
+  memberSignupFormSchema,
+  memberLoginFormSchema,
 } from "./db/validation.js";
 export type {
   PageFormData,
@@ -87,6 +122,8 @@ export type {
   SiteTemplateFormData,
   SubscribeFormData,
   LoginFormData,
+  MemberSignupFormData,
+  MemberLoginFormData,
 } from "./db/validation.js";
 
 // HTTP utilities

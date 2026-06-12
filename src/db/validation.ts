@@ -56,3 +56,20 @@ export const loginFormSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 export type LoginFormData = z.infer<typeof loginFormSchema>;
+
+/** Member signup form (POST /api/members/signup). */
+export const memberSignupFormSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Please provide a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  display_name: z.string().trim().max(100).optional(),
+  next: z.string().optional(),
+});
+export type MemberSignupFormData = z.infer<typeof memberSignupFormSchema>;
+
+/** Member login form (POST /api/members/login). */
+export const memberLoginFormSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Please provide a valid email address"),
+  password: z.string().min(1, "Password is required"),
+  next: z.string().optional(),
+});
+export type MemberLoginFormData = z.infer<typeof memberLoginFormSchema>;

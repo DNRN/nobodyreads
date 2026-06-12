@@ -32,6 +32,10 @@
     "./astro/context": {
       "types": "./dist/astro/context.d.ts",
       "import": "./dist/astro/context.js"
+    },
+    "./community": {
+      "types": "./dist/community/index.d.ts",
+      "import": "./dist/community/index.js"
     }
   },
   "bin": {
@@ -81,6 +85,7 @@
     "@hono/zod-validator": "^0.7.6",
     "@libsql/client": "^0.14.0",
     "astro": "^5.17.1",
+    "bcryptjs": "^3.0.3",
     "busboy": "^1.6.0",
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.2",

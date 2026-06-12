@@ -1,0 +1,97 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+import { getNavItems } from "../../src/content/db.js";
+import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
+import { getDbClient } from "../lib/db.js";
+
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const urlPrefix = process.env.URL_PREFIX || "";
+const siteName = process.env.SITE_NAME || "nobodyreads.me";
+
+const db = await getDbClient();
+const navItems = await getNavItems(db, tenantId);
+
+const error = Astro.url.searchParams.get("error");
+const next = Astro.url.searchParams.get("next") || "";
+const loginHref = next
+  ? `${urlPrefix}/login?next=${encodeURIComponent(next)}`
+  : `${urlPrefix}/login`;
+
+const options = {
+  title: `Join — ${siteName}`,
+  navItems,
+  seo: { noIndex: true },
+  urlPrefix,
+  siteName,
+};
+---
+<SiteLayout options={options}>
+  <div class="nb-auth-card">
+    <h2>Join {siteName}</h2>
+    <p>Create a member account to join this space and like posts.</p>
+    {error === "exists" ? (
+      <ul class="nb-form-errors">
+        <li>An account with this email already exists. <a href={loginHref}>Log in instead</a>.</li>
+      </ul>
+    ) : null}
+    {error === "invalid" ? (
+      <ul class="nb-form-errors">
+        <li>Please provide a valid email and a password of at least 8 characters.</li>
+      </ul>
+    ) : null}
+    <form method="POST" action={`${urlPrefix}/api/members/signup`}>
+      <input type="hidden" name="next" value={next} />
+      <label for="display_name">Display name</label>
+      <input type="text" id="display_name" name="display_name" maxlength="100" autofocus />
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required />
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" minlength="8" required />
+      <button type="submit">Create account</button>
+    </form>
+    <p class="nb-auth-alt">Already a member? <a href={loginHref}>Log in</a></p>
+  </div>
+</SiteLayout>
+
+<style is:global>
+  .nb-auth-card {
+    max-width: 380px;
+    margin: 2rem auto;
+  }
+  .nb-auth-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 1rem;
+  }
+  .nb-auth-card label {
+    font-size: 0.85em;
+    opacity: 0.8;
+  }
+  .nb-auth-card input {
+    padding: 0.5rem 0.65rem;
+    font: inherit;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+  }
+  .nb-auth-card button {
+    margin-top: 0.75rem;
+    padding: 0.55rem 1rem;
+    font: inherit;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+  .nb-form-errors {
+    padding-left: 1.1rem;
+    color: #c0392b;
+  }
+  .nb-auth-alt {
+    margin-top: 1rem;
+    font-size: 0.9em;
+  }
+</style>

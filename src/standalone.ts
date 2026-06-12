@@ -19,6 +19,11 @@ import {
   createSubscriptionAdminRoutes,
 } from "./subscription/index.js";
 import {
+  createCommunityRoutes,
+  createMemberAuthRoutes,
+} from "./community/routes.js";
+import { resolveLocalMember } from "./community/auth.js";
+import {
   editorRequiresAuth,
   isAuthenticatedRequest,
 } from "./admin/server/auth.js";
@@ -206,9 +211,14 @@ async function start() {
     return c.text("Not found", 404);
   });
 
-  // ---- Public API: blog + subscriptions ----
+  // ---- Public API: blog + subscriptions + community ----
   app.route("/api", createBlogApiRoutes({ db }));
   app.route("/api", createSubscriptionApiRoutes({ db }));
+  app.route("/api", createMemberAuthRoutes({ db }));
+  app.route(
+    "/api",
+    createCommunityRoutes({ db, resolveMember: resolveLocalMember(db) })
+  );
 
   // ---- Admin auth middleware ----
   app.use("/admin/*", async (c, next) => {

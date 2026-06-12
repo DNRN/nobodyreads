@@ -113,6 +113,23 @@ const BASE_CSS = `.post-header {
 
 .back-link:hover {
   color: var(--text);
+}
+
+.nb-subscribe {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 3rem;
+  max-width: 24rem;
+}
+
+.nb-subscribe .site-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.nb-subscribe .site-button {
+  flex-shrink: 0;
 }`;
 
 export const postBodyComponent = defineComponent({

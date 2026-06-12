@@ -33,6 +33,12 @@ export interface PageEditorOptions {
   uploadUrl?: string;
   /** URL for media list API (default: "/admin/media/list"). */
   mediaListUrl?: string;
+  /**
+   * URL for the server-side preview render API (default:
+   * "/admin/editor/preview"). Used to resolve {{view:slug}} content views and
+   * [[id]] links, which the client-side markdown pass cannot.
+   */
+  previewUrl?: string;
   /** Initial markdown content. */
   initialValue?: string;
   /** Whether this is a new page (enables slug auto-generation). */

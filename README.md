@@ -332,7 +332,7 @@ serve({ fetch: app.fetch, port: 3000 });
 
 **Media storage**: `createMediaStorage`, `loadStorageConfig`, `LocalMediaStorage`, `GcsMediaStorage`, `S3MediaStorage`
 
-**Email**: `isEmailEnabled`, `createEmailProvider`, `registerEmailProvider`, `loadEmailConfig`, `listAllSubscribers`
+**Email**: `isEmailEnabled`, `createEmailProvider`, `registerEmailProvider`, `loadEmailConfig`, `listAllSubscribers`, `countSubscribers`
 
 **Editor auth**: `editorRequiresAuth`, `isAuthenticatedRequest`, `buildSessionCookie`, `verifyEditorPassword`
 

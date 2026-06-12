@@ -3,13 +3,39 @@ import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { pageFormSchema } from "../../../db/validation.js";
 import { getPageById, findPageByKind, deletePage, upsertPage } from "../../../content/db.js";
+import { renderContent } from "../../../content/render.js";
 import type { Page, PageKind } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
 import type { AdminModuleContext } from "./types.js";
 
 export function createContentRoutes(ctx: AdminModuleContext): Hono {
-  const { db, tenantId, editorBase } = ctx;
+  const { db, tenantId, urlPrefix, editorBase } = ctx;
   const app = new Hono();
+
+  // Server-side render of unsaved markdown for the editor's live preview.
+  // Mirrors the public page pipeline so {{view:slug}} content views and
+  // [[id]] links render faithfully — including unpublished views — which the
+  // client-side `marked` pass cannot resolve (no DB / no SQL / no JS template).
+  app.post("/editor/preview", async (c) => {
+    let content = "";
+    try {
+      const body = (await c.req.json()) as { content?: unknown };
+      if (typeof body.content === "string") content = body.content;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+
+    try {
+      const html = await renderContent(db, content, tenantId, urlPrefix, {
+        includeDrafts: true,
+        showMissingPlaceholders: true,
+      });
+      return c.json({ html });
+    } catch (err) {
+      console.error("Editor preview render error:", err);
+      return c.json({ error: "Failed to render preview" }, 500);
+    }
+  });
 
   app.post(
     "/editor/save",

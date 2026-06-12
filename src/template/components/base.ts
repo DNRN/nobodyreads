@@ -1,4 +1,5 @@
 import { defineComponent } from "../component-definition.js";
+import { siteButtonRules, siteInputRules } from "../form-primitives.js";
 
 const BASE_CSS = `*, *::before, *::after {
   margin: 0;
@@ -46,7 +47,11 @@ main {
   color: #b44;
   font-style: italic;
   font-size: 0.9rem;
-}`;
+}
+
+${siteInputRules(".site-input")}
+
+${siteButtonRules(".site-button")}`;
 
 export const baseComponent = defineComponent({
   name: "base",

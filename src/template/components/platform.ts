@@ -1,4 +1,5 @@
 import { defineComponent } from "../component-definition.js";
+import { siteButtonRules, siteInputRules } from "../form-primitives.js";
 
 const BASE_CSS = `.platform-hero {
   padding: 3rem 0 2.5rem;
@@ -290,20 +291,7 @@ const BASE_CSS = `.platform-hero {
   margin-top: 0;
 }
 
-.auth-form input {
-  padding: 0.5rem 0.65rem;
-  font-size: 0.9rem;
-  font-family: var(--font);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.auth-form input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+${siteInputRules('.auth-form input:not([type="checkbox"]):not([type="radio"])')}
 
 .auth-form small {
   font-size: 0.7rem;
@@ -313,20 +301,9 @@ const BASE_CSS = `.platform-hero {
 
 .auth-form button {
   margin-top: 1.5rem;
-  padding: 0.55rem 1rem;
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: opacity 0.15s;
 }
 
-.auth-form button:hover {
-  opacity: 0.85;
-}
+${siteButtonRules(".auth-form button")}
 
 .auth-alt {
   text-align: center;

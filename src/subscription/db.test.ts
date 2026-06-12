@@ -7,6 +7,7 @@ import {
   unsubscribeById,
   listVerifiedSubscribers,
   listAllSubscribers,
+  countSubscribers,
   deleteSubscriber,
 } from "./db.js";
 
@@ -35,15 +36,23 @@ describe("addSubscriber", () => {
     expect(all[0].email).toBe("alice@example.com");
   });
 
-  it("resets token for an existing unverified subscriber", async () => {
+  it("resets token and flags pendingVerification for an unconfirmed subscriber", async () => {
     const first = await addSubscriber(t.db, TENANT, "alice@example.com");
     const second = await addSubscriber(t.db, TENANT, "alice@example.com");
 
     expect(second.alreadySubscribed).toBe(false);
+    expect(second.pendingVerification).toBe(true);
     expect(second.token).not.toBe(first.token);
+    expect(second.token).toBeTypeOf("string");
 
     const all = await listAllSubscribers(t.db, TENANT);
     expect(all).toHaveLength(1);
+  });
+
+  it("does not flag pendingVerification on a brand-new signup", async () => {
+    const result = await addSubscriber(t.db, TENANT, "alice@example.com");
+    expect(result.pendingVerification).toBe(false);
+    expect(result.alreadySubscribed).toBe(false);
   });
 
   it("returns alreadySubscribed for verified active subscriber", async () => {
@@ -52,16 +61,19 @@ describe("addSubscriber", () => {
 
     const result = await addSubscriber(t.db, TENANT, "alice@example.com");
     expect(result.alreadySubscribed).toBe(true);
+    expect(result.pendingVerification).toBe(false);
     expect(result.token).toBeNull();
   });
 
-  it("re-subscribes after unsubscribe", async () => {
+  it("re-subscribes after unsubscribe as a fresh opt-in", async () => {
     const { token } = await addSubscriber(t.db, TENANT, "alice@example.com");
     await verifySubscriber(t.db, TENANT, token!);
     await unsubscribeByEmail(t.db, TENANT, "alice@example.com");
 
     const result = await addSubscriber(t.db, TENANT, "alice@example.com");
     expect(result.alreadySubscribed).toBe(false);
+    // A prior unsubscribe is a fresh opt-in, not a stale pending signup.
+    expect(result.pendingVerification).toBe(false);
     expect(result.token).toBeTypeOf("string");
   });
 });
@@ -181,6 +193,29 @@ describe("listAllSubscribers", () => {
 
     const all = await listAllSubscribers(t.db, TENANT);
     expect(all).toHaveLength(3);
+  });
+});
+
+// ---------- countSubscribers ----------
+
+describe("countSubscribers", () => {
+  it("returns all zeros for an empty list", async () => {
+    const counts = await countSubscribers(t.db, TENANT);
+    expect(counts).toEqual({ verified: 0, pending: 0, unsubscribed: 0, total: 0 });
+  });
+
+  it("counts subscribers by state", async () => {
+    const r1 = await addSubscriber(t.db, TENANT, "verified@test.com");
+    await verifySubscriber(t.db, TENANT, r1.token!);
+
+    await addSubscriber(t.db, TENANT, "pending@test.com");
+
+    const r3 = await addSubscriber(t.db, TENANT, "unsub@test.com");
+    await verifySubscriber(t.db, TENANT, r3.token!);
+    await unsubscribeByEmail(t.db, TENANT, "unsub@test.com");
+
+    const counts = await countSubscribers(t.db, TENANT);
+    expect(counts).toEqual({ verified: 1, pending: 1, unsubscribed: 1, total: 3 });
   });
 });
 

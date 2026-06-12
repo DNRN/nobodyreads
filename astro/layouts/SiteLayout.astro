@@ -68,8 +68,8 @@ const emailEnabled = isEmailEnabled();
 
 const subscribeFormHtml = emailEnabled
   ? `<form class="nb-subscribe" method="POST" action="/api/subscribe">
-      <input type="email" name="email" placeholder="Your email" required />
-      <button type="submit">Subscribe</button>
+      <input type="email" name="email" class="site-input" placeholder="Your email" required />
+      <button type="submit" class="site-button">Subscribe</button>
      </form>`
   : "";
 

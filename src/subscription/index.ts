@@ -100,11 +100,8 @@ export function createSubscriptionApiRoutes(
         );
       }
 
-      const { token, alreadySubscribed } = await addSubscriber(
-        db,
-        tenantId,
-        email
-      );
+      const { token, alreadySubscribed, pendingVerification } =
+        await addSubscriber(db, tenantId, email);
 
       if (alreadySubscribed) {
         return respondHtml(
@@ -135,6 +132,16 @@ export function createSubscriptionApiRoutes(
             siteUrl
           );
         }
+      }
+
+      if (pendingVerification) {
+        return respondHtml(
+          c,
+          200,
+          "Almost there",
+          "This email is already signed up but not yet confirmed. We've re-sent the confirmation link — please check your inbox to validate your email.",
+          siteUrl
+        );
       }
 
       return respondHtml(

@@ -133,9 +133,9 @@ const options = page
         <h2 class="post-title">{page.title}</h2>
       </div>
       <div class={pageKind === "post" ? "post-body" : "page-body"} set:html={htmlBody} />
-      <a href={previewUrlPrefix} class="back-link">
-        {pageKind === "post" ? "\u2190 back to all posts" : "\u2190 back to home"}
-      </a>
+      {pageKind !== "post" ? (
+        <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+      ) : null}
     </>
   ) : (
     <>

@@ -1,4 +1,4 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { subscriber } from "../db/schema.js";
 import type { Database } from "../db/index.js";
 import { randomUUID, randomBytes } from "node:crypto";
@@ -23,16 +23,34 @@ function toSubscriber(row: SubscriberRow): Subscriber {
 
 // --- Subscribers ---
 
+/** Outcome of an {@link addSubscriber} call. */
+export interface AddSubscriberResult {
+  /** Verify token to email out, or `null` when no email should be sent. */
+  token: string | null;
+  /** The email is already verified and active — nothing to do. */
+  alreadySubscribed: boolean;
+  /**
+   * The email already exists but has not been confirmed yet. The token is
+   * refreshed and re-sent so the caller can prompt the user to validate the
+   * email they already signed up with.
+   */
+  pendingVerification: boolean;
+}
+
 /**
- * Add a new subscriber. Returns the verify token.
- * If the email already exists and is unverified, resets the token.
- * If verified and not unsubscribed, returns null (already subscribed).
+ * Add a new subscriber. Enforces one row per (email, tenant):
+ *
+ * - **New email** → insert, return a fresh token (`pendingVerification: false`).
+ * - **Existing but unconfirmed** → refresh + return token with
+ *   `pendingVerification: true` so the caller tells the user to validate.
+ * - **Previously unsubscribed** → reactivate as a fresh opt-in (new token).
+ * - **Verified & active** → `alreadySubscribed: true`, no token.
  */
 export async function addSubscriber(
   db: Database,
   tenantId: string,
   email: string
-): Promise<{ token: string | null; alreadySubscribed: boolean }> {
+): Promise<AddSubscriberResult> {
   const normalizedEmail = email.trim().toLowerCase();
   const verifyToken = randomBytes(32).toString("hex");
 
@@ -50,8 +68,12 @@ export async function addSubscriber(
     const row = existing[0];
 
     if (row.verified && !row.unsubscribed) {
-      return { token: null, alreadySubscribed: true };
+      return { token: null, alreadySubscribed: true, pendingVerification: false };
     }
+
+    // A still-pending signup (never verified, not unsubscribed) is distinct
+    // from a fresh opt-in after an explicit unsubscribe.
+    const pendingVerification = !row.verified && !row.unsubscribed;
 
     await db
       .update(subscriber)
@@ -66,7 +88,7 @@ export async function addSubscriber(
         and(eq(subscriber.subscriberId, row.subscriberId), eq(subscriber.tenantId, tenantId))
       );
 
-    return { token: verifyToken, alreadySubscribed: false };
+    return { token: verifyToken, alreadySubscribed: false, pendingVerification };
   }
 
   const subscriberId = randomUUID();
@@ -77,7 +99,7 @@ export async function addSubscriber(
     verifyToken,
   });
 
-  return { token: verifyToken, alreadySubscribed: false };
+  return { token: verifyToken, alreadySubscribed: false, pendingVerification: false };
 }
 
 /** Verify a subscriber by their token. Returns true if successful. */
@@ -173,6 +195,41 @@ export async function listAllSubscribers(
     .where(eq(subscriber.tenantId, tenantId))
     .orderBy(desc(subscriber.createdAt));
   return rows.map(toSubscriber);
+}
+
+/** Aggregate subscriber counts by state, without loading any email addresses. */
+export interface SubscriberCounts {
+  verified: number;
+  pending: number;
+  unsubscribed: number;
+  total: number;
+}
+
+/**
+ * Count subscribers grouped by state for the admin view. Returns only
+ * aggregate numbers — email addresses are never selected.
+ */
+export async function countSubscribers(
+  db: Database,
+  tenantId: string
+): Promise<SubscriberCounts> {
+  const rows = await db
+    .select({
+      verified: sql<number>`sum(case when ${subscriber.verified} = 1 and ${subscriber.unsubscribed} = 0 then 1 else 0 end)`,
+      pending: sql<number>`sum(case when ${subscriber.verified} = 0 and ${subscriber.unsubscribed} = 0 then 1 else 0 end)`,
+      unsubscribed: sql<number>`sum(case when ${subscriber.unsubscribed} = 1 then 1 else 0 end)`,
+      total: sql<number>`count(*)`,
+    })
+    .from(subscriber)
+    .where(eq(subscriber.tenantId, tenantId));
+
+  const row = rows[0];
+  return {
+    verified: Number(row?.verified ?? 0),
+    pending: Number(row?.pending ?? 0),
+    unsubscribed: Number(row?.unsubscribed ?? 0),
+    total: Number(row?.total ?? 0),
+  };
 }
 
 /** Hard-delete a subscriber (admin action). */

@@ -6,6 +6,8 @@ export interface AdminModuleContext {
   db: Database;
   storage?: MediaStorage;
   tenantId: string;
+  /** URL prefix the host mounts this package under (e.g. per-tenant base). */
+  urlPrefix: string;
   adminBase: string;
   editorBase: string;
   /** Prefix prepended to generated media storage keys (e.g. per-tenant folder). */

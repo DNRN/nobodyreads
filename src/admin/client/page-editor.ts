@@ -65,18 +65,55 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
   } = options;
   const uploadUrl = options.uploadUrl ?? "/admin/media/upload";
   const mediaListUrl = options.mediaListUrl ?? "/admin/media/list";
+  const previewUrl = options.previewUrl ?? "/admin/editor/preview";
 
   let previewTimer: ReturnType<typeof setTimeout> | null = null;
+  // Monotonic token so out-of-order async preview responses can't clobber a
+  // newer render (fetch responses may resolve in a different order than sent).
+  let previewSeq = 0;
 
   function schedulePreview() {
     if (previewTimer) clearTimeout(previewTimer);
     previewTimer = setTimeout(updatePreview, 150);
   }
 
-  function updatePreview() {
-    const text = editor.getValue();
+  function renderLocal(text: string) {
     const rendered = markedInstance.parse(text);
     previewElement.innerHTML = typeof rendered === "string" ? rendered : text;
+  }
+
+  // {{view:slug}} content views and [[id]] links can only be resolved by the
+  // server (DB lookups, custom SQL/JS). When the content contains them we round
+  // trip to the preview endpoint; otherwise we render locally for snappy typing.
+  function needsServerRender(text: string): boolean {
+    return /\{\{view:[a-z0-9-]+\}\}/.test(text) || /\[\[[a-z0-9-]+(?:\|[^\]]+)?\]\]/.test(text);
+  }
+
+  async function updatePreview() {
+    const text = editor.getValue();
+
+    if (!needsServerRender(text)) {
+      renderLocal(text);
+      return;
+    }
+
+    const seq = ++previewSeq;
+    try {
+      const resp = await fetch(previewUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ content: text }),
+      });
+      if (!resp.ok) throw new Error(`Preview request failed: ${resp.status}`);
+      const data = (await resp.json()) as { html?: string };
+      if (seq !== previewSeq) return; // a newer render superseded this one
+      previewElement.innerHTML = data.html ?? "";
+    } catch {
+      // Fall back to the local render so the preview still shows something
+      // useful (tokens stay as literal text) if the server is unreachable.
+      if (seq !== previewSeq) return;
+      renderLocal(text);
+    }
   }
 
   const previewUpdater = EditorView.updateListener.of((update) => {

@@ -48302,7 +48302,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
 
   // src/admin/client/site-editor.ts
   function createSiteEditor(options) {
-    var _a5;
     const {
       formElement,
       tabs: tabs2,
@@ -48318,7 +48317,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       componentsPane,
       addTokenBtn
     } = options;
-    const tokenSaveUrl = (_a5 = options.tokenSaveUrl) != null ? _a5 : "/admin/settings/tokens";
     let isDirty = false;
     let editMode = "tabs";
     let previewDebounce;
@@ -48370,29 +48368,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     }
     function getCustomTokensFromUI() {
-      var _a6, _b2, _c2, _d2, _e2, _f, _g, _h;
+      var _a5, _b2, _c2, _d2, _e2, _f, _g, _h;
       const container = customTokensEditor != null ? customTokensEditor : document.getElementById("custom-tokens-editor");
       if (!container) return [];
       const rows = container.querySelectorAll("tr[data-token-key]");
       const tokens = [];
       for (const row of rows) {
-        const key = (_a6 = row.getAttribute("data-token-key")) != null ? _a6 : "";
+        const key = (_a5 = row.getAttribute("data-token-key")) != null ? _a5 : "";
         const label = (_d2 = (_c2 = (_b2 = row.querySelector("td:nth-child(2)")) == null ? void 0 : _b2.textContent) == null ? void 0 : _c2.trim()) != null ? _d2 : key;
         const type = (_g = (_f = (_e2 = row.querySelector("td:nth-child(3)")) == null ? void 0 : _e2.textContent) == null ? void 0 : _f.trim()) != null ? _g : "text";
-        const input = row.querySelector(`input[name="tokenval:${key}"]`);
-        const defaultValue = (_h = input == null ? void 0 : input.value) != null ? _h : "";
+        const defaultValue = (_h = row.getAttribute("data-token-default")) != null ? _h : "";
         tokens.push({ key, label, type, defaultValue });
       }
       return tokens;
     }
     function getComponentsFromUI() {
-      var _a6, _b2, _c2;
+      var _a5, _b2, _c2;
       const pane = componentsPane != null ? componentsPane : document.getElementById("components-editor");
       if (!pane) return {};
       const components = {};
       const cards = pane.querySelectorAll("[data-component]");
       for (const card of cards) {
-        const name2 = (_a6 = card.getAttribute("data-component")) != null ? _a6 : "";
+        const name2 = (_a5 = card.getAttribute("data-component")) != null ? _a5 : "";
         if (!name2) continue;
         const config3 = {};
         const variantSelect = pane.querySelector(
@@ -48425,15 +48422,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         }
       }
       return components;
-    }
-    function getTokenValuesFromUI() {
-      const values2 = {};
-      const inputs = document.querySelectorAll('input[name^="tokenval:"]');
-      for (const input of inputs) {
-        const key = input.name.slice("tokenval:".length);
-        values2[key] = input.value;
-      }
-      return values2;
     }
     function buildTemplateJson() {
       if (editMode === "advanced" && jsonEditor) {
@@ -48475,9 +48463,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       previewDebounce = window.setTimeout(applyLivePreviewCss, 150);
     }
     function activateTab(target) {
-      var _a6;
+      var _a5;
       tabs2.querySelectorAll(".editor-tab").forEach((t2) => t2.classList.remove("active"));
-      (_a6 = tabs2.querySelector(`.editor-tab[data-tab="${target}"]`)) == null ? void 0 : _a6.classList.add("active");
+      (_a5 = tabs2.querySelector(`.editor-tab[data-tab="${target}"]`)) == null ? void 0 : _a5.classList.add("active");
       const paneList = Array.from(panes);
       paneList.forEach((pane) => {
         const isTarget = pane.getAttribute("data-pane") === target;
@@ -48500,20 +48488,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     }
     tabs2.addEventListener("click", (e) => {
-      var _a6;
-      const tab = (_a6 = e.target) == null ? void 0 : _a6.closest(".editor-tab");
+      var _a5;
+      const tab = (_a5 = e.target) == null ? void 0 : _a5.closest(".editor-tab");
       if (!tab) return;
       const target = tab.dataset.tab;
       if (target) activateTab(target);
     });
     if (addTokenBtn) {
       addTokenBtn.addEventListener("click", () => {
-        var _a6, _b2, _c2, _d2;
+        var _a5, _b2, _c2, _d2;
         const keyInput = document.getElementById("new-token-key");
         const labelInput = document.getElementById("new-token-label");
         const typeSelect = document.getElementById("new-token-type");
         const defaultInput = document.getElementById("new-token-default");
-        const key = (_a6 = keyInput == null ? void 0 : keyInput.value) == null ? void 0 : _a6.trim();
+        const key = (_a5 = keyInput == null ? void 0 : keyInput.value) == null ? void 0 : _a5.trim();
         const label = (_b2 = labelInput == null ? void 0 : labelInput.value) == null ? void 0 : _b2.trim();
         const type = (typeSelect == null ? void 0 : typeSelect.value) || "text";
         const defaultValue = (_c2 = defaultInput == null ? void 0 : defaultInput.value) != null ? _c2 : "";
@@ -48534,7 +48522,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           if (emptyMsg) {
             const table = document.createElement("table");
             table.className = "editor-table";
-            table.innerHTML = `<thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Value</th><th></th></tr></thead><tbody></tbody>`;
+            table.innerHTML = `<thead><tr><th>Key</th><th>Label</th><th>Type</th><th>Default</th><th></th></tr></thead><tbody></tbody>`;
             emptyMsg.replaceWith(table);
           }
           tbody = (_d2 = container == null ? void 0 : container.querySelector("tbody")) != null ? _d2 : null;
@@ -48542,12 +48530,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         if (!tbody) return;
         const tr = document.createElement("tr");
         tr.setAttribute("data-token-key", key);
-        const inputType = type === "color" ? "color" : "text";
+        tr.setAttribute("data-token-default", defaultValue);
         tr.innerHTML = `
         <td><code>{{${key}}}</code></td>
         <td>${label}</td>
         <td>${type}</td>
-        <td><input type="${inputType}" class="editor-input editor-input--sm" name="tokenval:${key}" value="${defaultValue}" /></td>
+        <td class="cell-slug">${defaultValue || '<span class="hint">\u2014</span>'}</td>
         <td><button type="button" class="btn btn-danger btn-sm" data-remove-token="${key}">Remove</button></td>
       `;
         tbody.appendChild(tr);
@@ -48558,8 +48546,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       });
     }
     const onRemoveToken = (e) => {
-      var _a6;
-      const btn = (_a6 = e.target) == null ? void 0 : _a6.closest("[data-remove-token]");
+      var _a5;
+      const btn = (_a5 = e.target) == null ? void 0 : _a5.closest("[data-remove-token]");
       if (!btn) return;
       const row = btn.closest("tr");
       if (row) {
@@ -48579,8 +48567,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         scheduleLivePreview();
       });
       componentsContainer.addEventListener("click", (e) => {
-        var _a6, _b2, _c2, _d2;
-        const btn = (_a6 = e.target) == null ? void 0 : _a6.closest("[data-reset-component]");
+        var _a5, _b2, _c2, _d2;
+        const btn = (_a5 = e.target) == null ? void 0 : _a5.closest("[data-reset-component]");
         if (!btn) return;
         const name2 = (_b2 = btn.getAttribute("data-reset-component")) != null ? _b2 : "";
         if (!name2) return;
@@ -48603,26 +48591,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     preview2.addEventListener("load", () => {
       applyLivePreviewCss();
     });
-    async function saveTokenValues() {
-      const values2 = getTokenValuesFromUI();
-      const body = new URLSearchParams();
-      for (const [key, value] of Object.entries(values2)) {
-        body.append(`token:${key}`, value);
-      }
-      try {
-        await fetch(tokenSaveUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-            Accept: "application/json"
-          },
-          credentials: "same-origin",
-          body
-        });
-      } catch (err) {
-        console.error("Failed to save token values:", err);
-      }
-    }
     formElement.addEventListener("submit", async (event) => {
       event.preventDefault();
       setSaveStatus("saving");
@@ -48659,7 +48627,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           }
           throw new Error(`Save failed: ${response.status}`);
         }
-        await saveTokenValues();
         isDirty = false;
         setSaveStatus("saved");
         refreshPreview(true);

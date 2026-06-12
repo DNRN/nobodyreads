@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import matter from "gray-matter";
 import { initDb, getDb } from "../src/shared/db.js";
-import { upsertPage } from "../src/content/db.js";
+import { upsertPage, getPageById } from "../src/content/db.js";
 import type { Page, PageMeta, PageKind, PageNav } from "../src/content/types.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
+import { notifySubscribers } from "../src/subscription/index.js";
 
 const TENANT_ID = process.env.TENANT_ID ?? DEFAULT_TENANT_ID;
 
@@ -119,6 +120,11 @@ for (const file of files) {
     nav: parseNav(data.nav),
   };
 
+  // Detect the draft -> published transition so subscribers are only notified
+  // once per post, mirroring the admin editor's save behavior.
+  const existing = await getPageById(db, id, TENANT_ID);
+  const wasPreviouslyPublished = existing?.published ?? false;
+
   await upsertPage(db, page, TENANT_ID);
 
   const flags: string[] = [];
@@ -128,6 +134,14 @@ for (const file of files) {
   if (page.seo?.noAiTraining) flags.push("no-ai-training");
   if (page.seo?.noIndex) flags.push("noindex");
   console.log(`[${flags.join(", ")}] ${page.id} \u2014 ${page.title} (tenant: ${TENANT_ID})`);
+
+  if (page.kind === "post" && page.published && !wasPreviouslyPublished) {
+    await notifySubscribers(db, TENANT_ID, {
+      title: page.title,
+      slug: page.slug,
+      excerpt: page.excerpt,
+    });
+  }
 }
 
 // Close the DB connection

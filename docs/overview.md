@@ -170,6 +170,18 @@ Content can be created two ways:
 
 Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLayout.astro` wraps output in the generated site template (CSS + section HTML).
 
+### Editor preview
+
+The admin page editor renders a live preview as you type. Plain Markdown is
+rendered client-side with `marked` for instant feedback. When the content
+contains server-only tokens (`{{view:slug}}` or `[[id]]` links), the editor
+debounces a request to `POST /admin/editor/preview` (`src/admin/server/modules/content.ts`),
+which runs the unsaved Markdown through `renderContent()` with `includeDrafts`
+so views — including unpublished ones — and internal links render exactly as
+they will on the public page. The endpoint falls back to the client render if
+unreachable. This is distinct from the `/preview/*` Astro routes used by the
+site-template editor iframe, which render *saved* content from the DB.
+
 ### Content views
 
 Views are defined in the admin UI or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Views are referenced in page Markdown as `{{view:slug}}`.
@@ -254,7 +266,19 @@ Off by default. Enabled via `config/email.config.json` with a pluggable provider
 - Built-in: **Mailjet**
 - Extensible: `registerEmailProvider(name, factory)` before routes start
 
-Public routes (`/api/subscribe`, verify, unsubscribe) and admin routes (subscriber list, delete) live in `src/subscription/`. Publishing a post for the first time triggers `notifySubscribers()` when email is enabled.
+Public routes (`/api/subscribe`, verify, unsubscribe) live in `src/subscription/`.
+Subscription uses **double opt-in**: `POST /api/subscribe` stores an unverified
+row with a one-time token and emails a confirmation link; only after
+`GET /api/subscribe/verify` confirms it does the address count as a subscriber.
+Each `(email, tenant)` is unique — re-submitting a verified address replies
+"already subscribed", while an unconfirmed address gets its link re-sent and is
+told to validate. Subscriber emails are notification recipients only; the admin
+**Settings** page shows aggregate counts (`countSubscribers`) and never lists
+addresses.
+
+Publishing a post for the first time triggers `notifySubscribers()` (verified +
+active subscribers only) when email is enabled — both from the admin editor's
+`/editor/save` and the `npm run post` CLI (`scripts/publish.ts`).
 
 ---
 
@@ -339,7 +363,7 @@ These are intentional constraints documented here so future changes stay aligned
 | `npm run build:editors` | esbuild admin client bundles → `public/` |
 | `npm run site:bootstrap` | Seed default template + `latest-posts` view |
 | `npm run post -- <file.md>` | Publish Markdown file to database |
-| `npm test` | Vitest |
+| `npm test` | Vitest (see [test.md](./test.md)) |
 
 Production Docker image uses a multi-stage build; the container runs `standalone.ts` with a mounted volume for `data/` (SQLite) and optionally `media/`.
 
@@ -349,3 +373,4 @@ Production Docker image uses a multi-stage build; the container runs `standalone
 
 - [README.md](../README.md) — installation, configuration, usage
 - [AGENTS.md](../AGENTS.md) — contributor/agent conventions and invariants
+- [test.md](./test.md) — test suite overview and how to run it

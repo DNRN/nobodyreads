@@ -44,6 +44,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     db: options.db,
     storage: options.storage,
     tenantId,
+    urlPrefix,
     adminBase,
     editorBase,
     keyPrefix: options.keyPrefix,

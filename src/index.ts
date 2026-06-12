@@ -51,7 +51,8 @@ export {
   upsertContentView,
   listMedia,
 } from "./content/db.js";
-export { listAllSubscribers } from "./subscription/db.js";
+export { listAllSubscribers, countSubscribers } from "./subscription/db.js";
+export type { SubscriberCounts } from "./subscription/db.js";
 export {
   isEmailEnabled,
   createEmailProvider,

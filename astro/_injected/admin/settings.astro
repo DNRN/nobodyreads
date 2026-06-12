@@ -1,42 +1,14 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listAllSubscribers, loadEmailConfig } from "nobodyreads";
+import { initDb, isEmailEnabled, countSubscribers } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
-const subscribersBase = `${ctx.adminBase}/subscribers`;
 
 const db = await initDb();
-const subscribers = await listAllSubscribers(db, ctx.tenantId);
+const counts = await countSubscribers(db, ctx.tenantId);
 
-const emailConfig = loadEmailConfig();
-const emailEnabled = emailConfig.enabled;
-const emailProvider = emailConfig.provider || "(not set)";
-const emailFrom = emailConfig.from?.email || "(not set)";
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function subscriberStatus(sub: { verified: boolean; unsubscribed: boolean }): string {
-  if (sub.unsubscribed) return "unsubscribed";
-  if (sub.verified) return "verified";
-  return "pending";
-}
-
-function badgeClass(status: string): string {
-  if (status === "verified") return "badge badge-published";
-  if (status === "pending") return "badge badge-draft";
-  return "badge badge-draft";
-}
-
-const verifiedCount = subscribers.filter(s => s.verified && !s.unsubscribed).length;
-const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).length;
+const emailEnabled = isEmailEnabled();
 ---
 <AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -47,7 +19,6 @@ const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).len
 
       <div class="editor-list-section">
         <h3>Email subscriptions</h3>
-        <p class="hint">Email subscriptions are configured via a local config file.</p>
 
         <div class="env-status">
           <div class="env-row">
@@ -56,55 +27,26 @@ const pendingCount = subscribers.filter(s => !s.verified && !s.unsubscribed).len
               {emailEnabled ? "Enabled" : "Disabled"}
             </span>
           </div>
-          <div class="env-row">
-            <span class="env-label">Provider</span>
-            <span class="env-value">{emailProvider}</span>
-          </div>
-          <div class="env-row">
-            <span class="env-label">From</span>
-            <span class="env-value">{emailFrom}</span>
-          </div>
         </div>
-
-        <p class="hint">
-          Configure the provider in <code>config/email.config.json</code> (override the
-          location with the <code>EMAIL_CONFIG</code> environment variable). See
-          <code>config/email.config.example.json</code> for details.
-        </p>
       </div>
 
       <div class="editor-list-section">
-        <h3>Subscribers <span class="subscriber-count">({verifiedCount} verified, {pendingCount} pending)</span></h3>
+        <h3>Subscribers</h3>
 
-        {subscribers.length === 0 ? (
-          <p class="editor-empty">No subscribers yet.</p>
-        ) : (
-          <table class="editor-table">
-            <thead>
-              <tr><th>Email</th><th>Status</th><th>Date</th><th></th></tr>
-            </thead>
-            <tbody>
-              {subscribers.map((sub) => {
-                const status = subscriberStatus(sub);
-                return (
-                  <tr>
-                    <td>{sub.email}</td>
-                    <td class="cell-status">
-                      <span class={badgeClass(status)}>{status}</span>
-                    </td>
-                    <td class="cell-date">{formatDate(sub.createdAt)}</td>
-                    <td class="cell-actions">
-                      <form method="POST" action={`${subscribersBase}/delete/${sub.id}`}
-                            onsubmit="return confirm('Delete this subscriber?')">
-                        <button type="submit" class="btn btn-ghost btn-sm">delete</button>
-                      </form>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        <div class="env-status">
+          <div class="env-row">
+            <span class="env-label">Confirmed</span>
+            <span class="env-value">{counts.verified}</span>
+          </div>
+          <div class="env-row">
+            <span class="env-label">Pending confirmation</span>
+            <span class="env-value">{counts.pending}</span>
+          </div>
+          <div class="env-row">
+            <span class="env-label">Unsubscribed</span>
+            <span class="env-value">{counts.unsubscribed}</span>
+          </div>
+        </div>
       </div>
     </div>
   </main>

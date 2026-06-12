@@ -38740,7 +38740,7 @@ ${text}</tr>
     return text.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
   }
   function createPageEditor(options2) {
-    var _a4, _b2;
+    var _a4, _b2, _c2;
     const {
       contentElement,
       previewElement,
@@ -38758,15 +38758,42 @@ ${text}</tr>
     } = options2;
     const uploadUrl = (_a4 = options2.uploadUrl) != null ? _a4 : "/admin/media/upload";
     const mediaListUrl = (_b2 = options2.mediaListUrl) != null ? _b2 : "/admin/media/list";
+    const previewUrl = (_c2 = options2.previewUrl) != null ? _c2 : "/admin/editor/preview";
     let previewTimer = null;
+    let previewSeq = 0;
     function schedulePreview() {
       if (previewTimer) clearTimeout(previewTimer);
       previewTimer = setTimeout(updatePreview, 150);
     }
-    function updatePreview() {
-      const text = editor.getValue();
+    function renderLocal(text) {
       const rendered = markedInstance2.parse(text);
       previewElement.innerHTML = typeof rendered === "string" ? rendered : text;
+    }
+    function needsServerRender(text) {
+      return /\{\{view:[a-z0-9-]+\}\}/.test(text) || /\[\[[a-z0-9-]+(?:\|[^\]]+)?\]\]/.test(text);
+    }
+    async function updatePreview() {
+      var _a5;
+      const text = editor.getValue();
+      if (!needsServerRender(text)) {
+        renderLocal(text);
+        return;
+      }
+      const seq = ++previewSeq;
+      try {
+        const resp = await fetch(previewUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ content: text })
+        });
+        if (!resp.ok) throw new Error(`Preview request failed: ${resp.status}`);
+        const data2 = await resp.json();
+        if (seq !== previewSeq) return;
+        previewElement.innerHTML = (_a5 = data2.html) != null ? _a5 : "";
+      } catch (e) {
+        if (seq !== previewSeq) return;
+        renderLocal(text);
+      }
     }
     const previewUpdater = EditorView.updateListener.of((update) => {
       if (update.docChanged) schedulePreview();

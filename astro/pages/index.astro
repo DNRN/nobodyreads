@@ -53,13 +53,6 @@ const options = page
   {page ? (
     <>
       {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
-      <div
-        class="nb-community"
-        data-community
-        data-api-base={`${urlPrefix}/api`}
-        data-login-href={`${urlPrefix}/login`}
-      ></div>
-      <script src="/community.js" defer is:inline></script>
     </>
   ) : (
     <>

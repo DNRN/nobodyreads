@@ -20,6 +20,7 @@ function headerSectionHtml(config: HeaderSectionConfig): string {
     <div class="nav-bar">
       <a class="site-logo" href="{{homeHref}}">${wm}</a>
       <nav class="site-nav-inline" aria-label="Main">{{nav}}</nav>
+      {{communityBlock}}
       {{authLinksBlock}}
       <div class="nav-actions">{{navToggle}}</div>
     </div>`;

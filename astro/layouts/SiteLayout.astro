@@ -16,10 +16,11 @@ import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
 import { isEmailEnabled } from "../../src/subscription/email.js";
 
-const { options, authLinksHtml, templateOverride } = Astro.props as {
+const { options, authLinksHtml, templateOverride, showCommunity = true } = Astro.props as {
   options: LayoutOptions;
   authLinksHtml?: string;
   templateOverride?: SiteTemplateDefinition | null;
+  showCommunity?: boolean;
 };
 
 const db = await initDb();
@@ -87,6 +88,11 @@ const authLinksBlock = authLinksHtml
       <span class="nav-auth nav-auth--menu">${authLinksHtml}</span>
      </nav>`
   : "";
+const communityApiBase = `${options.urlPrefix || ""}/api`;
+const communityLoginHref = `${options.urlPrefix || ""}/login`;
+const communityBlock = showCommunity
+  ? `<div class="nb-community nb-community--topbar" data-community data-join-only data-api-base="${escapeHtml(communityApiBase)}" data-login-href="${escapeHtml(communityLoginHref)}"></div>`
+  : "";
 const navToggle = authLinksHtml
   ? `<button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle menu" aria-controls="site-menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -97,6 +103,7 @@ const templateHtml = generateHtml(templateDef);
 const hasSubscribeToken = templateHtml.includes("{{subscribe}}");
 let bodyHtml = templateHtml
   .replaceAll("{{nav}}", navHtml)
+  .replaceAll("{{communityBlock}}", communityBlock)
   .replaceAll("{{authLinksBlock}}", authLinksBlock)
   .replaceAll("{{navToggle}}", navToggle)
   .replaceAll("{{siteName}}", escapeHtml(siteName))
@@ -172,6 +179,7 @@ const customJs = templateDef.customJs?.trim() || "";
   <body>
     <Fragment set:html={bodyHtml} />
     {customJs ? <script type="module" set:html={customJs} /> : null}
+    {showCommunity ? <script src="/community.js" defer /> : null}
     <script src="/site.js" defer></script>
   </body>
 </html>

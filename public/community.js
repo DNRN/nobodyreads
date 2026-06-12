@@ -14,12 +14,13 @@
     style.id = STYLE_ID;
     style.textContent = [
       ".nb-community{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin:1.25rem 0;}",
+      ".nb-community--topbar{display:inline-flex;margin:0;gap:0.5rem;}",
       ".nb-community button{cursor:pointer;}",
       ".nb-community .nb-like{display:inline-flex;align-items:center;gap:0.4rem;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;padding:0.3rem 0.85rem;font:inherit;}",
       ".nb-community .nb-like.liked .nb-like-heart{color:#e0245e;}",
-      ".nb-community .nb-join{border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;padding:0.3rem 0.85rem;font:inherit;}",
-      ".nb-community .nb-join.joined{opacity:0.7;}",
+      ".nb-community .site-button.joined{opacity:0.7;}",
       ".nb-community .nb-members{opacity:0.6;font-size:0.85em;}",
+      ".nb-community--topbar .nb-members{font-size:0.75rem;}",
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -52,21 +53,27 @@
     var apiBase = root.getAttribute("data-api-base") || "/api";
     var loginHref = root.getAttribute("data-login-href") || "/login";
     var slug = root.getAttribute("data-slug") || "";
+    var likesOnly = root.hasAttribute("data-likes-only");
+    var joinOnly = root.hasAttribute("data-join-only");
+    var compact = root.classList.contains("nb-community--topbar");
 
     var membership = await request(apiBase + "/membership");
     if (!membership.ok || !membership.body) return;
     var state = membership.body;
 
-    var joinBtn = document.createElement("button");
-    joinBtn.type = "button";
-    joinBtn.className = "nb-join";
-
-    var members = document.createElement("span");
-    members.className = "nb-members";
+    var joinBtn = null;
+    var members = null;
+    if (!likesOnly) {
+      joinBtn = document.createElement("button");
+      joinBtn.type = "button";
+      joinBtn.className = "site-button";
+      members = document.createElement("span");
+      members.className = "nb-members";
+    }
 
     var likeBtn = null;
     var likes = { count: 0, likedByMe: false };
-    if (slug) {
+    if (slug && !joinOnly) {
       var likesRes = await request(
         apiBase + "/posts/" + encodeURIComponent(slug) + "/likes"
       );
@@ -77,11 +84,19 @@
     }
 
     function render() {
-      joinBtn.textContent = state.joined ? "Joined \u2713" : "Join this space";
-      joinBtn.classList.toggle("joined", !!state.joined);
-      joinBtn.title = state.joined ? "Click to leave this space" : "";
-      members.textContent =
-        state.memberCount === 1 ? "1 member" : state.memberCount + " members";
+      if (joinBtn) {
+        joinBtn.textContent = state.joined
+          ? "Joined \u2713"
+          : compact
+            ? "Join"
+            : "Join this space";
+        joinBtn.classList.toggle("joined", !!state.joined);
+        joinBtn.title = state.joined ? "Click to leave this space" : "";
+      }
+      if (members) {
+        members.textContent =
+          state.memberCount === 1 ? "1 member" : state.memberCount + " members";
+      }
       if (likeBtn) {
         likeBtn.innerHTML =
           '<span class="nb-like-heart">' +
@@ -94,25 +109,27 @@
       }
     }
 
-    joinBtn.addEventListener("click", async function () {
-      if (!state.member) {
-        location.href = loginUrl(loginHref);
-        return;
-      }
-      var res = await request(
-        apiBase + (state.joined ? "/leave" : "/join"),
-        "POST"
-      );
-      if (res.status === 401) {
-        location.href = loginUrl(loginHref);
-        return;
-      }
-      if (res.ok && res.body) {
-        state.joined = res.body.joined;
-        state.memberCount += state.joined ? 1 : -1;
-        render();
-      }
-    });
+    if (joinBtn) {
+      joinBtn.addEventListener("click", async function () {
+        if (!state.member) {
+          location.href = loginUrl(loginHref);
+          return;
+        }
+        var res = await request(
+          apiBase + (state.joined ? "/leave" : "/join"),
+          "POST"
+        );
+        if (res.status === 401) {
+          location.href = loginUrl(loginHref);
+          return;
+        }
+        if (res.ok && res.body) {
+          state.joined = res.body.joined;
+          state.memberCount += state.joined ? 1 : -1;
+          render();
+        }
+      });
+    }
 
     if (likeBtn) {
       likeBtn.addEventListener("click", async function () {
@@ -143,8 +160,8 @@
     }
 
     render();
-    root.appendChild(joinBtn);
-    root.appendChild(members);
+    if (joinBtn) root.appendChild(joinBtn);
+    if (members) root.appendChild(members);
     if (likeBtn) root.appendChild(likeBtn);
   }
 

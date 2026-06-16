@@ -68,6 +68,8 @@ Published entry points (`package.json` `exports`):
 | `nobodyreads/editor/styles` | Shared admin CSS |
 | `nobodyreads/astro` | `nobodyreadsAdmin()` Astro integration |
 | `nobodyreads/astro/context` | `NobodyreadsAdminContext` helpers for injected admin pages |
+| `nobodyreads/community` | Memberships, post likes, local member accounts, `ResolveMember` |
+| `nobodyreads/federation` | Federated sign-in client (delegate auth to a community hub) |
 
 The CLI binary `nobodyreads` points at `dist/standalone.js`.
 
@@ -82,6 +84,8 @@ src/
   paths.ts              # Package resource path helpers
 
   content/              # Blog content: DB queries, Markdown rendering, public API
+  community/            # Memberships, likes, local member accounts, ResolveMember
+  federation/           # Federated sign-in client (delegates auth to a hub)
   db/                   # Drizzle schema + Zod validation schemas
   admin/
     server/             # Hono admin route factories (content, views, theme, media, auth)
@@ -115,7 +119,7 @@ schema.sql              # SQLite schema applied on startup
 2. **robots.txt** — from package root
 3. **Static files** — `public/` (editor JS, CSS, etc.)
 4. **Media** — `GET /media/:key` via `MediaStorage.serve()`
-5. **Public API** — `createBlogApiRoutes` + `createSubscriptionApiRoutes` at `/api`
+5. **Public API** — `createBlogApiRoutes` + `createSubscriptionApiRoutes` + `createMemberAuthRoutes` + `createCommunityRoutes` at `/api`; `createFederatedAuthRoutes` is also added at `/api` when federation is configured
 6. **Admin auth middleware** — redirects to `/admin/login` when `EDITOR_PASSWORD` is set and session is missing
 7. **Admin API** — `createEditorRoutes` + `createSubscriptionAdminRoutes` at `/admin`
 8. **Catch-all** — Astro SSR (production) or dev proxy to `ASTRO_DEV_URL`
@@ -282,6 +286,47 @@ active subscribers only) when email is enabled — both from the admin editor's
 
 ---
 
+## Community and federation
+
+Community features (space memberships, post likes) identify a reader by a
+`MemberIdentity { issuer, subject, displayName }` rather than a single account
+table. `spaceMembership` and `postLike` are keyed by `(tenantId, issuer,
+subject)`, so identities can come from different sources without schema
+changes. A host plugs in a `ResolveMember` that maps a request to the current
+member; `createCommunityRoutes` calls it for `join`/`leave`/`like`.
+
+Two built-in issuers:
+
+- **`local`** (`src/community/`) — accounts stored in this instance's `member`
+  table, with `member_session` cookies. Routes: `createMemberAuthRoutes`.
+- **federated** (`src/federation/`) — the reader signs in through an external
+  **community hub** (identity provider). The space is a relying party in an
+  OAuth2 authorization-code flow; the hub origin becomes the member `issuer`.
+
+`combineResolvers(...)` layers resolvers so the first match wins, letting a
+space accept both local and federated members at once.
+
+### Federated sign-in flow
+
+Configured via `FEDERATION_*` env vars (see Configuration). When set,
+`createFederatedAuthRoutes()` mounts:
+
+- `GET /api/federation/login` — generate CSRF state, remember `next`, redirect
+  to the hub's authorize endpoint with this space's `client_id` and callback
+  `redirect_uri`.
+- `GET /api/federation/callback` — verify state, exchange the `code` for the
+  user's identity server-to-server (client credentials), set a signed
+  `federated_member_session` cookie, redirect back.
+- `POST /api/federation/logout` — clear the federated session.
+
+The package is tenant-agnostic and knows nothing about a specific hub: the hub
+URL and client credentials come from configuration only. The callback
+`redirect_uri` must exactly match what was registered on the hub. The hub side
+of this protocol (space registration, authorize/consent, token issuance) is the
+responsibility of the host acting as identity provider, not this package.
+
+---
+
 ## SEO
 
 `src/shared/seo.ts` builds meta tags and JSON-LD structured data from page frontmatter (`seo:` block) and site identity settings. `SiteLayout.astro` injects these into the document head. Pages can set `noIndex`, custom OG images, FAQ structured data, and `noAiTraining` (sets `X-Robots-Tag` response header).
@@ -297,6 +342,7 @@ active subscribers only) when email is enabled — both from the admin editor's
 | `config/email.config.json` | Subscription email provider |
 | Database (`site_settings`, `site_template`) | Runtime site identity and layout |
 | `TENANT_ID` / `URL_PREFIX` env | Multi-tenant routing (library hosts) |
+| `FEDERATION_*` env | Federated sign-in: hub URL (`FEDERATION_ISSUER_URL`), `FEDERATION_CLIENT_ID`/`FEDERATION_CLIENT_SECRET`, optional `FEDERATION_ISSUER_NAME`, `FEDERATION_SESSION_SECRET` |
 
 ---
 

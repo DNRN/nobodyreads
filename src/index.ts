@@ -24,6 +24,7 @@ export {
   createCommunityRoutes,
   createMemberAuthRoutes,
   resolveLocalMember,
+  combineResolvers,
   getLocalMemberIdentity,
   getMemberIdFromRequest,
   buildMemberSessionCookie,

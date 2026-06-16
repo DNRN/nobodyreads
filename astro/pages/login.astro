@@ -3,6 +3,7 @@ import SiteLayout from "../layouts/SiteLayout.astro";
 import { getNavItems } from "../../src/content/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getDbClient } from "../lib/db.js";
+import { isFederationEnabled, getFederationConfig } from "../../src/federation/config.js";
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const urlPrefix = process.env.URL_PREFIX || "";
@@ -16,6 +17,12 @@ const next = Astro.url.searchParams.get("next") || "";
 const signupHref = next
   ? `${urlPrefix}/signup?next=${encodeURIComponent(next)}`
   : `${urlPrefix}/signup`;
+
+const federationEnabled = isFederationEnabled();
+const federationName = getFederationConfig()?.issuerName ?? "the community";
+const federationLoginHref = next
+  ? `${urlPrefix}/api/federation/login?next=${encodeURIComponent(next)}`
+  : `${urlPrefix}/api/federation/login`;
 
 const options = {
   title: `Log in — ${siteName}`,
@@ -42,6 +49,11 @@ const options = {
       <input type="password" id="password" name="password" required />
       <button type="submit">Log in</button>
     </form>
+    {federationEnabled ? (
+      <p class="nb-auth-alt">
+        <a href={federationLoginHref}>Sign in with {federationName}</a>
+      </p>
+    ) : null}
     <p class="nb-auth-alt">No account yet? <a href={signupHref}>Join</a></p>
   </div>
 </SiteLayout>

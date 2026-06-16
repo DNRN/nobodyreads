@@ -36,6 +36,10 @@
     "./community": {
       "types": "./dist/community/index.d.ts",
       "import": "./dist/community/index.js"
+    },
+    "./federation": {
+      "types": "./dist/federation/index.d.ts",
+      "import": "./dist/federation/index.js"
     }
   },
   "bin": {

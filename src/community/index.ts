@@ -8,6 +8,7 @@ export type {
 } from "./routes.js";
 export {
   resolveLocalMember,
+  combineResolvers,
   getLocalMemberIdentity,
   getMemberIdFromRequest,
   buildMemberSessionCookie,

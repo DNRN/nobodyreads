@@ -84,3 +84,17 @@ export async function getLocalMemberIdentity(
 export function resolveLocalMember(db: Database): ResolveMember {
   return (c) => getLocalMemberIdentity(db, c.req.raw);
 }
+
+/**
+ * Combine multiple resolvers; the first one that returns an identity wins.
+ * Useful for layering sign-in methods (e.g. local accounts + federated).
+ */
+export function combineResolvers(...resolvers: ResolveMember[]): ResolveMember {
+  return async (c) => {
+    for (const resolve of resolvers) {
+      const identity = await resolve(c);
+      if (identity) return identity;
+    }
+    return null;
+  };
+}

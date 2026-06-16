@@ -22,7 +22,10 @@ import {
   createCommunityRoutes,
   createMemberAuthRoutes,
 } from "./community/routes.js";
-import { resolveLocalMember } from "./community/auth.js";
+import { combineResolvers, resolveLocalMember } from "./community/auth.js";
+import { isFederationEnabled } from "./federation/config.js";
+import { resolveFederatedMember } from "./federation/auth.js";
+import { createFederatedAuthRoutes } from "./federation/routes.js";
 import {
   editorRequiresAuth,
   isAuthenticatedRequest,
@@ -215,9 +218,19 @@ async function start() {
   app.route("/api", createBlogApiRoutes({ db }));
   app.route("/api", createSubscriptionApiRoutes({ db }));
   app.route("/api", createMemberAuthRoutes({ db }));
+
+  // Federated sign-in (delegates to a community hub) when configured. Members
+  // can come from local accounts or the hub; the first resolver to match wins.
+  const memberResolver = isFederationEnabled()
+    ? combineResolvers(resolveLocalMember(db), resolveFederatedMember())
+    : resolveLocalMember(db);
+  if (isFederationEnabled()) {
+    app.route("/api", createFederatedAuthRoutes());
+  }
+
   app.route(
     "/api",
-    createCommunityRoutes({ db, resolveMember: resolveLocalMember(db) })
+    createCommunityRoutes({ db, resolveMember: memberResolver })
   );
 
   // ---- Admin auth middleware ----

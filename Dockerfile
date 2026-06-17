@@ -10,10 +10,14 @@ FROM base AS deps
 COPY package*.json ./
 RUN npm ci
 
-# --- Build TypeScript ---
+# --- Build TypeScript + Astro ---
 FROM deps AS build
 COPY tsconfig.json ./
+COPY astro.config.mjs ./
 COPY src ./src
+COPY astro ./astro
+COPY content ./content
+COPY public ./public
 RUN npm run build
 
 # --- Final image ---
@@ -28,8 +32,8 @@ COPY robots.txt ./robots.txt
 COPY scripts ./scripts
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "dist/standalone.js"]

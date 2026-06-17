@@ -13,7 +13,7 @@ import { streamSSE } from "hono/streaming";
 import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/index.js";
-import { createEditorRoutes } from "./admin/server/routes.js";
+import { createAdminRoutes } from "./admin/server/routes.js";
 import {
   createSubscriptionApiRoutes,
   createSubscriptionAdminRoutes,
@@ -173,6 +173,9 @@ async function start() {
     });
   }
 
+  // ---- Health check ----
+  app.get("/_health", (c) => c.text("ok"));
+
   // ---- robots.txt ----
   app.get("/robots.txt", async (c) => {
     try {
@@ -247,7 +250,7 @@ async function start() {
   });
 
   // ---- Admin routes ----
-  app.route("/admin", createEditorRoutes({ db, storage }));
+  app.route("/admin", createAdminRoutes({ db, storage }));
   app.route("/admin", createSubscriptionAdminRoutes({ db }));
 
   // ---- Catchall: Astro SSR or dev proxy ----

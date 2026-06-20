@@ -370,6 +370,21 @@ nobodyreads/
 └── vitest.config.ts          # Test configuration
 ```
 
+## Architecture notes
+
+### Page transitions
+
+`SiteLayout` uses Astro's `ClientRouter` for client-side navigation between public blog pages (home, posts, custom pages). Links are intercepted and pages are swapped with a crossfade animation rather than a full reload.
+
+Because the header and footer are generated from a database template string rather than Astro components, `transition:persist` cannot be used directly. Instead, `view-transition-name` is applied via CSS to `.site-header` and `.site-footer`. This creates independent transition groups for those elements — since their content is identical across navigations, they appear to stay in place while only the page content transitions.
+
+Two supporting details keep things stable:
+
+- **`scrollbar-gutter: stable`** on `html` — reserves scrollbar space on all pages so the topbar does not shift sideways when navigating between long and short pages.
+- **`astro:before-swap` listener** — copies `data-theme` from the current `<html>` element onto the incoming document before the DOM swap. Astro's swap function removes all `<html>` attributes (including `data-theme`), which would cause a flash on dark-mode sites without this preservation step.
+
+The `AdminLayout` does not use `ClientRouter` — admin navigation uses standard full-page loads.
+
 ## Scripts
 
 | Script | Description |

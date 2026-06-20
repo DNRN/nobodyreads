@@ -11,6 +11,7 @@ import {
   resolveMediaValue,
 } from "../../src/shared/site-settings.js";
 import { createMediaStorage } from "../../src/media/storage.js";
+import ClientRouter from "astro/components/ClientRouter.astro";
 import type { SiteTemplateDefinition } from "../../src/template/types.js";
 import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
@@ -171,10 +172,28 @@ const customJs = templateDef.customJs?.trim() || "";
         max-width: 100%;
         height: auto;
       }
+      html {
+        scrollbar-gutter: stable;
+      }
+      .site-header {
+        view-transition-name: nr-header;
+      }
+      .site-footer {
+        view-transition-name: nr-footer;
+      }
     </style>
     <style id="nr-generated-css" set:html={generatedCss} />
     <Fragment set:html={scriptTags} />
     <Fragment set:html={devReload} />
+    <ClientRouter />
+    <script>
+      // Preserve data-theme across navigations — Astro's swap removes all html
+      // attributes, which would cause a flash on dark-mode sites.
+      document.addEventListener("astro:before-swap", (e) => {
+        const theme = document.documentElement.dataset.theme;
+        if (theme) (e as any).newDocument.documentElement.dataset.theme = theme;
+      });
+    </script>
   </head>
   <body>
     <Fragment set:html={bodyHtml} />

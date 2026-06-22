@@ -19,8 +19,7 @@
       ".nb-community .nb-like{display:inline-flex;align-items:center;gap:0.4rem;border:1px solid currentColor;border-radius:999px;background:transparent;color:inherit;padding:0.3rem 0.85rem;font:inherit;}",
       ".nb-community .nb-like.liked .nb-like-heart{color:#e0245e;}",
       ".nb-community .site-button.joined{opacity:0.7;}",
-      ".nb-community .nb-members{opacity:0.6;font-size:0.85em;}",
-      ".nb-community--topbar .nb-members{font-size:0.75rem;}",
+      ".nb-community--topbar .site-button{padding:0.3rem 0.7rem;font-size:0.82rem;}",
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -62,13 +61,10 @@
     var state = membership.body;
 
     var joinBtn = null;
-    var members = null;
     if (!likesOnly) {
       joinBtn = document.createElement("button");
       joinBtn.type = "button";
       joinBtn.className = "site-button";
-      members = document.createElement("span");
-      members.className = "nb-members";
     }
 
     var likeBtn = null;
@@ -92,10 +88,6 @@
             : "Join this space";
         joinBtn.classList.toggle("joined", !!state.joined);
         joinBtn.title = state.joined ? "Click to leave this space" : "";
-      }
-      if (members) {
-        members.textContent =
-          state.memberCount === 1 ? "1 member" : state.memberCount + " members";
       }
       if (likeBtn) {
         likeBtn.innerHTML =
@@ -161,12 +153,13 @@
 
     render();
     if (joinBtn) root.appendChild(joinBtn);
-    if (members) root.appendChild(members);
     if (likeBtn) root.appendChild(likeBtn);
   }
 
   function start() {
     document.querySelectorAll("[data-community]").forEach(function (el) {
+      if (el.hasAttribute("data-nb-init")) return;
+      el.setAttribute("data-nb-init", "1");
       init(el).catch(function (err) {
         console.warn("community widget failed:", err);
       });
@@ -178,4 +171,5 @@
   } else {
     start();
   }
+  document.addEventListener("astro:page-load", start);
 })();

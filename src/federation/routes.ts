@@ -23,7 +23,7 @@ function safeNext(next: string | undefined, fallback: string): string {
 }
 
 /**
- * Federation sign-in routes for an auxiliary space. Mount at /api so paths are
+ * Federation sign-in routes for an auxiliary plot. Mount at /api so paths are
  * `/api/federation/{login,callback,logout}`. Delegates authentication to the
  * configured community hub via the OAuth2 authorization-code flow and stores
  * the result in a signed federated member session cookie.
@@ -35,7 +35,7 @@ export function createFederatedAuthRoutes(
   const home = urlPrefix || "/";
   const app = new Hono();
 
-  // The redirect URI must exactly match what the space registered on the hub.
+  // The redirect URI must exactly match what the plot registered on the hub.
   function callbackUrl(c: Context): string {
     const url = new URL(c.req.url);
     return `${url.origin}${urlPrefix}/api/federation/callback`;

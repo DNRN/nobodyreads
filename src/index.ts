@@ -32,10 +32,10 @@ export {
   createMember,
   getMemberById,
   verifyMemberCredentials,
-  joinSpace,
-  leaveSpace,
-  isSpaceMember,
-  countSpaceMembers,
+  joinPlot,
+  leavePlot,
+  isPlotMember,
+  countPlotMembers,
   likePost,
   unlikePost,
   countPostLikes,
@@ -63,7 +63,7 @@ export {
   media,
   subscriber,
   member,
-  spaceMembership,
+  plotMembership,
   postLike,
 } from "./db/schema.js";
 export {

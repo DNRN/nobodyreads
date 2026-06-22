@@ -92,9 +92,19 @@ CREATE TABLE IF NOT EXISTS member (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Space memberships
+-- Plot memberships
 -- Members are identified by (issuer, subject) so identities can come from
 -- local accounts, a hosting platform, or (later) federated sign-in.
+CREATE TABLE IF NOT EXISTS plot_membership (
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  display_name   TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, member_issuer, member_subject)
+);
+
+-- Space memberships (legacy name, kept for existing databases)
 CREATE TABLE IF NOT EXISTS space_membership (
   tenant_id      TEXT NOT NULL DEFAULT '_default',
   member_issuer  TEXT NOT NULL,

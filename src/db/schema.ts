@@ -138,12 +138,12 @@ export const member = sqliteTable("member", {
     .default(sql`(datetime('now'))`),
 });
 
-// --- Space memberships ---
+// --- Plot memberships ---
 // Members are identified by (issuer, subject) so identities can come from
 // local accounts, a hosting platform, or (later) federated sign-in.
 
-export const spaceMembership = sqliteTable(
-  "space_membership",
+export const plotMembership = sqliteTable(
+  "plot_membership",
   {
     tenantId: text("tenant_id").notNull().default("_default"),
     memberIssuer: text("member_issuer").notNull(),

@@ -1,5 +1,5 @@
 /**
- * Federation client configuration. An auxiliary space delegates sign-in to a
+ * Federation client configuration. An auxiliary plot delegates sign-in to a
  * community hub (identity provider) configured entirely via environment
  * variables. This module is tenant-agnostic and knows nothing about which hub
  * it points at.
@@ -12,7 +12,7 @@ export interface FederationConfig {
   issuer: string;
   /** Human-friendly hub name for sign-in UI. */
   issuerName: string;
-  /** OAuth2 client id issued by the hub when this space registered. */
+  /** OAuth2 client id issued by the hub when this plot registered. */
   clientId: string;
   /** OAuth2 client secret issued by the hub. */
   clientSecret: string;

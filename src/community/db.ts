@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { Database } from "../db/index.js";
-import { member, spaceMembership, postLike } from "../db/schema.js";
+import { member, plotMembership, postLike } from "../db/schema.js";
 import type { MemberIdentity } from "./types.js";
 
 const BCRYPT_ROUNDS = 12;
@@ -76,15 +76,15 @@ export async function verifyMemberCredentials(
   return ok ? toMemberRecord(rows[0]) : null;
 }
 
-// --- Space memberships ---
+// --- Plot memberships ---
 
-export async function joinSpace(
+export async function joinPlot(
   db: Database,
   tenantId: string,
   identity: MemberIdentity
 ): Promise<void> {
   await db
-    .insert(spaceMembership)
+    .insert(plotMembership)
     .values({
       tenantId,
       memberIssuer: identity.issuer,
@@ -94,45 +94,45 @@ export async function joinSpace(
     .onConflictDoNothing();
 }
 
-export async function leaveSpace(
+export async function leavePlot(
   db: Database,
   tenantId: string,
   identity: MemberIdentity
 ): Promise<void> {
   await db
-    .delete(spaceMembership)
+    .delete(plotMembership)
     .where(membershipFilter(tenantId, identity));
 }
 
-export async function isSpaceMember(
+export async function isPlotMember(
   db: Database,
   tenantId: string,
   identity: MemberIdentity
 ): Promise<boolean> {
   const rows = await db
-    .select({ tenantId: spaceMembership.tenantId })
-    .from(spaceMembership)
+    .select({ tenantId: plotMembership.tenantId })
+    .from(plotMembership)
     .where(membershipFilter(tenantId, identity))
     .limit(1);
   return rows.length > 0;
 }
 
-export async function countSpaceMembers(
+export async function countPlotMembers(
   db: Database,
   tenantId: string
 ): Promise<number> {
   const rows = await db
     .select({ value: count() })
-    .from(spaceMembership)
-    .where(eq(spaceMembership.tenantId, tenantId));
+    .from(plotMembership)
+    .where(eq(plotMembership.tenantId, tenantId));
   return rows[0]?.value ?? 0;
 }
 
 function membershipFilter(tenantId: string, identity: MemberIdentity) {
   return and(
-    eq(spaceMembership.tenantId, tenantId),
-    eq(spaceMembership.memberIssuer, identity.issuer),
-    eq(spaceMembership.memberSubject, identity.subject)
+    eq(plotMembership.tenantId, tenantId),
+    eq(plotMembership.memberIssuer, identity.issuer),
+    eq(plotMembership.memberSubject, identity.subject)
   );
 }
 

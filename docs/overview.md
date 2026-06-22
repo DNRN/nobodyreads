@@ -306,6 +306,24 @@ Two built-in issuers:
 `combineResolvers(...)` layers resolvers so the first match wins, letting a
 space accept both local and federated members at once.
 
+### Self-hosting modes and the hub/client split
+
+This package implements the **relying-party (client) side** of federation only.
+The hub (OAuth2 authorization server) is the host platform's responsibility.
+When this instance is configured with `FEDERATION_ISSUER_URL`, it becomes an
+**auxiliary plot** that accepts logins from that hub:
+
+- **Mode 1 — Standalone**: no `FEDERATION_*` vars set. Fully independent.
+- **Mode 2 — Auxiliary plot**: `FEDERATION_ISSUER_URL` set. Hub users can
+  sign in and participate in the community.
+- **Mode 3 — Auxiliary + discovery**: same as Mode 2, plus the instance
+  exposes `/.well-known/nobodyreads/catalog` and opts into the hub's Explore
+  index (planned).
+
+For nobodyreads.me plots that self-host after exporting their content, the hub
+is `https://nobodyreads.me`. The architecture is hub-agnostic — any OAuth2
+authorization server at the configured URL will work.
+
 ### Federated sign-in flow
 
 Configured via `FEDERATION_*` env vars (see Configuration). When set,
@@ -397,6 +415,10 @@ These are intentional constraints documented here so future changes stay aligned
 
 10. **Markdown extensions as render-time transforms.** Wiki links and view embeds are resolved before Markdown parsing, keeping author syntax simple and ensuring links stay current when slugs change.
 
+11. **Data portability is a first-class concern.** The planned export API (`GET /admin/export`) produces a portable archive — Markdown files, settings, subscribers, media — importable into any fresh instance. Plot owners must never be locked into a specific host. This is a core OSS package responsibility, not a platform add-on.
+
+12. **Discovery catalog is opt-in.** The planned `/.well-known/nobodyreads/catalog` endpoint is disabled by default. Instances must explicitly opt in per the `discoverable` site setting. Individual posts respect their own `discoverable` frontmatter flag.
+
 ---
 
 ## Build and scripts
@@ -420,3 +442,4 @@ Production Docker image uses a multi-stage build; the container runs `standalone
 - [README.md](../README.md) — installation, configuration, usage
 - [AGENTS.md](../AGENTS.md) — contributor/agent conventions and invariants
 - [test.md](./test.md) — test suite overview and how to run it
+- [../nobodyreads.me/docs/foundation.md](../../nobodyreads.me/docs/foundation.md) — platform-level explanation of self-hosting modes, data portability, and the federation hub/client architecture (nobodyreads.me private repo)

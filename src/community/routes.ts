@@ -9,12 +9,12 @@ import {
 } from "../db/validation.js";
 import {
   countPostLikes,
-  countSpaceMembers,
+  countPlotMembers,
   createMember,
   hasLikedPost,
-  isSpaceMember,
-  joinSpace,
-  leaveSpace,
+  isPlotMember,
+  joinPlot,
+  leavePlot,
   likePost,
   unlikePost,
   verifyMemberCredentials,
@@ -119,12 +119,12 @@ export interface CommunityRouterOptions {
 }
 
 /**
- * Space membership + post like routes. Mount at /api.
+ * Plot membership + post like routes. Mount at /api.
  *
  * Routes:
  *   GET  /membership          — current member + joined state
- *   POST /join                — join this space
- *   POST /leave               — leave this space
+ *   POST /join                — join this plot
+ *   POST /leave               — leave this plot
  *   GET  /posts/:slug/likes   — like count + likedByMe
  *   POST /posts/:slug/like    — like a post (members only)
  *   POST /posts/:slug/unlike  — remove a like
@@ -138,28 +138,28 @@ export function createCommunityRoutes(options: CommunityRouterOptions): Hono {
   app.get("/membership", async (c) => {
     const identity = await resolveMember(c);
     const joined = identity
-      ? await isSpaceMember(db, tenantId, identity)
+      ? await isPlotMember(db, tenantId, identity)
       : false;
     return c.json({
       member: identity
         ? { issuer: identity.issuer, displayName: identity.displayName }
         : null,
       joined,
-      memberCount: await countSpaceMembers(db, tenantId),
+      memberCount: await countPlotMembers(db, tenantId),
     });
   });
 
   app.post("/join", async (c) => {
     const identity = await resolveMember(c);
     if (!identity) return c.json({ error: "unauthorized" }, 401);
-    await joinSpace(db, tenantId, identity);
+    await joinPlot(db, tenantId, identity);
     return c.json({ joined: true });
   });
 
   app.post("/leave", async (c) => {
     const identity = await resolveMember(c);
     if (!identity) return c.json({ error: "unauthorized" }, 401);
-    await leaveSpace(db, tenantId, identity);
+    await leavePlot(db, tenantId, identity);
     return c.json({ joined: false });
   });
 
@@ -180,7 +180,7 @@ export function createCommunityRoutes(options: CommunityRouterOptions): Hono {
     if (!post) return c.json({ error: "not_found" }, 404);
     const identity = await resolveMember(c);
     if (!identity) return c.json({ error: "unauthorized" }, 401);
-    if (!(await isSpaceMember(db, tenantId, identity))) {
+    if (!(await isPlotMember(db, tenantId, identity))) {
       return c.json({ error: "not_member" }, 403);
     }
     await likePost(db, tenantId, post.id, identity);

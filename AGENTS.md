@@ -2,7 +2,21 @@
 
 `nobodyreads` is a self-hosted, single-tenant blog engine published as an npm
 package. It is also designed to be embedded as a library by other hosts (e.g.
-multi-tenant platforms).
+multi-tenant platforms like nobodyreads.me).
+
+A self-hosted instance can run in three modes depending on federation config:
+
+- **Standalone** — no federation; fully independent.
+- **Auxiliary plot** — `FEDERATION_ISSUER_URL` points to a hub (e.g.
+  `https://nobodyreads.me`); users from the hub can sign in, comment, and
+  join the community without a separate account.
+- **Auxiliary plot + discovery** — same as above, plus the instance exposes
+  `/.well-known/nobodyreads/catalog` and opts into the hub's Explore index.
+
+The federation module in this package (`src/federation/`) is the **relying
+party / OAuth2 client** side only. The authorization server (hub) is the
+responsibility of the host platform (nobodyreads.me in the reference
+implementation).
 
 ## Tooling
 
@@ -26,6 +40,14 @@ multi-tenant platforms).
   (`tenantId`, `adminBase`, `editorBase`, `siteBase`, `loginHref`). Pages read
   it from `Astro.locals.nobodyreadsAdmin`; hosts must populate it via Astro
   middleware before any injected page renders.
+- **Federation client** (`src/federation/`) — OAuth2 relying-party routes
+  (`createFederatedAuthRoutes`). When `FEDERATION_*` env vars are set, readers
+  can sign in via an external hub (e.g. nobodyreads.me). This is the **client
+  side only**; the hub / authorization server lives in the host platform.
+- **Export API** (planned) — `GET /admin/export` generates a portable archive
+  (Markdown files, settings JSON, subscriber CSV, media) for data portability.
+- **Discovery catalog** (planned) — `GET /.well-known/nobodyreads/catalog`
+  exposes public post metadata for hub discovery indexing (Mode 3 self-hosting).
 - **Standalone server** — `src/standalone.ts` wires everything together for
   the `npx nobodyreads` CLI use case.
 - **Documentation** — `docs/` holds architecture notes and recorded design

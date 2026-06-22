@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import ViewEditorForm from "../../../components/admin/ViewEditorForm.astro";
+import ViewEditor from "../../../components/admin/ViewEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, getContentViewById } from "nobodyreads";
 
@@ -22,7 +22,6 @@ if (!view) {
   title={`Edit: ${view.title} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/view-editor.js" defer></script>`}
 >
-  <ViewEditorForm view={view} viewsBase={viewsBase} />
+  <ViewEditor client:load view={view} viewsBase={viewsBase} />
 </AdminLayout>

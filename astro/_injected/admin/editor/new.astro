@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
+import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, findPageByKind, type PageKind } from "nobodyreads";
 
@@ -23,7 +23,6 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
   title={`New ${kindLabel} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/page-editor.js" defer></script>`}
 >
-  <PageEditorForm editorBase={ctx.editorBase} kind={kind} />
+  <PageEditor client:load editorBase={ctx.editorBase} adminBase={ctx.adminBase} kind={kind} />
 </AdminLayout>

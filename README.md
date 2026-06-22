@@ -46,12 +46,13 @@ The blog starts at `http://localhost:3000`. The admin area lives under `/admin`:
 
 | Route | Purpose |
 |-------|---------|
-| `/admin` | Dashboard |
+| `/admin` | Home (dashboard) |
 | `/admin/editor` | Page/post editor |
-| `/admin/views` | Content views |
 | `/admin/media` | Media library |
-| `/admin/settings` | Site settings |
-| `/admin/layout` | Site template editor |
+| `/admin/layout` | Site template / design editor |
+| `/admin/views` | Content views |
+| `/admin/community` | Subscribers (audience) |
+| `/admin/settings` | Site identity & settings |
 | `/admin/login` | Auth (when password is set) |
 
 ### Development with Astro
@@ -396,9 +397,6 @@ The `AdminLayout` does not use `ClientRouter` — admin navigation uses standard
 | `npm run post -- <file>` | Publish a Markdown file to the database |
 | `npm run site:bootstrap` | Bootstrap a new site with default content |
 | `npm run site:use-minimal-css` | Switch to minimal CSS theme |
-| `npm run build:site-editor` | Bundle the site template editor |
-| `npm run build:page-editor` | Bundle the page editor |
-| `npm run build:view-editor` | Bundle the view editor |
 | `npm test` | Run tests (Vitest) |
 | `npm run typecheck` | Type-check without emitting |
 

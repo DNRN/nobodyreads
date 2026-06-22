@@ -21,6 +21,8 @@ export {
 } from "./core/media.js";
 export type { MediaModalOptions } from "./core/media.js";
 
+export { renderImage, DEFAULT_IMAGE_WIDTH } from "../../shared/image-markdown.js";
+
 export type {
   EditorInstance,
   PageEditorOptions,

@@ -45,6 +45,16 @@ const ASTRO_ENTRY_PATH = join(
   "server",
   "entry.mjs"
 );
+// Astro's client build output (hashed JS/CSS for islands, view transitions,
+// etc.) served at the paths the SSR HTML references (e.g. /_astro/*). In dev
+// these come from the Astro dev proxy instead.
+const ASTRO_CLIENT_DIR = join(
+  import.meta.dirname,
+  "..",
+  "dist",
+  "astro",
+  "client"
+);
 
 /**
  * Sentinel response that tells @hono/node-server the raw Node response
@@ -202,6 +212,36 @@ async function start() {
       const ext = extname(filePath);
       const contentType = MIME[ext] || "application/octet-stream";
       return c.body(content, 200, { "Content-Type": contentType });
+    } catch {
+      return next();
+    }
+  });
+
+  // ---- Astro client build assets (production): /_astro/* and friends ----
+  // In dev these are served by the Astro dev proxy, so this only matters when
+  // running the built output.
+  app.use("*", async (c, next) => {
+    if (c.req.method !== "GET" && c.req.method !== "HEAD") return next();
+
+    const pathname = new URL(c.req.url).pathname;
+    const filePath = join(ASTRO_CLIENT_DIR, pathname);
+    if (!filePath.startsWith(ASTRO_CLIENT_DIR)) return next();
+
+    try {
+      const fileStat = await statAsync(filePath);
+      if (!fileStat.isFile()) return next();
+
+      const content = await readFileAsync(filePath);
+      const ext = extname(filePath);
+      const contentType = MIME[ext] || "application/octet-stream";
+      // Hashed assets are immutable; everything else stays uncached to be safe.
+      const cacheControl = pathname.startsWith("/_astro/")
+        ? "public, max-age=31536000, immutable"
+        : "no-cache";
+      return c.body(content, 200, {
+        "Content-Type": contentType,
+        "Cache-Control": cacheControl,
+      });
     } catch {
       return next();
     }

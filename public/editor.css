@@ -462,6 +462,11 @@
    Dashboard card grid
    ======================================== */
 .nr-admin .dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
   margin-bottom: 2rem;
 }
 
@@ -523,6 +528,68 @@
   font-size: 0.8rem;
   color: var(--nr-muted);
   line-height: 1.4;
+}
+
+/* Home: quick stats */
+.nr-admin .dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.nr-admin .dashboard-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--nr-border);
+  border-radius: var(--nr-radius);
+  background: var(--nr-bg);
+}
+
+.nr-admin .dashboard-stat-num {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nr-admin .dashboard-stat-label {
+  font-size: 0.8rem;
+  color: var(--nr-muted);
+}
+
+/* Home: first-run checklist */
+.nr-admin .dashboard-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nr-admin .dashboard-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.nr-admin .dashboard-check-mark {
+  display: inline-flex;
+  width: 1.25rem;
+  justify-content: center;
+  color: var(--nr-muted);
+}
+
+.nr-admin .dashboard-check.done .dashboard-check-mark {
+  color: var(--nr-accent);
+}
+
+.nr-admin .dashboard-check.done > span:last-child {
+  color: var(--nr-muted);
+  text-decoration: line-through;
 }
 
 /* ========================================
@@ -981,9 +1048,10 @@
 }
 
 /* ----- Split pane ----- */
+/* Single pane now — the WYSIWYG editor is its own preview (no split column). */
 .nr-admin .editor-split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
@@ -996,7 +1064,8 @@
 }
 
 .nr-admin .editor-pane-write {
-  border-right: 1px solid var(--nr-border);
+  flex: 1;
+  min-height: 0;
 }
 
 /* ----- Toolbar ----- */
@@ -1788,3 +1857,125 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   Milkdown WYSIWYG page editor
+   ======================================== */
+.nr-admin .editor-toolbar--wysiwyg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.nr-admin .editor-mode-label {
+  font-size: 0.8rem;
+  color: var(--nr-muted);
+}
+
+.nr-admin .nbr-milkdown {
+  flex: 1;
+  min-height: 0;
+  background: var(--nr-bg);
+  overflow: auto;
+}
+
+.nr-admin .nbr-milkdown.hidden {
+  display: none;
+}
+
+/* Flex chain so the editable area grows to fill the pane — the overlay
+   siblings (toolbar, block handle, slash menu) are absolutely positioned and
+   stay out of flow. This makes the whole region clickable, not just the text. */
+.nr-admin .nbr-milkdown .milkdown {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Centered, readable column: the editable element stays full-width (so clicking
+   anywhere focuses), while horizontal padding collapses to center a ~44rem
+   measure on wide panes and falls back to 2rem on narrow ones. */
+.nr-admin .nbr-milkdown .milkdown > .ProseMirror {
+  flex: 1 0 auto;
+  padding: 2rem max(2rem, calc((100% - 44rem) / 2));
+  box-sizing: border-box;
+}
+
+/* Custom-token chips rendered inside the editor */
+.nr-admin .nbr-wiki-link,
+.nr-admin .nbr-view-embed {
+  padding: 0.05em 0.35em;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.nr-admin .nbr-wiki-link {
+  background: var(--nr-accent-soft);
+  color: var(--nr-accent);
+}
+
+.nr-admin .nbr-view-embed {
+  background: var(--nr-accent-soft);
+  color: var(--nr-muted);
+  font-family: var(--nr-font-mono, ui-monospace, monospace);
+  font-size: 0.85em;
+}
+
+/* Match the Crepe editor to the admin theme. The --nr-* tokens already switch
+   with [data-theme], so this single mapping themes both light and dark. The
+   .nr-admin .nbr-milkdown .milkdown selector outranks Crepe's own .milkdown
+   defaults. */
+.nr-admin .nbr-milkdown .milkdown {
+  --crepe-font-default: var(--nr-font);
+  --crepe-font-title: var(--nr-font);
+  --crepe-font-code: var(--nr-font-mono);
+
+  --crepe-color-background: var(--nr-bg);
+  --crepe-color-on-background: var(--nr-text);
+  --crepe-color-surface: var(--nr-surface);
+  --crepe-color-surface-low: var(--nr-surface);
+  --crepe-color-on-surface: var(--nr-text);
+  --crepe-color-on-surface-variant: var(--nr-muted);
+  --crepe-color-outline: var(--nr-border);
+  --crepe-color-primary: var(--nr-accent);
+  --crepe-color-secondary: var(--nr-surface);
+  --crepe-color-on-secondary: var(--nr-text);
+  --crepe-color-inverse: var(--nr-text);
+  --crepe-color-on-inverse: var(--nr-bg);
+  --crepe-color-hover: var(--nr-hover);
+  --crepe-color-selected: var(--nr-accent-soft);
+  --crepe-color-inline-area: var(--nr-accent-soft);
+  --crepe-color-inline-code: var(--nr-danger);
+  --crepe-color-error: var(--nr-danger);
+}
+
+/* Save toast (page editor) */
+.nr-admin .nbr-toast {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  background: var(--nr-bg);
+  color: var(--nr-text);
+  border: 1px solid var(--nr-border);
+  box-shadow: var(--nr-shadow-lg);
+}
+
+.nr-admin .nbr-toast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nr-muted);
+  flex-shrink: 0;
+}
+
+.nr-admin .nbr-toast--success .nbr-toast-dot { background: var(--nr-success); }
+.nr-admin .nbr-toast--error .nbr-toast-dot { background: var(--nr-danger); }
+.nr-admin .nbr-toast--error { color: var(--nr-danger); border-color: var(--nr-danger-soft); }

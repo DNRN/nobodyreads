@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import PageEditorForm from "../../../components/admin/PageEditorForm.astro";
+import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, getPageById } from "nobodyreads";
 
@@ -21,7 +21,6 @@ if (!page) {
   title={`Edit: ${page.title} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
-  scripts={`<script src="/page-editor.js" defer></script>`}
 >
-  <PageEditorForm page={page} editorBase={ctx.editorBase} />
+  <PageEditor client:load page={page} editorBase={ctx.editorBase} adminBase={ctx.adminBase} />
 </AdminLayout>

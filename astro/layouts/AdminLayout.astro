@@ -24,13 +24,31 @@ function isActive(href: string): boolean {
   return currentPath.startsWith(href);
 }
 
-const navItems = [
-  { href: adminBase, label: "Dashboard" },
-  { href: `${adminBase}/editor`, label: "Content" },
-  { href: `${adminBase}/layout`, label: "Layout" },
-  { href: `${adminBase}/media`, label: "Media" },
-  { href: `${adminBase}/views`, label: "Views" },
-  { href: `${adminBase}/settings`, label: "Settings" },
+// Grouped navigation: a small hierarchy beats six flat items. Each group has a
+// clear job and room to grow (Audience → comments, Manage → domains/export).
+const navGroups = [
+  {
+    label: "Create",
+    items: [
+      { href: adminBase, label: "Home" },
+      { href: `${adminBase}/editor`, label: "Content" },
+      { href: `${adminBase}/media`, label: "Media" },
+    ],
+  },
+  {
+    label: "Customize",
+    items: [
+      { href: `${adminBase}/layout`, label: "Design" },
+      { href: `${adminBase}/views`, label: "Views" },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [
+      { href: `${adminBase}/community`, label: "Community" },
+      { href: `${adminBase}/settings`, label: "Settings" },
+    ],
+  },
 ];
 ---
 <!DOCTYPE html>
@@ -78,14 +96,18 @@ const navItems = [
       <div class="nr-admin-body">
         <div class="nr-admin-sidebar-overlay" id="sidebar-overlay"></div>
         <aside class="nr-admin-sidebar" id="admin-sidebar">
-          <div class="nr-admin-nav-section">Navigation</div>
-          {navItems.map((item) => (
-            <a
-              href={item.href}
-              class:list={["nr-admin-nav-link", { active: isActive(item.href) }]}
-            >
-              {item.label}
-            </a>
+          {navGroups.map((group) => (
+            <>
+              <div class="nr-admin-nav-section">{group.label}</div>
+              {group.items.map((item) => (
+                <a
+                  href={item.href}
+                  class:list={["nr-admin-nav-link", { active: isActive(item.href) }]}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </>
           ))}
         </aside>
         <div class="nr-admin-content">

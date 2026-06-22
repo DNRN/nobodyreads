@@ -1,12 +1,9 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, isEmailEnabled, countSubscribers } from "nobodyreads";
+import { isEmailEnabled } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
-
-const db = await initDb();
-const counts = await countSubscribers(db, ctx.tenantId);
 
 const emailEnabled = isEmailEnabled();
 ---
@@ -16,6 +13,18 @@ const emailEnabled = isEmailEnabled();
       <div class="editor-list-header">
         <h2>Settings</h2>
       </div>
+
+      <section class="editor-home" aria-label="Site identity">
+        <div class="editor-home-main">
+          <span class="editor-home-label">Site identity</span>
+          <a href={`${ctx.editorBase}/site`} class="editor-home-title">
+            Name, tagline, logo, favicon &amp; social image
+          </a>
+        </div>
+        <div class="editor-home-meta">
+          <a href={`${ctx.editorBase}/site`} class="btn btn-sm btn-ghost">Edit</a>
+        </div>
+      </section>
 
       <div class="editor-list-section">
         <h3>Email subscriptions</h3>
@@ -28,25 +37,9 @@ const emailEnabled = isEmailEnabled();
             </span>
           </div>
         </div>
-      </div>
-
-      <div class="editor-list-section">
-        <h3>Subscribers</h3>
-
-        <div class="env-status">
-          <div class="env-row">
-            <span class="env-label">Confirmed</span>
-            <span class="env-value">{counts.verified}</span>
-          </div>
-          <div class="env-row">
-            <span class="env-label">Pending confirmation</span>
-            <span class="env-value">{counts.pending}</span>
-          </div>
-          <div class="env-row">
-            <span class="env-label">Unsubscribed</span>
-            <span class="env-value">{counts.unsubscribed}</span>
-          </div>
-        </div>
+        <p class="hint">
+          Subscriber numbers live under <a href={`${ctx.adminBase}/community`}>Community</a>.
+        </p>
       </div>
     </div>
   </main>

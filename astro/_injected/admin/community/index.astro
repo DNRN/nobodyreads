@@ -1,0 +1,47 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, isEmailEnabled, countSubscribers } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+
+const db = await initDb();
+const counts = await countSubscribers(db, ctx.tenantId);
+const emailEnabled = isEmailEnabled();
+---
+<AdminLayout title="Community — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <h2>Community</h2>
+      </div>
+      <p class="hint">Your audience — the people who follow and (soon) discuss your work.</p>
+
+      <div class="editor-list-section">
+        <h3>Subscribers</h3>
+
+        {emailEnabled ? null : (
+          <p class="hint">
+            Email subscriptions are currently disabled. Enable them in
+            <a href={`${ctx.adminBase}/settings`}>Settings</a>.
+          </p>
+        )}
+
+        <div class="env-status">
+          <div class="env-row">
+            <span class="env-label">Confirmed</span>
+            <span class="env-value">{counts.verified}</span>
+          </div>
+          <div class="env-row">
+            <span class="env-label">Pending confirmation</span>
+            <span class="env-value">{counts.pending}</span>
+          </div>
+          <div class="env-row">
+            <span class="env-label">Unsubscribed</span>
+            <span class="env-value">{counts.unsubscribed}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</AdminLayout>

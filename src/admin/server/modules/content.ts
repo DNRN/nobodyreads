@@ -108,6 +108,12 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         ).catch((err) => console.error("Subscriber notification error:", err));
       }
 
+      // AJAX saves (editor autosave / save button) ask for JSON and stay on the
+      // page; plain form posts (no-JS fallback) get the usual redirect.
+      if (c.req.header("accept")?.includes("application/json")) {
+        return c.json({ ok: true, id: pageId, published: p.published });
+      }
+
       return c.redirect(`${editorBase}/${pageId}`);
     }
   );

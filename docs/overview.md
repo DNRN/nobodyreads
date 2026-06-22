@@ -117,7 +117,8 @@ schema.sql              # SQLite schema applied on startup
 
 1. **Dev live-reload** — `GET /__reload` (SSE)
 2. **robots.txt** — from package root
-3. **Static files** — `public/` (editor JS, CSS, etc.)
+3. **Static files** — `public/` (editor CSS, public-site JS, etc.)
+3a. **Astro client build** — `dist/astro/client` (hashed island/transition assets at `/_astro/*`); production only, dev serves these via the Astro proxy
 4. **Media** — `GET /media/:key` via `MediaStorage.serve()`
 5. **Public API** — `createBlogApiRoutes` + `createSubscriptionApiRoutes` + `createMemberAuthRoutes` + `createCommunityRoutes` at `/api`; `createFederatedAuthRoutes` is also added at `/api` when federation is configured
 6. **Admin auth middleware** — redirects to `/admin/login` when `EDITOR_PASSWORD` is set and session is missing
@@ -214,6 +215,18 @@ The admin UI is split across **two layers** by design:
 ### Astro pages (read-mostly shell)
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
+
+The navigation is grouped into five areas — **Home** (dashboard), **Content**, **Design** (Theme/Layout + Views), **Community** (subscribers; comments later), and **Settings** (site identity, email) — chosen to match user mental models and leave a home for future roadmap features. Site identity is reached from **Settings**, not the Content editor. See [`../plan.md`](../plan.md) for the staged admin/editor reorganization.
+
+All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
+
+- `PageEditor.svelte` — a **Milkdown WYSIWYG** editor (Crepe: slash menu, selection toolbar, placeholder). Markdown remains the source of truth — Crepe serializes to Markdown on every change into the form field — with a **Source toggle** to a raw textarea. Saving is AJAX (debounced **draft autosave**, **Ctrl/Cmd+S**, and the Save button) with toast feedback; `POST /editor/save` returns JSON when the request `Accept`s it and otherwise redirects (the no-JS form-post path). Crepe's **ImageBlock feature is disabled** (it rewrites image alt text, which would clobber our `![alt|400px|right]` size/align hints); images are plain commonmark nodes with a drag/paste uploader via `@milkdown/kit/plugin/upload`.
+- `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
+- `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
+
+The custom Markdown constructs (`[[wiki]]`, `{{view:slug}}`) are Milkdown **atom-node** plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`): a shared `$remark` transform/serializer plus a `$node` schema and input rule each. Modelling them as dedicated nodes (never plain text) is what keeps the Markdown serializer from escaping them — round-trip fidelity verified end-to-end (`prototype/`). The other editor helpers in `src/admin/client/` are exported as `nobodyreads/editor`.
+
+Svelte powers admin islands only; the public site ships no islands and stays zero-framework. There is no longer a separate `build:editors` step. ProseMirror is deduped via `astro.config.mjs` `vite.resolve.dedupe` (Milkdown breaks with multiple ProseMirror instances).
 
 Pages read runtime context from `Astro.locals.nobodyreadsAdmin`:
 
@@ -428,7 +441,6 @@ These are intentional constraints documented here so future changes stay aligned
 | `npm run dev` | Hono standalone with tsx watch |
 | `npm run dev:astro` | Astro dev server (proxied in dev) |
 | `npm run build` | `astro build` then `tsc` |
-| `npm run build:editors` | esbuild admin client bundles → `public/` |
 | `npm run site:bootstrap` | Seed default template + `latest-posts` view |
 | `npm run post -- <file.md>` | Publish Markdown file to database |
 | `npm test` | Vitest (see [test.md](./test.md)) |

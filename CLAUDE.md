@@ -7,8 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm run dev          # Hono standalone server with tsx watch (port 3000)
 npm run dev:astro    # Astro dev server (port 4321); run alongside dev
-npm run build        # astro build && tsc (produces dist/ and dist/astro/)
-npm run build:editors # esbuild admin client bundles → public/
+npm run build        # astro build && tsc (produces dist/ and dist/astro/); also bundles the admin Svelte islands
 npm run typecheck    # tsc --noEmit
 npm test             # vitest run (single pass)
 npx vitest           # vitest in watch mode
@@ -94,9 +93,17 @@ Render-time transforms in `src/content/render.ts`:
 
 Visual design is data-driven JSON (`SiteTemplateDefinition`) stored in `site_template` with append-only revision history. `generateCss()` and `generateHtml()` in `src/template/generate.ts` produce the stylesheet and HTML injected by `SiteLayout.astro`. No theme directory to fork.
 
-### Admin client bundles
+### Admin editors (Svelte islands)
 
-Browser editors (CodeMirror 6) are separate esbuild IIFE bundles built to `public/`. Rebuild them with `npm run build:editors` when changing files under `src/admin/client/`.
+All three admin editors are Svelte islands in `astro/components/admin/`, hydrated with `client:load` and bundled by Astro/Vite (no manual build step):
+
+- `PageEditor.svelte` — **Milkdown WYSIWYG** (Crepe). Markdown stays the source of truth (Crepe serializes on change); a Source toggle swaps to a raw `<textarea>`. Crepe's ImageBlock feature is **disabled** because it commandeers image alt text and would destroy our `![alt|400px|right]` size/align hints; images use plain commonmark nodes with a drop/paste uploader.
+- `ViewEditor.svelte` — idiomatic Svelte; CodeMirror for the SQL/JS panes.
+- `SiteEditor.svelte` — owns the markup and bootstraps the heavier `createSiteEditor` logic (`src/admin/client/site-editor.ts`) via element refs; CodeMirror panes.
+
+Custom Markdown constructs (`[[wiki]]`, `{{view:slug}}`) are Milkdown atom-node plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`) — modelled as dedicated nodes so the serializer never escapes them. The other editor helpers live in `src/admin/client/` (`nobodyreads/editor`). Svelte powers admin islands only — the public site ships no islands and stays zero-framework.
+
+ProseMirror must run as a single instance: `astro.config.mjs` `vite.resolve.dedupe` collapses the `prosemirror-*` copies Milkdown ships. The standalone server serves the Astro client build (`dist/astro/client`, incl. `/_astro/*`) so islands hydrate in production.
 
 ### Configuration
 

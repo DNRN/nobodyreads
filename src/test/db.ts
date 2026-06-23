@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import * as schema from "../db/schema.js";
+import * as schema from "../db/schema/index.js";
 import type { Database } from "../db/index.js";
 
 const schemaSql = readFileSync(

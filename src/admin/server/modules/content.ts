@@ -63,10 +63,12 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       }
 
       let wasPreviouslyPublished = false;
+      let existingCommentsEnabled: boolean | undefined;
       let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
         wasPreviouslyPublished = existing?.published ?? false;
+        existingCommentsEnabled = existing?.commentsEnabled;
         if (!content && existing?.content) content = existing.content;
       }
 
@@ -91,6 +93,12 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
                 order: parseInt(data.nav_order || "0", 10),
               }
             : undefined,
+        // Comments default on; preserve the existing value when the form omits
+        // the control (non-post kinds), otherwise honor the submitted on/off.
+        commentsEnabled:
+          data.comments_enabled === undefined
+            ? existingCommentsEnabled ?? true
+            : data.comments_enabled === "on",
       };
 
       await upsertPage(db, p, tenantId);

@@ -1,3 +1,12 @@
+-- Canonical schema, run at startup via executeMultiple() in shared/db.ts.
+-- This file (not the Drizzle slices) is the runtime source of truth.
+--
+-- Adding or altering a table is a THREE-file change:
+--   1. the feature's Drizzle slice (e.g. src/content/schema.ts) — typed queries
+--   2. this file — the DDL that actually creates tables on a fresh database
+--   3. migrateColumns() in src/shared/db.ts — an ALTER so existing DBs catch up
+-- Keep all three in sync. Drizzle Kit is configured but not used for migrations.
+
 -- Tenants (only used in platform mode)
 CREATE TABLE IF NOT EXISTS tenant (
   id           TEXT PRIMARY KEY,
@@ -29,6 +38,7 @@ CREATE TABLE IF NOT EXISTS page (
   kind       TEXT NOT NULL CHECK(kind IN ('home','page','post')),
   nav_label  TEXT,
   nav_order  INTEGER,
+  comments_enabled INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -123,6 +133,26 @@ CREATE TABLE IF NOT EXISTS post_like (
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (tenant_id, page_id, member_issuer, member_subject)
 );
+
+-- Comments (threaded discussion on posts)
+-- Authored by a member identity (issuer, subject) like post_like. Soft-deleted
+-- via deleted_at so a removed comment keeps its place in the thread.
+CREATE TABLE IF NOT EXISTS comment (
+  comment_id     TEXT NOT NULL,
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  page_id        TEXT NOT NULL,
+  parent_id      TEXT,
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  author_name    TEXT NOT NULL,
+  body           TEXT NOT NULL,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at     TEXT,
+  deleted_at     TEXT,
+  PRIMARY KEY (comment_id, tenant_id)
+);
+CREATE INDEX IF NOT EXISTS comment_page_idx ON comment (tenant_id, page_id, created_at);
+CREATE INDEX IF NOT EXISTS comment_parent_idx ON comment (parent_id);
 
 -- Email subscribers
 CREATE TABLE IF NOT EXISTS subscriber (

@@ -81,6 +81,7 @@ export interface Page {
   seo?: PageMeta;
   kind: PageKind; // "home" | "page" | "post"
   nav?: PageNav; // If present, page appears in the top bar
+  commentsEnabled: boolean; // Whether readers can comment on this post
 }
 
 /** An uploaded media file (image, video, audio, etc.). */

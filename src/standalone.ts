@@ -12,7 +12,7 @@ import { serve } from "@hono/node-server";
 import { streamSSE } from "hono/streaming";
 import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
-import { createBlogApiRoutes } from "./content/index.js";
+import { createBlogApiRoutes } from "./content/routes.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
   createSubscriptionApiRoutes,
@@ -22,6 +22,7 @@ import {
   createCommunityRoutes,
   createMemberAuthRoutes,
 } from "./community/routes.js";
+import { createCommentRoutes } from "./comments/routes.js";
 import { combineResolvers, resolveLocalMember } from "./community/auth.js";
 import { isFederationEnabled } from "./federation/config.js";
 import { resolveFederatedMember } from "./federation/auth.js";
@@ -274,6 +275,16 @@ async function start() {
   app.route(
     "/api",
     createCommunityRoutes({ db, resolveMember: memberResolver })
+  );
+
+  // Comments. Moderation (delete any) is granted to the authenticated editor.
+  app.route(
+    "/api",
+    createCommentRoutes({
+      db,
+      resolveMember: memberResolver,
+      canModerate: (c) => isAuthenticatedRequest(c.req.raw),
+    })
   );
 
   // ---- Admin auth middleware ----

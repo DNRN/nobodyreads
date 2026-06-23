@@ -2,7 +2,7 @@ import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
-import * as schema from "../db/schema.js";
+import * as schema from "../db/schema/index.js";
 import type { Database } from "../db/index.js";
 
 // --- Database connection ---
@@ -78,6 +78,7 @@ async function migrateColumns(client: Client): Promise<void> {
     "ALTER TABLE tenant ADD COLUMN avatar_color TEXT",
     "ALTER TABLE tenant ADD COLUMN bio TEXT",
     "ALTER TABLE site_template ADD COLUMN current_revision_id INTEGER",
+    "ALTER TABLE page ADD COLUMN comments_enabled INTEGER NOT NULL DEFAULT 1",
   ];
   for (const sql of migrations) {
     try {

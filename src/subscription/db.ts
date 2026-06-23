@@ -1,5 +1,5 @@
 import { eq, and, desc, asc, sql } from "drizzle-orm";
-import { subscriber } from "../db/schema.js";
+import { subscriber } from "./schema.js";
 import type { Database } from "../db/index.js";
 import { randomUUID, randomBytes } from "node:crypto";
 import type { Subscriber } from "./types.js";

@@ -18,6 +18,10 @@ export const pageFormSchema = z.object({
   kind: z.enum(["home", "page", "post"]).default("post"),
   nav_label: z.string().trim().optional(),
   nav_order: z.string().optional(),
+  // Reliable on/off encoding: the editor renders a hidden "off" field before
+  // the checkbox "on", so an unchecked box still submits a value. Absent only
+  // for forms without the control (non-post kinds / older clients).
+  comments_enabled: z.string().optional(),
 });
 export type PageFormData = z.infer<typeof pageFormSchema>;
 

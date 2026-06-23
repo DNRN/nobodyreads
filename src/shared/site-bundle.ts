@@ -1,5 +1,5 @@
 import { eq, and, desc } from "drizzle-orm";
-import { siteTemplate, siteTemplateRevision } from "../db/schema.js";
+import { siteTemplate, siteTemplateRevision } from "./schema.js";
 import { getRawClient } from "./db.js";
 import type { Database } from "../db/index.js";
 import type { SiteTemplateDefinition } from "../template/types.js";

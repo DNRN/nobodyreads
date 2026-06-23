@@ -1,6 +1,27 @@
+// API route groups (public reads vs member/admin interface)
+export { createPublicApiRoutes } from "./api/public.js";
+export type { PublicApiOptions } from "./api/public.js";
+export { createInterfaceApiRoutes } from "./api/interface.js";
+export type { InterfaceApiOptions } from "./api/interface.js";
+
 // Routers (Hono sub-apps)
-export { createBlogApiRoutes } from "./content/index.js";
-export type { BlogApiOptions } from "./content/index.js";
+export { createBlogApiRoutes } from "./content/routes.js";
+export type { BlogApiOptions } from "./content/routes.js";
+
+// Comments
+export {
+  createCommentRoutes,
+  listComments,
+  getCommentById,
+  createComment,
+  softDeleteComment,
+  countRecentCommentsByMember,
+} from "./comments/index.js";
+export type {
+  CommentRouterOptions,
+  Comment,
+  NewComment,
+} from "./comments/index.js";
 export { createAdminRoutes, createEditorRoutes } from "./admin/server/routes.js";
 export type { AdminRouterOptions, EditorRouterOptions } from "./admin/server/routes.js";
 export { createContentRoutes } from "./admin/server/modules/content.js";
@@ -65,7 +86,8 @@ export {
   member,
   plotMembership,
   postLike,
-} from "./db/schema.js";
+  comment,
+} from "./db/schema/index.js";
 export {
   listPosts,
   listPostsForView,

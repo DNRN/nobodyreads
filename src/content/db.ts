@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, inArray, isNotNull } from "drizzle-orm";
-import { page, contentView, media } from "../db/schema.js";
+import { page, contentView } from "./schema.js";
+import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
 import type { Database } from "../db/index.js";
 import type {
@@ -38,6 +39,7 @@ function toPage(row: PageRow): Page {
       row.navLabel != null
         ? { label: row.navLabel, order: row.navOrder ?? 0 }
         : undefined,
+    commentsEnabled: row.commentsEnabled ?? true,
   };
 }
 
@@ -437,6 +439,7 @@ export async function upsertPage(
       kind: p.kind,
       navLabel: p.nav?.label ?? null,
       navOrder: p.nav?.order ?? null,
+      commentsEnabled: p.commentsEnabled,
     })
     .onConflictDoUpdate({
       target: [page.pageId, page.tenantId],
@@ -454,6 +457,7 @@ export async function upsertPage(
         kind: p.kind,
         navLabel: p.nav?.label ?? null,
         navOrder: p.nav?.order ?? null,
+        commentsEnabled: p.commentsEnabled,
       },
     });
 }

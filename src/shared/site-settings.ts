@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 
-import { siteSettings } from "../db/schema.js";
+import { siteSettings } from "./schema.js";
 import type { Database } from "../db/index.js";
 
 // --- Site identity settings ---

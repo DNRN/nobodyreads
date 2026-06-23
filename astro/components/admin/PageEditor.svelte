@@ -40,6 +40,7 @@
     published: false,
     kind,
     nav: undefined,
+    commentsEnabled: true,
   } as Page);
 
   // --- Form state ---
@@ -52,6 +53,7 @@
   let published = $state(p.published);
   let navLabel = $state(p.nav?.label ?? "");
   let navOrder = $state(p.nav?.order != null ? String(p.nav.order) : "");
+  let commentsEnabled = $state(p.commentsEnabled ?? true);
   let content = $state(p.content ?? "");
   let slugManuallyEdited = false;
 
@@ -87,7 +89,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled });
   }
   let baseline = snapshot();
 
@@ -107,6 +109,7 @@
     if (published) body.set("published", "on");
     body.set("nav_label", navLabel);
     body.set("nav_order", navOrder);
+    body.set("comments_enabled", commentsEnabled ? "on" : "off");
     body.set("content", content);
     return body;
   }
@@ -162,7 +165,7 @@
   // Any edit to content or metadata (re)arms the autosave timer. The baseline
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled];
     if (editorReady) scheduleAutosave();
   });
 
@@ -367,6 +370,20 @@
           {published ? "Live and visible to readers." : "Saved as a draft. Not visible to readers."}
         </p>
       </div>
+
+      {#if kind === "post"}
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={commentsEnabled} />
+            Allow comments
+          </label>
+          <p class="hint">
+            {commentsEnabled
+              ? "Readers can comment and reply on this post."
+              : "Comments are closed for this post."}
+          </p>
+        </div>
+      {/if}
 
       <details class="field">
         <summary>Navigation</summary>

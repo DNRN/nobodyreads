@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { Database } from "../db/index.js";
-import { member, plotMembership, postLike } from "../db/schema.js";
+import { member, plotMembership, postLike } from "./schema.js";
 import type { MemberIdentity } from "./types.js";
 
 const BCRYPT_ROUNDS = 12;

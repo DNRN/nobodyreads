@@ -5,7 +5,13 @@ import {
   listSiteTemplateRevisions,
 } from "../src/shared/site-bundle.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
-import { getContentViewBySlug, upsertContentView } from "../src/content/db.js";
+import {
+  findPageByKind,
+  getContentViewBySlug,
+  upsertContentView,
+  upsertPage,
+} from "../src/content/db.js";
+import { defaultHomePage } from "../src/content/defaults.js";
 import type { ContentView } from "../src/content/types.js";
 
 const TENANT_ID = process.env.TENANT_ID ?? DEFAULT_TENANT_ID;
@@ -40,6 +46,16 @@ if (!latestPostsView) {
   console.log(`Seeded default content view '{{view:latest-posts}}' for tenant ${TENANT_ID}.`);
 } else {
   console.log(`Default content view already exists for tenant ${TENANT_ID}.`);
+}
+
+const existingHome = await findPageByKind(db, "home", TENANT_ID);
+if (!existingHome) {
+  const today = new Date().toISOString().slice(0, 10);
+  const title = process.env.SITE_NAME ?? "My site";
+  await upsertPage(db, defaultHomePage({ title, date: today }), TENANT_ID);
+  console.log(`Seeded starter home page for tenant ${TENANT_ID}.`);
+} else {
+  console.log(`Home page already exists for tenant ${TENANT_ID}.`);
 }
 
 getRawClient().close();

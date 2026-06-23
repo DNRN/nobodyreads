@@ -22,11 +22,15 @@ function formatDate(iso: string): string {
 }
 
 // First-run checklist — nudges a brand-new site toward a real first post. Hidden
-// once every step is done so it doesn't clutter an established site.
+// once every step is done so it doesn't clutter an established site. A fresh site
+// ships with a starter home page, so step one is about making it yours rather
+// than creating one: it's "done" once the page has been saved at least once
+// (the editor stamps `updated` on every edit).
+const homePersonalized = !!homePage?.updated;
 const checklist = [
   {
-    done: !!homePage,
-    label: "Set up your home page",
+    done: homePersonalized,
+    label: "Make the home page yours",
     href: homePage ? `${ctx.editorBase}/${homePage.id}` : `${ctx.editorBase}/new?kind=home`,
   },
   { done: posts.length > 0, label: "Write your first post", href: `${ctx.editorBase}/new?kind=post` },

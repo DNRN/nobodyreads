@@ -138,6 +138,10 @@ export {
 } from "./shared/http.js";
 export type { HtmlOptions } from "./shared/http.js";
 
+// Starter content
+export { defaultHomePage, buildDefaultHomeContent } from "./content/defaults.js";
+export type { DefaultHomePageOptions } from "./content/defaults.js";
+
 // Templates & rendering
 export { renderPostListView } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";

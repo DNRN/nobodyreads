@@ -398,6 +398,10 @@ async function start() {
     server.on(
       "upgrade",
       (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+        // Guard the client socket: browsers reset HMR connections abruptly
+        // (e.g. on tab close), and an unhandled 'error' here would crash
+        // the whole dev server with ECONNRESET.
+        socket.on("error", () => socket.destroy());
         try {
           const target = new URL(ASTRO_DEV_URL);
           const port = target.port

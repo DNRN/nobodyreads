@@ -1,6 +1,6 @@
 # nobodyreads
 
-A minimal, self-hosted blog engine. Markdown-first, server-rendered, zero client-side frameworks. Write for yourself — nobody reads it anyway.
+A minimal, self-hosted plot engine. Markdown-first, server-rendered, zero client-side frameworks. Write for yourself — nobody reads it anyway.
 
 ## Features
 
@@ -42,7 +42,7 @@ npm run site:bootstrap
 npm run dev
 ```
 
-The blog starts at `http://localhost:3000`. The admin area lives under `/admin`:
+Your plot starts at `http://localhost:3000`. The admin area lives under `/admin`:
 
 | Route | Purpose |
 |-------|---------|
@@ -218,7 +218,7 @@ kind: post
 published: true
 ---
 
-This is my first blog post.
+This is my first post.
 ```
 
 Publish to the database:
@@ -229,7 +229,7 @@ npm run post -- content/hello-world.md
 
 ### Page kinds
 
-- **`post`** — blog post, shown in the post listing (default)
+- **`post`** — plot post, shown in the post listing (default)
 - **`page`** — static page (e.g. About), accessible at `/:slug`
 - **`home`** — the home page
 
@@ -262,7 +262,7 @@ seo:
   noIndex: false
   faq:
     - question: "What is this?"
-      answer: "A blog engine."
+      answer: "A plot engine."
 ```
 
 ## Docker
@@ -349,7 +349,7 @@ nobodyreads/
 │   ├── index.ts              # Library entry point (all public exports)
 │   ├── standalone.ts         # Standalone Hono server (npx nobodyreads)
 │   ├── paths.ts              # Package resource path helpers
-│   ├── content/              # Blog API routes, rendering, content DB queries
+│   ├── content/              # Plot API routes, rendering, content DB queries
 │   ├── db/                   # Drizzle schema, Zod validation
 │   ├── editor/               # Admin routes, auth, browser editor bundles
 │   ├── media/                # Media storage backends (local, GCS, S3)
@@ -375,7 +375,7 @@ nobodyreads/
 
 ### Page transitions
 
-`SiteLayout` uses Astro's `ClientRouter` for client-side navigation between public blog pages (home, posts, custom pages). Links are intercepted and pages are swapped with a crossfade animation rather than a full reload.
+`SiteLayout` uses Astro's `ClientRouter` for client-side navigation between public plot pages (home, posts, custom pages). Links are intercepted and pages are swapped with a crossfade animation rather than a full reload.
 
 Because the header and footer are generated from a database template string rather than Astro components, `transition:persist` cannot be used directly. Instead, `view-transition-name` is applied via CSS to `.site-header` and `.site-footer`. This creates independent transition groups for those elements — since their content is identical across navigations, they appear to stay in place while only the page content transitions.
 

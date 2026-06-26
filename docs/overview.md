@@ -8,7 +8,7 @@ For setup and day-to-day usage, see the [README](../README.md). For agent/CI con
 
 ## What it is
 
-nobodyreads is a **minimal, self-hosted blog engine** published as an npm package. It is:
+nobodyreads is a **minimal, self-hosted plot engine** published as an npm package. It is:
 
 - **Markdown-first** — content is stored as Markdown with YAML frontmatter in SQLite.
 - **Server-rendered** — no client-side framework on the public site; Astro SSR for pages, Hono for APIs and admin mutations.
@@ -83,7 +83,7 @@ src/
   standalone.ts         # CLI entry — assembles the full server
   paths.ts              # Package resource path helpers
 
-  content/              # Blog content: DB queries, Markdown rendering, public API
+  content/              # Plot content: DB queries, Markdown rendering, public API
   community/            # Memberships, likes, local member accounts, ResolveMember
   federation/           # Federated sign-in client (delegates auth to a hub)
   db/                   # Drizzle schema + Zod validation schemas
@@ -149,7 +149,7 @@ All content tables carry a `tenant_id` column (default `_default`) so the same s
 ### Page kinds
 
 - **`home`** — exactly one per tenant; served at `/`
-- **`post`** — blog posts; served at `/posts/:slug`
+- **`post`** — plot posts; served at `/posts/:slug`
 - **`page`** — static pages; served at `/:slug`
 
 Navigation is optional per page via `nav_label` and `nav_order` columns (set from frontmatter `nav:` block or the admin editor).

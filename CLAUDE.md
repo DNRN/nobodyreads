@@ -34,7 +34,7 @@ In **development**, Hono proxies unmatched requests to the Astro dev server on p
 `src/standalone.ts` mounts routes in this order:
 1. Dev live-reload SSE (`/__reload`)
 2. robots.txt, static files (`public/`), media (`/media/:key`)
-3. Public API — blog routes, subscription routes, member auth routes, community routes, federated auth routes — all at `/api`
+3. Public API — plot routes, subscription routes, member auth routes, community routes, federated auth routes — all at `/api`
 4. Admin auth middleware (password gate when `EDITOR_PASSWORD` is set)
 5. Admin API — editor routes, subscription admin — at `/admin`
 6. Catch-all → Astro SSR
@@ -45,7 +45,7 @@ In **development**, Hono proxies unmatched requests to the Astro dev server on p
 src/
   index.ts              # Package barrel (all public exports)
   standalone.ts         # CLI entry point
-  content/              # Blog DB queries, Markdown rendering, public API routes
+  content/              # Plot DB queries, Markdown rendering, public API routes
   community/            # Memberships, post likes, local member accounts
   federation/           # Federated sign-in client (OAuth2 relying party)
   db/                   # Drizzle schema + Zod validation schemas

@@ -96,78 +96,62 @@ export function registerEmailProvider(
   providers.set(name.toLowerCase(), factory);
 }
 
-// --- Mailjet provider (fetch-based, no SDK) ---
+// --- Lettermint provider (fetch-based, no SDK) ---
 
-class MailjetProvider implements EmailProvider {
-  private apiKey: string;
-  private apiSecret: string;
+class LettermintProvider implements EmailProvider {
+  private apiToken: string;
   private fromName: string;
   private fromEmail: string;
   private replyTo?: string;
 
   constructor(
-    apiKey: string,
-    apiSecret: string,
+    apiToken: string,
     fromName: string,
     fromEmail: string,
     replyTo?: string
   ) {
-    this.apiKey = apiKey;
-    this.apiSecret = apiSecret;
+    this.apiToken = apiToken;
     this.fromName = fromName;
     this.fromEmail = fromEmail;
     this.replyTo = replyTo;
   }
 
   async sendEmail(message: EmailMessage): Promise<void> {
-    const url = "https://api.mailjet.com/v3.1/send";
-
-    const body = {
-      Messages: [
-        {
-          From: {
-            Email: this.fromEmail,
-            Name: this.fromName,
-          },
-          ...(this.replyTo ? { ReplyTo: { Email: this.replyTo } } : {}),
-          To: [{ Email: message.to }],
-          Subject: message.subject,
-          HTMLPart: message.html,
-          TextPart: message.text,
-        },
-      ],
+    const body: Record<string, unknown> = {
+      from: `${this.fromName} <${this.fromEmail}>`,
+      to: [message.to],
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
     };
 
-    const response = await fetch(url, {
+    if (this.replyTo) {
+      body.reply_to = [this.replyTo];
+    }
+
+    const response = await fetch("https://api.lettermint.co/v1/send", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString("base64")}`,
+        "x-lettermint-token": this.apiToken,
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Mailjet error (${response.status}): ${text}`);
+      throw new Error(`Lettermint error (${response.status}): ${text}`);
     }
   }
 }
 
-// Register the built-in Mailjet provider
-registerEmailProvider("mailjet", ({ from, options }) => {
-  const apiKey = typeof options.apiKey === "string" ? options.apiKey : undefined;
-  const apiSecret =
-    typeof options.apiSecret === "string" ? options.apiSecret : undefined;
+// Register the built-in Lettermint provider
+registerEmailProvider("lettermint", ({ from, options }) => {
+  const apiToken =
+    typeof options.apiToken === "string" ? options.apiToken : undefined;
 
-  if (!apiKey || !apiSecret || !from.email) return null;
-  return new MailjetProvider(
-    apiKey,
-    apiSecret,
-    from.name,
-    from.email,
-    from.replyTo
-  );
+  if (!apiToken || !from.email) return null;
+  return new LettermintProvider(apiToken, from.name, from.email, from.replyTo);
 });
 
 // --- Configuration ---

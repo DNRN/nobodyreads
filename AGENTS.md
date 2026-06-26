@@ -1,6 +1,6 @@
 # AGENTS.md — nobodyreads
 
-`nobodyreads` is a self-hosted, single-tenant blog engine published as an npm
+`nobodyreads` is a self-hosted, single-tenant plot engine published as an npm
 package. It is also designed to be embedded as a library by other hosts (e.g.
 multi-tenant platforms like nobodyreads.me).
 

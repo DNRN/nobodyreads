@@ -4,18 +4,22 @@
    ============================================================ */
 
 /* ---- Design tokens ---- */
+/* Forest & Oat palette — kept in sync with the platform tokens
+   (nobodyreads.me/astro/styles/tokens.css) and DEFAULT_TEMPLATE so a
+   freshly created site is colored, not blank, from the start. */
 :root {
-  --bg:            #fdfdfd;
-  --text:          #2c2c2c;
-  --muted:         #7a7a7a;
-  --border:        #e0e0e0;
-  --surface:       #f5f5f5;
-  --accent:        #2c2c2c;
-  --accent-text:   #fdfdfd;
-  --link:          #2c2c2c;
-  --link-hover:    #000;
-  --danger:        #c0392b;
-  --success:       #27ae60;
+  color-scheme: light;
+  --bg:            #f1efe2;  /* oatmeal */
+  --text:          #23271d;
+  --muted:         #7e8068;
+  --border:        #dcdcc8;
+  --surface:       #e2e4d0;  /* tinted oat — code blocks, cards */
+  --accent:        #456a3a;  /* deep moss */
+  --accent-text:   #f1efe2;
+  --link:          #456a3a;
+  --link-hover:    #23271d;
+  --danger:        #9b3a2f;
+  --success:       #3d6b32;
   --radius:        6px;
   --brand-font:    'Georgia', serif;
   --font-mono:     'Menlo', 'Consolas', ui-monospace, monospace;
@@ -24,6 +28,22 @@
   --brand-ink:     inherit;
   --max-w:         680px;
   --max-w-wide:    860px;
+}
+
+/* Forest after dark — activated by site.js (sets data-theme on <html>). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:          #1a1e16;
+  --text:        #ecead6;
+  --muted:       #7e856c;
+  --border:      #2a3022;
+  --surface:     #222719;
+  --accent:      #9bbd76;  /* sage */
+  --accent-text: #171b12;
+  --link:        #9bbd76;
+  --link-hover:  #ecead6;
+  --danger:      #d98c82;
+  --success:     #9bb074;
 }
 
 /* ---- Reset ---- */

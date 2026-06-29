@@ -153,6 +153,8 @@ export interface LayoutOptions {
   urlPrefix?: string;
   /** Target for the topbar brand/wordmark link. Defaults to the per-context home (`urlPrefix || "/"`). */
   brandHref?: string;
+  /** Login target for the community widget (e.g. join button). Defaults to `${urlPrefix}/login`. */
+  loginHref?: string;
   siteName?: string;
   siteTagline?: string;
   /** Site-wide default social image, used when a page has no `seo.ogImage`. */

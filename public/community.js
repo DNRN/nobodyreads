@@ -60,8 +60,10 @@
     if (!membership.ok || !membership.body) return;
     var state = membership.body;
 
+    // The join button is shown to everyone, including signed-out visitors:
+    // clicking it while not a member redirects to login (see handler below).
     var joinBtn = null;
-    if (!likesOnly && state.member) {
+    if (!likesOnly) {
       joinBtn = document.createElement("button");
       joinBtn.type = "button";
       joinBtn.className = "site-button";

@@ -125,6 +125,14 @@ export interface LinkTarget {
 
 // --- Layout types ---
 
+/** An entry in the topbar account dropdown. */
+export interface MenuItem {
+  label: string;
+  href?: string; // Renders as a GET link
+  action?: string; // Renders as a POST form button (e.g. "/logout")
+  variant?: "default" | "danger";
+}
+
 /** Options passed to a layout function when rendering a page. */
 export interface LayoutOptions {
   title: string;
@@ -140,11 +148,21 @@ export interface LayoutOptions {
   page?: Page;
 
   // Multi-tenant support
+  /** Tenant whose settings/template the layout should load. Defaults to the single-tenant id. */
+  tenantId?: string;
   urlPrefix?: string;
+  /** Target for the topbar brand/wordmark link. Defaults to the per-context home (`urlPrefix || "/"`). */
+  brandHref?: string;
   siteName?: string;
   siteTagline?: string;
   /** Site-wide default social image, used when a page has no `seo.ogImage`. */
   defaultOgImage?: string;
+
+  // Topbar account dropdown
+  /** Items rendered in the topbar account dropdown. When non-empty, the menu trigger shows. */
+  menuItems?: MenuItem[];
+  /** Optional heading shown at the top of the dropdown (e.g. "@nickname"). */
+  menuHeader?: string;
 }
 
 /**

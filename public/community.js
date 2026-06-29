@@ -61,7 +61,7 @@
     var state = membership.body;
 
     var joinBtn = null;
-    if (!likesOnly) {
+    if (!likesOnly && state.member) {
       joinBtn = document.createElement("button");
       joinBtn.type = "button";
       joinBtn.className = "site-button";

@@ -18,11 +18,10 @@ function headerSectionHtml(config: HeaderSectionConfig): string {
   let html = `<header class="site-header">
   <div class="container">
     <div class="nav-bar">
-      <a class="site-logo" href="{{homeHref}}">${wm}</a>
+      <a class="site-logo" href="{{brandHref}}">${wm}</a>
       <nav class="site-nav-inline" aria-label="Main">{{nav}}</nav>
       {{communityBlock}}
-      {{authLinksBlock}}
-      <div class="nav-actions">{{navToggle}}</div>
+      <div class="nav-actions">{{navToggle}}{{authLinksBlock}}</div>
     </div>`;
 
   if (config.showHero) {

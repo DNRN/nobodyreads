@@ -3,6 +3,7 @@ import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
 import { renderContent } from "../../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
+import { isAuthenticatedRequest } from "../../../src/admin/server/auth.js";
 import { getDbClient } from "../../lib/db.js";
 import { formatDate } from "../../lib/format.js";
 
@@ -29,6 +30,11 @@ if (page) {
   Astro.response.status = 404;
 }
 
+const adminHref = `${urlPrefix}/admin`;
+const loggedIn = isAuthenticatedRequest(Astro.request);
+const menuItems = [
+  loggedIn ? { label: "Admin", href: adminHref } : { label: "Log in", href: adminHref },
+];
 const options = page
   ? {
       title: `${page.title} — ${siteName}`,
@@ -42,6 +48,7 @@ const options = page
       page,
       urlPrefix,
       siteName,
+      menuItems,
     }
   : {
       title: `404 — ${siteName}`,
@@ -49,6 +56,7 @@ const options = page
       seo: { noIndex: true },
       urlPrefix,
       siteName,
+      menuItems,
     };
 ---
 <SiteLayout options={options}>

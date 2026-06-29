@@ -17,17 +17,17 @@ import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
 import { isEmailEnabled } from "../../src/subscription/email.js";
 
-const { options, authLinksHtml, templateOverride, showCommunity = true } = Astro.props as {
+const { options, templateOverride, showCommunity = true } = Astro.props as {
   options: LayoutOptions;
-  authLinksHtml?: string;
   templateOverride?: SiteTemplateDefinition | null;
   showCommunity?: boolean;
 };
 
+const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
 const db = await initDb();
-const settings = await getSiteSettings(db, DEFAULT_TENANT_ID);
+const settings = await getSiteSettings(db, tenantId);
 const templateDef: SiteTemplateDefinition =
-  templateOverride ?? (await getSiteTemplate(db, DEFAULT_TENANT_ID)) ?? DEFAULT_TEMPLATE;
+  templateOverride ?? (await getSiteTemplate(db, tenantId)) ?? DEFAULT_TEMPLATE;
 
 const identity = resolveSiteIdentity(settings, {
   siteName: "nobodyreads.me",
@@ -43,6 +43,7 @@ const faviconUrl = resolveMediaValue(identity.favicon, mediaUrl);
 const ogImageUrl = resolveMediaValue(identity.ogImage, mediaUrl);
 
 const homeHref = options.urlPrefix || "/";
+const brandHref = options.brandHref ?? homeHref;
 const navItems = options.navItems ?? [];
 const activePageId = options.activePageId;
 
@@ -84,9 +85,22 @@ const navHtml = navItems
     return `<a href="${href}"${active}>${label}</a>`;
   })
   .join("");
-const authLinksBlock = authLinksHtml
-  ? `<nav class="site-menu" id="site-menu" data-nav aria-label="Profile">
-      <span class="nav-auth nav-auth--menu">${authLinksHtml}</span>
+const menuItems = options.menuItems ?? [];
+const menuHeaderHtml = options.menuHeader
+  ? `<div class="site-menu-header">${escapeHtml(options.menuHeader)}</div>`
+  : "";
+const menuItemsHtml = menuItems
+  .map((item) => {
+    const variant = item.variant === "danger" ? " nav-menu-item--danger" : "";
+    if (item.action) {
+      return `<form class="nav-menu-form" method="post" action="${escapeHtml(item.action)}"><button type="submit" class="nav-menu-item${variant}" role="menuitem">${escapeHtml(item.label)}</button></form>`;
+    }
+    return `<a class="nav-menu-item${variant}" role="menuitem" href="${escapeHtml(item.href ?? "#")}">${escapeHtml(item.label)}</a>`;
+  })
+  .join("");
+const authLinksBlock = menuItems.length
+  ? `<nav class="site-menu" id="site-menu" data-nav aria-label="Account">
+      ${menuHeaderHtml}${menuItemsHtml}
      </nav>`
   : "";
 const communityApiBase = `${options.urlPrefix || ""}/api`;
@@ -94,9 +108,9 @@ const communityLoginHref = `${options.urlPrefix || ""}/login`;
 const communityBlock = showCommunity
   ? `<div class="nb-community nb-community--topbar" data-community data-join-only data-api-base="${escapeHtml(communityApiBase)}" data-login-href="${escapeHtml(communityLoginHref)}"></div>`
   : "";
-const navToggle = authLinksHtml
-  ? `<button class="nav-toggle" type="button" data-nav-toggle aria-label="Toggle menu" aria-controls="site-menu" aria-expanded="false">
-      <span></span><span></span><span></span>
+const navToggle = menuItems.length
+  ? `<button class="nav-toggle" type="button" data-nav-toggle aria-label="Account menu" aria-haspopup="true" aria-controls="site-menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
      </button>`
   : "";
 
@@ -112,6 +126,7 @@ let bodyHtml = templateHtml
   .replaceAll("{{siteBranding}}", brandingHtml)
   .replaceAll("{{siteLogo}}", logoUrl ? escapeHtml(logoUrl) : "")
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))
+  .replaceAll("{{brandHref}}", escapeHtml(brandHref))
   .replaceAll("{{year}}", `${new Date().getFullYear()}`)
   .replaceAll("{{subscribe}}", subscribeFormHtml);
 

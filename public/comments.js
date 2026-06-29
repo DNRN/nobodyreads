@@ -129,7 +129,7 @@
       submit.textContent = parentId ? "Reply" : "Comment";
       rowEl.appendChild(submit);
       if (parentId) {
-        var cancel = el("button", null, "Cancel");
+        var cancel = el("button", "site-button-secondary", "Cancel");
         cancel.type = "button";
         cancel.addEventListener("click", function () {
           if (onDone) onDone();

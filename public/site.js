@@ -1,7 +1,5 @@
 const root = document.documentElement;
 const themeToggle = document.querySelector("[data-theme-toggle]");
-const navToggle = document.querySelector("[data-nav-toggle]");
-const nav = document.querySelector("[data-nav]");
 
 function resolveTheme(theme) {
   if (theme === "system") {
@@ -61,26 +59,39 @@ window.getStoredTheme = function () {
   }
 };
 
-if (navToggle && nav) {
-  navToggle.addEventListener("click", () => {
-    const isOpen = document.body.classList.toggle("nav-open");
-    navToggle.setAttribute("aria-expanded", String(isOpen));
-  });
-
-  nav.addEventListener("click", (event) => {
-    const target = event.target;
-    if (target instanceof Element && target.matches("a")) {
-      document.body.classList.remove("nav-open");
-      navToggle.setAttribute("aria-expanded", "false");
-    }
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!document.body.classList.contains("nav-open")) return;
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    if (nav.contains(target) || navToggle.contains(target)) return;
-    document.body.classList.remove("nav-open");
-    navToggle.setAttribute("aria-expanded", "false");
-  });
+// Account/nav menu toggle. Bound to `document` via delegation (not to the
+// header elements directly) so it keeps working after Astro's ClientRouter
+// swaps the page — those swaps replace the header DOM and drop any listeners
+// attached straight to it.
+function closeNavMenu() {
+  document.body.classList.remove("nav-open");
+  const toggle = document.querySelector("[data-nav-toggle]");
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
 }
+
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const toggle = target.closest("[data-nav-toggle]");
+  if (toggle) {
+    const isOpen = document.body.classList.toggle("nav-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    return;
+  }
+
+  if (!document.body.classList.contains("nav-open")) return;
+
+  // A link inside the menu closes it (the navigation itself still proceeds);
+  // any click outside the menu closes it too.
+  if (target.closest("[data-nav] a") || !target.closest("[data-nav]")) {
+    closeNavMenu();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeNavMenu();
+});
+
+// Reset the menu state when a client-side navigation completes.
+document.addEventListener("astro:after-swap", closeNavMenu);

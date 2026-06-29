@@ -242,6 +242,7 @@ export type {
   PostListViewConfig,
   CustomViewConfig,
   LayoutOptions,
+  MenuItem,
   PageMeta,
   PageKind,
   PageNav,

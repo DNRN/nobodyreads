@@ -45,7 +45,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     {
       type: "header",
       enabled: true,
-      showHero: true,
+      showHero: false,
       showTagline: true,
       logoText: "nobody_reads",
       logoDotText: "me",

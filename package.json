@@ -37,6 +37,7 @@
       "types": "./dist/astro/context.d.ts",
       "import": "./dist/astro/context.js"
     },
+    "./astro/SiteLayout": "./astro/layouts/SiteLayout.astro",
     "./community": {
       "types": "./dist/community/index.d.ts",
       "import": "./dist/community/index.js"

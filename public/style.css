@@ -168,6 +168,25 @@ h1.site-title a:hover {
   opacity: 0.85;
 }
 
+/* Secondary action (cancel / dismiss) — pairs with .site-button */
+.site-button-secondary {
+  padding: 0.55rem 1rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.site-button-secondary:hover {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--muted);
+}
+
 .site-footer {
   border-top: 1px solid var(--border);
   padding: 1.5rem 0;

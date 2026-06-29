@@ -1,6 +1,7 @@
 import { defineComponent } from "../component-definition.js";
 
 const BASE_CSS = `.nav-actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -62,23 +63,20 @@ const BASE_CSS = `.nav-actions {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: transparent;
+  color: var(--text);
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.nav-toggle span {
-  display: block;
-  width: 14px;
-  height: 2px;
-  background: var(--text);
+.nav-toggle:hover,
+body.nav-open .nav-toggle {
+  border-color: var(--text);
 }
 
-.site-nav,
-.site-menu {
+.site-nav {
   position: absolute;
   top: calc(100% + 0.75rem);
   left: 0;
@@ -97,10 +95,23 @@ const BASE_CSS = `.nav-actions {
 }
 
 .site-menu {
-  left: auto;
+  position: absolute;
+  top: calc(100% + 0.5rem);
   right: 0;
   width: max-content;
   min-width: 12rem;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 20;
 }
 
 body.nav-open .site-nav,
@@ -110,8 +121,7 @@ body.nav-open .site-menu {
   transform: translateY(0);
 }
 
-.site-nav a,
-.site-menu a {
+.site-nav a {
   color: var(--muted);
   text-decoration: none;
   font-size: 0.85rem;
@@ -120,18 +130,45 @@ body.nav-open .site-menu {
 }
 
 .site-nav a:hover,
-.site-nav a.active,
-.site-menu a:hover,
-.site-menu a.active {
+.site-nav a.active {
   color: var(--text);
 }
 
-.site-nav .nav-auth,
-.site-menu .nav-auth {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.6rem;
+.site-menu-header {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.15rem;
+}
+
+.nav-menu-form {
+  margin: 0;
+}
+
+.nav-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.nav-menu-item:hover {
+  background: var(--border);
+}
+
+.nav-menu-item--danger {
+  color: #c0392b;
 }`;
 
 const INLINE_CSS = `.site-nav-inline {

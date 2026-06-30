@@ -74,11 +74,11 @@ The Hono server proxies page requests to Astro in dev mode (controlled by `ASTRO
 ### Production build
 
 ```bash
-npm run build    # runs astro build && tsc
+npm run build    # runs build:client + astro build + tsc
 npm run start    # NODE_ENV=production
 ```
 
-The Node server serves the built Astro SSR output from `dist/astro/`.
+The Node server serves the built Astro SSR output from `dist/astro/`. `build:client` bundles the public browser scripts (see [Client scripts](#client-scripts)) into `public/` and runs first.
 
 ## Configuration
 
@@ -349,6 +349,7 @@ nobodyreads/
 │   ├── index.ts              # Library entry point (all public exports)
 │   ├── standalone.ts         # Standalone Hono server (npx nobodyreads)
 │   ├── paths.ts              # Package resource path helpers
+│   ├── client/              # Browser scripts (TS) bundled to public/*.js by Vite
 │   ├── content/              # Plot API routes, rendering, content DB queries
 │   ├── db/                   # Drizzle schema, Zod validation
 │   ├── editor/               # Admin routes, auth, browser editor bundles
@@ -361,7 +362,7 @@ nobodyreads/
 │   ├── pages/                # Public pages, admin pages, preview routes
 │   ├── components/           # Reusable Astro components
 │   └── lib/                  # Server-side helpers for Astro routes
-├── public/                   # Static assets (CSS, bundled editor JS)
+├── public/                   # Static assets (CSS, editor JS, generated client/*.js)
 ├── scripts/                  # Bootstrap, publish, and utility scripts
 ├── content/                  # Example Markdown content
 ├── schema.sql                # Database schema
@@ -386,13 +387,26 @@ Two supporting details keep things stable:
 
 The `AdminLayout` does not use `ClientRouter` — admin navigation uses standard full-page loads.
 
+### Client scripts
+
+The public site ships a small amount of progressive-enhancement JavaScript that runs outside the Astro/Svelte island system: theme + nav (`site.js`), the join/like widget (`community.js`), and the comment thread widget (`comments.js`). The sources live in `src/client/` as TypeScript and are bundled to `public/*.js` by `npm run build:client` (a thin wrapper around Vite's library mode in `scripts/build-client.ts`).
+
+Each entry is emitted as a self-contained **IIFE** with a **stable, un-hashed filename**. The names are load-bearing and must not change:
+
+- `site.js` and `community.js` are referenced by hardcoded `<script>` tags in the layouts.
+- `comments.js` is opt-in per post and its `/comments.js` path is **persisted in tenant `scripts` arrays in the database** — renaming or hashing it would break existing content.
+
+The generated files are git-ignored (`build:client` regenerates them, and the production `build` runs it first). They are still published with the package because the `files` array ships `public/`. Run `npm run dev:client` for a watch build while developing. Type-checking for these DOM-targeted modules uses `tsconfig.client.json`, kept separate from the Node build (`src/client/` is excluded from the main `tsconfig.json`).
+
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
 | `npm run dev` | Start dev server with hot reload |
 | `npm run dev:astro` | Start Astro dev server |
-| `npm run build` | Build for production (Astro + TypeScript) |
+| `npm run dev:client` | Rebuild `public/*.js` from `src/client/` on change (watch) |
+| `npm run build` | Build for production (client scripts + Astro + TypeScript) |
+| `npm run build:client` | Bundle `src/client/*.ts` into `public/*.js` |
 | `npm run start` | Start production server |
 | `npm run post -- <file>` | Publish a Markdown file to the database |
 | `npm run site:bootstrap` | Bootstrap a new site with default content |

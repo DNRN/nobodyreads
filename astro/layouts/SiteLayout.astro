@@ -104,7 +104,7 @@ const authLinksBlock = menuItems.length
      </nav>`
   : "";
 const communityApiBase = `${options.urlPrefix || ""}/api`;
-const communityLoginHref = `${options.urlPrefix || ""}/login`;
+const communityLoginHref = options.loginHref ?? `${options.urlPrefix || ""}/login`;
 const communityBlock = showCommunity
   ? `<div class="nb-community nb-community--topbar" data-community data-join-only data-api-base="${escapeHtml(communityApiBase)}" data-login-href="${escapeHtml(communityLoginHref)}"></div>`
   : "";

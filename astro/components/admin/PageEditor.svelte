@@ -39,6 +39,7 @@
     kind,
     nav: undefined,
     commentsEnabled: true,
+    inFeed: true,
   } as Page);
 
   // --- Form state ---
@@ -52,6 +53,10 @@
   let navLabel = $state(p.nav?.label ?? "");
   let navOrder = $state(p.nav?.order != null ? String(p.nav.order) : "");
   let commentsEnabled = $state(p.commentsEnabled ?? true);
+  let inFeed = $state(p.inFeed ?? true);
+  let seoOgImage = $state(p.seo?.ogImage ?? "");
+  let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
+  let seoImageUploading = $state(false);
   let content = $state(p.content ?? "");
   let slugManuallyEdited = false;
 
@@ -87,7 +92,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard });
   }
   let baseline = snapshot();
 
@@ -108,6 +113,9 @@
     body.set("nav_label", navLabel);
     body.set("nav_order", navOrder);
     body.set("comments_enabled", commentsEnabled ? "on" : "off");
+    body.set("in_feed", inFeed ? "on" : "off");
+    body.set("seo_og_image", seoOgImage);
+    body.set("seo_twitter_card", seoTwitterCard);
     body.set("content", content);
     return body;
   }
@@ -163,7 +171,7 @@
   // Any edit to content or metadata (re)arms the autosave timer. The baseline
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard];
     if (editorReady) scheduleAutosave();
   });
 
@@ -193,6 +201,17 @@
     if (!res.ok) throw new Error("Upload failed");
     const data = await res.json();
     return data.url as string;
+  }
+
+  async function uploadSeoImage(file: File): Promise<void> {
+    seoImageUploading = true;
+    try {
+      seoOgImage = await uploadImage(file);
+    } catch {
+      showToast("Image upload failed", "error", 4000);
+    } finally {
+      seoImageUploading = false;
+    }
   }
 
   async function createCrepe(initial: string) {
@@ -388,6 +407,64 @@
               : "Comments are closed for this post."}
           </p>
         </div>
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={inFeed} />
+            Include in RSS feed
+          </label>
+          <p class="hint">
+            {inFeed
+              ? "This post appears in your RSS / podcast feed."
+              : "This post is excluded from the feed."}
+          </p>
+        </div>
+      {/if}
+
+      {#if kind === "post"}
+        <details class="field">
+          <summary>Social sharing</summary>
+          <div class="field">
+            <label for="seo_og_image">Share image</label>
+            <p class="hint">Overrides the site default when this post is shared on social networks.</p>
+            <div class="seo-image-row">
+              <input
+                type="text"
+                id="seo_og_image"
+                name="seo_og_image"
+                placeholder="https://… or upload below"
+                bind:value={seoOgImage}
+              />
+              <label class="btn btn-sm btn-ghost seo-image-upload-btn" aria-busy={seoImageUploading}>
+                {seoImageUploading ? "Uploading…" : "Upload"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onchange={async (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) await uploadSeoImage(file);
+                    (e.target as HTMLInputElement).value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {#if seoOgImage}
+              <img
+                src={seoOgImage}
+                alt="Share preview"
+                class="seo-image-preview"
+                onerror={(e) => { (e.target as HTMLImageElement).hidden = true; }}
+              />
+            {/if}
+          </div>
+          <div class="field">
+            <label for="seo_twitter_card">Card style</label>
+            <select id="seo_twitter_card" name="seo_twitter_card" bind:value={seoTwitterCard}>
+              <option value="summary">Summary (small image)</option>
+              <option value="summary_large_image">Large image</option>
+            </select>
+          </div>
+        </details>
       {/if}
 
       <details class="field">

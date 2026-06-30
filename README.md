@@ -248,7 +248,7 @@ nav:
 Create reusable views in **Admin > Views**, then embed them in any page:
 
 ```markdown
-Welcome to my site.
+Welcome to my plot.
 
 {{view:latest-posts}}
 ```

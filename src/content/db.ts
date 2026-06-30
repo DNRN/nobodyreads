@@ -40,6 +40,7 @@ function toPage(row: PageRow): Page {
         ? { label: row.navLabel, order: row.navOrder ?? 0 }
         : undefined,
     commentsEnabled: row.commentsEnabled ?? true,
+    inFeed: row.inFeed ?? true,
   };
 }
 
@@ -139,6 +140,22 @@ export async function listPosts(db: Database, tenantId: string): Promise<PageSum
     .from(page)
     .where(and(eq(page.published, true), eq(page.kind, "post"), eq(page.tenantId, tenantId)))
     .orderBy(desc(page.date));
+  return rows.map(toPageSummary);
+}
+
+/** List published, in-feed posts for RSS generation (newest first, limit 50). */
+export async function listFeedPosts(db: Database, tenantId: string): Promise<PageSummary[]> {
+  const rows = await db
+    .select(pageSummaryCols)
+    .from(page)
+    .where(and(
+      eq(page.published, true),
+      eq(page.kind, "post"),
+      eq(page.tenantId, tenantId),
+      eq(page.inFeed, true),
+    ))
+    .orderBy(desc(page.date))
+    .limit(50);
   return rows.map(toPageSummary);
 }
 
@@ -440,6 +457,7 @@ export async function upsertPage(
       navLabel: p.nav?.label ?? null,
       navOrder: p.nav?.order ?? null,
       commentsEnabled: p.commentsEnabled,
+      inFeed: p.inFeed,
     })
     .onConflictDoUpdate({
       target: [page.pageId, page.tenantId],
@@ -458,6 +476,7 @@ export async function upsertPage(
         navLabel: p.nav?.label ?? null,
         navOrder: p.nav?.order ?? null,
         commentsEnabled: p.commentsEnabled,
+        inFeed: p.inFeed,
       },
     });
 }

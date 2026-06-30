@@ -22,6 +22,9 @@ export const pageFormSchema = z.object({
   // the checkbox "on", so an unchecked box still submits a value. Absent only
   // for forms without the control (non-post kinds / older clients).
   comments_enabled: z.string().optional(),
+  in_feed: z.string().optional(),
+  seo_og_image: z.string().trim().max(500).optional(),
+  seo_twitter_card: z.enum(["summary", "summary_large_image"]).optional(),
 });
 export type PageFormData = z.infer<typeof pageFormSchema>;
 

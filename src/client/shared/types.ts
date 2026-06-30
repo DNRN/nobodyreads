@@ -21,6 +21,7 @@ export interface CommentNode {
   body: string;
   createdAt: string;
   deleted: boolean;
+  pinned: boolean;
   mine: boolean;
   /** Populated client-side by buildTree(); absent in the raw response. */
   children?: CommentNode[];

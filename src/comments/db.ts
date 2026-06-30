@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, asc, gte, count } from "drizzle-orm";
+import { and, eq, asc, gte, count, sql } from "drizzle-orm";
 import type { Database } from "../db/index.js";
 import type { MemberIdentity } from "../community/types.js";
 import { comment } from "./schema.js";
@@ -19,6 +19,7 @@ function toComment(row: typeof comment.$inferSelect): Comment {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt ?? undefined,
     deleted: row.deletedAt != null,
+    pinned: row.pinnedAt != null,
   };
 }
 
@@ -35,7 +36,7 @@ export async function listComments(
     .select()
     .from(comment)
     .where(and(eq(comment.tenantId, tenantId), eq(comment.pageId, pageId)))
-    .orderBy(asc(comment.createdAt));
+    .orderBy(sql`(pinned_at IS NOT NULL) DESC`, asc(comment.createdAt));
   return rows.map(toComment);
 }
 
@@ -84,6 +85,29 @@ export async function softDeleteComment(
     .update(comment)
     .set({ deletedAt: new Date().toISOString() })
     .where(and(eq(comment.tenantId, tenantId), eq(comment.commentId, commentId)));
+}
+
+/**
+ * Pin a comment so it sorts first, or unpin it. Enforces at-most-one pinned
+ * comment per page: pinning a new comment clears any existing pin first.
+ */
+export async function setPinnedComment(
+  db: Database,
+  tenantId: string,
+  commentId: string,
+  pageId: string,
+  pinned: boolean,
+): Promise<void> {
+  await db
+    .update(comment)
+    .set({ pinnedAt: null })
+    .where(and(eq(comment.tenantId, tenantId), eq(comment.pageId, pageId)));
+  if (pinned) {
+    await db
+      .update(comment)
+      .set({ pinnedAt: new Date().toISOString() })
+      .where(and(eq(comment.tenantId, tenantId), eq(comment.commentId, commentId)));
+  }
 }
 
 /**

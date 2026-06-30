@@ -107,6 +107,7 @@
     "gray-matter": "^4.0.3",
     "hono": "^4.12.9",
     "marked": "^15.0.7",
+    "openai": "^6.45.0",
     "prosemirror-keymap": "^1.2.3",
     "prosemirror-model": "^1.25.9",
     "prosemirror-state": "^1.4.4",

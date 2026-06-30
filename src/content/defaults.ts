@@ -53,5 +53,6 @@ export function defaultHomePage(options: DefaultHomePageOptions): Page {
     nav: { label: "home", order: 0 },
     seo: { metaDescription: "A personal blog.", ogType: "website" },
     commentsEnabled: false,
+    inFeed: false,
   };
 }

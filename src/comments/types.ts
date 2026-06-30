@@ -11,6 +11,8 @@ export interface Comment {
   updatedAt?: string;
   /** True when the comment was soft-deleted (body should be hidden). */
   deleted: boolean;
+  /** True when the plot owner has pinned this comment (shown first). */
+  pinned: boolean;
 }
 
 /** Input for creating a comment. */

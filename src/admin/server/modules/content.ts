@@ -64,13 +64,32 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
 
       let wasPreviouslyPublished = false;
       let existingCommentsEnabled: boolean | undefined;
+      let existingInFeed: boolean | undefined;
+      let existingSeo: Page["seo"] | undefined;
       let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
         wasPreviouslyPublished = existing?.published ?? false;
         existingCommentsEnabled = existing?.commentsEnabled;
+        existingInFeed = existing?.inFeed;
+        existingSeo = existing?.seo;
         if (!content && existing?.content) content = existing.content;
       }
+
+      // Merge per-post social fields into the existing seo JSON, preserving
+      // all other seo fields (author, tldr, faq, etc.) set via other tools.
+      const seoUpdate: Page["seo"] = { ...existingSeo };
+      if (data.seo_og_image !== undefined) {
+        if (data.seo_og_image) {
+          seoUpdate.ogImage = data.seo_og_image;
+        } else {
+          delete seoUpdate.ogImage;
+        }
+      }
+      if (data.seo_twitter_card) {
+        seoUpdate.twitterCard = data.seo_twitter_card;
+      }
+      const seo = Object.keys(seoUpdate).length > 0 ? seoUpdate : undefined;
 
       const p: Page = {
         id: pageId,
@@ -99,6 +118,11 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
           data.comments_enabled === undefined
             ? existingCommentsEnabled ?? true
             : data.comments_enabled === "on",
+        inFeed:
+          data.in_feed === undefined
+            ? existingInFeed ?? true
+            : data.in_feed === "on",
+        seo,
       };
 
       await upsertPage(db, p, tenantId);

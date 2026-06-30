@@ -7,6 +7,8 @@ export type { InterfaceApiOptions } from "./api/interface.js";
 // Routers (Hono sub-apps)
 export { createBlogApiRoutes } from "./content/routes.js";
 export type { BlogApiOptions } from "./content/routes.js";
+export { createFeedRoutes } from "./content/feed.js";
+export type { FeedOptions } from "./content/feed.js";
 
 // Comments
 export {
@@ -15,6 +17,7 @@ export {
   getCommentById,
   createComment,
   softDeleteComment,
+  setPinnedComment,
   countRecentCommentsByMember,
 } from "./comments/index.js";
 export type {
@@ -91,6 +94,7 @@ export {
 export {
   listPosts,
   listPostsForView,
+  listFeedPosts,
   getPageBySlug,
   getPageByKind,
   findPageByKind,

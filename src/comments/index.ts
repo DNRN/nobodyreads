@@ -5,6 +5,7 @@ export {
   getCommentById,
   createComment,
   softDeleteComment,
+  setPinnedComment,
   countRecentCommentsByMember,
 } from "./db.js";
 export type { Comment, NewComment } from "./types.js";

@@ -24,6 +24,9 @@ export const page = sqliteTable(
     commentsEnabled: integer("comments_enabled", { mode: "boolean" })
       .notNull()
       .default(true),
+    inFeed: integer("in_feed", { mode: "boolean" })
+      .notNull()
+      .default(true),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),

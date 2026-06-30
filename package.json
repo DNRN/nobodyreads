@@ -38,6 +38,7 @@
       "import": "./dist/astro/context.js"
     },
     "./astro/SiteLayout": "./astro/layouts/SiteLayout.astro",
+    "./astro/ShareBar": "./astro/components/ShareBar.astro",
     "./community": {
       "types": "./dist/community/index.d.ts",
       "import": "./dist/community/index.js"
@@ -55,7 +56,7 @@
     "public",
     "astro/_injected",
     "astro/layouts",
-    "astro/components/admin",
+    "astro/components",
     "config/storage.config.example.json",
     "config/email.config.example.json",
     "schema.sql",

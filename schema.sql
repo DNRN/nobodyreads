@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS page (
   nav_label  TEXT,
   nav_order  INTEGER,
   comments_enabled INTEGER NOT NULL DEFAULT 1,
+  in_feed          INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -149,6 +150,7 @@ CREATE TABLE IF NOT EXISTS comment (
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at     TEXT,
   deleted_at     TEXT,
+  pinned_at      TEXT,
   PRIMARY KEY (comment_id, tenant_id)
 );
 CREATE INDEX IF NOT EXISTS comment_page_idx ON comment (tenant_id, page_id, created_at);

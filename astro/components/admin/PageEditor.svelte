@@ -1,9 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { fade } from "svelte/transition";
-  import { Crepe } from "@milkdown/crepe";
-  import { upload, uploadConfig } from "@milkdown/kit/plugin/upload";
-  import { nobodyreadsMilkdownPlugins } from "nobodyreads/editor/milkdown";
+  import type { Crepe as CrepeType } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/frame.css";
   import type { Page, PageKind } from "nobodyreads";
@@ -62,7 +60,7 @@
 
   let formEl: HTMLFormElement;
   let crepeMount: HTMLElement;
-  let crepe: Crepe | null = null;
+  let crepe: CrepeType | null = null;
 
   function onTitleInput() {
     if (isNew && kind !== "home" && !slugManuallyEdited) {
@@ -198,6 +196,13 @@
   }
 
   async function createCrepe(initial: string) {
+    const [{ Crepe }, { upload, uploadConfig }, { nobodyreadsMilkdownPlugins }] =
+      await Promise.all([
+        import("@milkdown/crepe"),
+        import("@milkdown/kit/plugin/upload"),
+        import("nobodyreads/editor/milkdown"),
+      ]);
+
     crepe = new Crepe({
       root: crepeMount,
       defaultValue: initial,

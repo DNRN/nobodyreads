@@ -64,13 +64,15 @@
   "scripts": {
     "dev": "tsx watch src/standalone.ts",
     "dev:astro": "astro dev",
+    "dev:client": "tsx scripts/build-client.ts --watch",
     "start": "NODE_ENV=production tsx src/standalone.ts",
-    "build": "astro build && tsc",
+    "build": "npm run build:client && astro build && tsc",
+    "build:client": "tsx scripts/build-client.ts",
     "site:use-minimal-css": "tsx scripts/use-minimal-css.ts",
     "site:bootstrap": "tsx scripts/bootstrap-site.ts",
     "site:remove-site-script": "tsx scripts/remove-site-script.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
     "post": "tsx scripts/publish.ts"
   },
   "keywords": [
@@ -139,6 +141,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "unified": "^11.0.5",
+    "vite": "^6.4.1",
     "vitest": "^4.1.2"
   }
 }

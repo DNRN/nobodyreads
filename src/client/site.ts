@@ -1,14 +1,29 @@
-const root = document.documentElement;
-const themeToggle = document.querySelector("[data-theme-toggle]");
+// Site chrome: theme application + the account/nav menu toggle. Loaded on
+// every page (public site and admin). No widgets, no framework.
 
-function resolveTheme(theme) {
-  if (theme === "system") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+type Theme = "light" | "dark" | "system";
+type ResolvedTheme = "light" | "dark";
+
+declare global {
+  interface Window {
+    applyTheme: (theme: Theme) => void;
+    getStoredTheme: () => Theme;
   }
-  return theme === "dark" || theme === "light" ? theme : "light";
 }
 
-function applyTheme(theme) {
+const root = document.documentElement;
+const themeToggle = document.querySelector<HTMLElement>("[data-theme-toggle]");
+
+function resolveTheme(theme: Theme): ResolvedTheme {
+  if (theme === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  return theme === "dark" ? "dark" : "light";
+}
+
+function applyTheme(theme: Theme): void {
   try {
     localStorage.setItem("theme", theme);
   } catch {
@@ -22,48 +37,41 @@ function applyTheme(theme) {
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute(
       "aria-label",
-      isDark ? "Switch to light mode" : "Switch to dark mode"
+      isDark ? "Switch to light mode" : "Switch to dark mode",
     );
   }
 }
 
-function getInitialTheme() {
+function getStoredTheme(): Theme {
   try {
     const stored = localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    if (stored === "light" || stored === "dark" || stored === "system") {
+      return stored;
+    }
   } catch {
     // ignore read errors
   }
   return "system";
 }
 
-applyTheme(root.dataset.theme || getInitialTheme());
+applyTheme((root.dataset.theme as Theme) || getStoredTheme());
 
 if (themeToggle) {
   themeToggle.addEventListener("click", () => {
-    const stored = localStorage.getItem("theme") || "system";
-    const resolved = resolveTheme(stored);
-    const next = resolved === "dark" ? "light" : "dark";
-    applyTheme(next);
+    const resolved = resolveTheme(getStoredTheme());
+    applyTheme(resolved === "dark" ? "light" : "dark");
   });
 }
 
-// Expose for Settings > Appearance (theme is changed there, not in header)
+// Expose for Settings > Appearance (theme is changed there, not in header).
 window.applyTheme = applyTheme;
-window.getStoredTheme = function () {
-  try {
-    const t = localStorage.getItem("theme");
-    return t === "light" || t === "dark" || t === "system" ? t : "system";
-  } catch {
-    return "system";
-  }
-};
+window.getStoredTheme = getStoredTheme;
 
 // Account/nav menu toggle. Bound to `document` via delegation (not to the
 // header elements directly) so it keeps working after Astro's ClientRouter
 // swaps the page — those swaps replace the header DOM and drop any listeners
 // attached straight to it.
-function closeNavMenu() {
+function closeNavMenu(): void {
   document.body.classList.remove("nav-open");
   const toggle = document.querySelector("[data-nav-toggle]");
   if (toggle) toggle.setAttribute("aria-expanded", "false");
@@ -95,3 +103,7 @@ document.addEventListener("keydown", (event) => {
 
 // Reset the menu state when a client-side navigation completes.
 document.addEventListener("astro:after-swap", closeNavMenu);
+
+// Marks this file as a module so the `declare global` augmentation above is
+// valid. The bundle is still emitted as a side-effecting IIFE.
+export {};

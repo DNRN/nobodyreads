@@ -184,6 +184,7 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
       });
       actions.appendChild(delBtn);
     }
+<<<<<<< HEAD
 
     if (!c.deleted && canModerate) {
       const pinBtn = el("button", null, c.pinned ? "Unpin" : "Pin");
@@ -197,6 +198,8 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
       });
       actions.appendChild(pinBtn);
     }
+=======
+>>>>>>> 568d054afd55a1b7ea2c5832be8d33210789ddc8
     li.appendChild(actions);
     li.appendChild(replySlot);
 

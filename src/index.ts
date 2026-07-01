@@ -3,8 +3,8 @@ export { createPublicApiRoutes } from "./api/public.js";
 export type { PublicApiOptions } from "./api/public.js";
 export { createInterfaceApiRoutes } from "./api/interface.js";
 export type { InterfaceApiOptions } from "./api/interface.js";
-export { createAiApiRoutes } from "./api/ai.js";
-export type { AiApiOptions } from "./api/ai.js";
+export { createAiApiRoutes } from "./api/ai/ai.routes.js";
+export type { AiApiOptions } from "./api/ai/ai.routes.js";
 
 // Routers (Hono sub-apps)
 export { createBlogApiRoutes } from "./content/routes.js";

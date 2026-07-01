@@ -136,6 +136,7 @@
     "codemirror": "^6.0.1",
     "crelt": "^1.0.6",
     "drizzle-kit": "^0.31.10",
+    "prettier": "^3.9.4",
     "puppeteer-core": "^25.1.0",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",

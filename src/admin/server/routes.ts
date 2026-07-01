@@ -3,10 +3,11 @@ import { DEFAULT_TENANT_ID } from "../../shared/types.js";
 import type { Database } from "../../db/index.js";
 import type { MediaStorage } from "../../media/storage.js";
 import type { EmailResolvable } from "../../subscription/email.js";
-import type { AdminModuleContext } from "./modules/types.js";
+import type { AdminModuleContext, AiProviderConfig } from "./modules/types.js";
 import { mountAuthRoutes } from "./modules/auth-routes.js";
 import { createContentRoutes } from "./modules/content.js";
 import { createThemeRoutes } from "./modules/theme.js";
+import { createAiRoutes } from "./modules/ai.js";
 import { createMediaRoutes } from "./modules/media.js";
 import { createViewRoutes } from "./modules/views.js";
 
@@ -30,6 +31,11 @@ export interface AdminRouterOptions {
   siteUrl?: string;
   /** Display name used in notification email branding. */
   siteName?: string;
+  /**
+   * OpenAI-compatible provider config for AI theming. The host owns the key and
+   * endpoint; when omitted, AI routes return 503 and the AI panel is hidden.
+   */
+  ai?: AiProviderConfig;
 }
 
 /** @deprecated Use AdminRouterOptions */
@@ -51,6 +57,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     email: options.email,
     siteUrl: options.siteUrl,
     siteName: options.siteName,
+    ai: options.ai,
   };
 }
 
@@ -61,6 +68,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
   mountAuthRoutes(app, ctx);
   app.route("/", createMediaRoutes(ctx));
   app.route("/", createThemeRoutes(ctx));
+  app.route("/", createAiRoutes(ctx));
   app.route("/", createContentRoutes(ctx));
   app.route("/", createViewRoutes(ctx));
 

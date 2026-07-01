@@ -31,6 +31,7 @@ export { createAdminRoutes, createEditorRoutes } from "./admin/server/routes.js"
 export type { AdminRouterOptions, EditorRouterOptions } from "./admin/server/routes.js";
 export { createContentRoutes } from "./admin/server/modules/content.js";
 export { createThemeRoutes } from "./admin/server/modules/theme.js";
+export { createAiRoutes } from "./admin/server/modules/ai.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
@@ -221,7 +222,11 @@ export {
   serializeRegistry,
   validateTheme,
   normalizeComponents,
+  themeDiffSchema,
+  themeDiffJsonSchema,
+  applyThemeDiff,
 } from "./template/index.js";
+export type { ThemeDiff } from "./template/index.js";
 export type {
   SiteTemplateDefinition,
   TokenSet,

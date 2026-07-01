@@ -17,6 +17,8 @@ export interface NobodyreadsAdminContext {
   siteBase: string;
   /** Where to send users to sign in when their session is missing/invalid. */
   loginHref: string;
+  /** Whether AI theming is configured for this host (shows/hides the AI panel). */
+  aiEnabled?: boolean;
 }
 
 export const ADMIN_CONTEXT_LOCALS_KEY = "nobodyreadsAdmin" as const;
@@ -65,5 +67,6 @@ export function makeAdminContext(
     editorBase: input.editorBase ?? `${adminBase}/editor`,
     siteBase: input.siteBase,
     loginHref: input.loginHref,
+    aiEnabled: input.aiEnabled,
   };
 }

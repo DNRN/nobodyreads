@@ -14,6 +14,7 @@ import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/routes.js";
 import { createAiApiRoutes } from "./api/ai/ai.routes.js";
+import { resolveAiProviderConfig } from "./api/ai/config.js";
 import { createFeedRoutes } from "./content/feed.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
@@ -98,8 +99,8 @@ const MIME: Record<string, string> = {
 // --- Astro SSR handler (production) ---
 
 let astroHandler:
-	((req: IncomingMessage, res: ServerResponse) => Promise<void>) | null =
-	null;
+	| ((req: IncomingMessage, res: ServerResponse) => Promise<void>)
+	| null = null;
 
 async function getAstroHandler(): Promise<
 	((req: IncomingMessage, res: ServerResponse) => Promise<void>) | null
@@ -280,6 +281,7 @@ async function start() {
 		createAiApiRoutes({
 			db,
 			openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+			openaiBaseRoute: process.env.OPENAI_BASE_URL ?? "",
 		}),
 	);
 
@@ -321,7 +323,7 @@ async function start() {
 	});
 
 	// ---- Admin routes ----
-	app.route("/admin", createAdminRoutes({ db, storage }));
+	app.route("/admin", createAdminRoutes({ db, storage, ai: resolveAiProviderConfig() }));
 	app.route("/admin", createSubscriptionAdminRoutes({ db }));
 
 	// ---- Catchall: Astro SSR or dev proxy ----

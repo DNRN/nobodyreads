@@ -9,6 +9,7 @@ export interface AiApiOptions {
 	tenantId?: string;
 	/** OpenAI API key — required for all AI routes. */
 	openaiApiKey: string;
+	openaiBaseRoute: string;
 }
 
 /**
@@ -19,13 +20,27 @@ export interface AiApiOptions {
  *   (none yet — add per-feature routes here)
  */
 export function createAiApiRoutes(options: AiApiOptions): Hono {
-	const { openaiApiKey } = options;
+	const { openaiApiKey, openaiBaseRoute } = options;
 	const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
 
 	const app = new Hono();
 
+	// Guard: reject all AI routes if no key is configured
+	app.use("/ai/*", async (c, next) => {
+		if (!openaiApiKey) {
+			return c.json({ error: "AI features not configured" }, 503);
+		}
+		if (!openaiBaseRoute) {
+			return c.json({ error: "AI features not configured" }, 503);
+		}
+		return next();
+	});
+
+	/// Create AIGenerate
+	const aiGen = AIGenerate(openaiApiKey, openaiBaseRoute, process.env.AI_THEME_MODEL ?? "");
+
 	app.get("/ai", async (c) => {
-		return c.json("Hello World", 200);
+		return c.json("AI Gen configured", 200);
 	});
 
 	app.post("/ai/theme", async (c) => {
@@ -33,7 +48,7 @@ export function createAiApiRoutes(options: AiApiOptions): Hono {
 		const { input } = body;
 
 		try {
-			const response = await AIGenerate.theme(input);
+			const response = await aiGen.theme(input);
 			return c.json(response);
 		} catch (err) {
 			if (err instanceof OpenAI.APIError) {
@@ -42,14 +57,6 @@ export function createAiApiRoutes(options: AiApiOptions): Hono {
 			console.error("AI theme generation failed:", err);
 			return c.json({ error: "Failed to generate theme" }, 500);
 		}
-	});
-
-	// Guard: reject all AI routes if no key is configured
-	app.use("/ai/*", async (c, next) => {
-		if (!openaiApiKey) {
-			return c.json({ error: "AI features not configured" }, 503);
-		}
-		return next();
 	});
 
 	return app;

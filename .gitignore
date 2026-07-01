@@ -16,3 +16,5 @@ data
 /public/site.js
 /public/community.js
 /public/comments.js
+# Astro generated cache & types
+.astro/

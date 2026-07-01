@@ -42,7 +42,12 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ error: validation.error }, 400);
     }
 
-    await addSiteTemplateRevision(db, validation.theme, tenantId);
+    const revisionId = await addSiteTemplateRevision(db, validation.theme, tenantId);
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) {
+      return c.json({ ok: true, revisionId });
+    }
     return c.redirect(`${adminBase}/layout`);
   };
   app.post("/site/save", saveSiteTemplate);

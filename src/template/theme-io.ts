@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ComponentMap, LegacyComponentVariants, SiteTemplateDefinition } from "./types.js";
 import { validateComponentsAgainstRegistry } from "./registry.js";
 
-const tokenSetSchema = z.object({
+export const tokenSetSchema = z.object({
   bg: z.string(),
   text: z.string(),
   muted: z.string(),

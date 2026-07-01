@@ -1,0 +1,28 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import AiThemer from "../../components/admin/AiThemer.svelte";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, DEFAULT_TEMPLATE, getSiteTemplate } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+
+// If a host hasn't configured AI, don't render the panel (the nav item is
+// hidden too). Send them back to the manual Design editor.
+if (!ctx.aiEnabled) {
+  return Astro.redirect(`${ctx.adminBase}/layout`);
+}
+
+const previewUrl = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
+
+const db = await initDb();
+const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
+const templateJson = JSON.stringify(template);
+---
+<AdminLayout title="AI Theming — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <AiThemer
+    client:load
+    adminBase={ctx.adminBase}
+    previewUrl={previewUrl}
+    templateJson={templateJson}
+  />
+</AdminLayout>

@@ -1980,3 +1980,30 @@
 .nr-admin .nbr-toast--success .nbr-toast-dot { background: var(--nr-success); }
 .nr-admin .nbr-toast--error .nbr-toast-dot { background: var(--nr-danger); }
 .nr-admin .nbr-toast--error { color: var(--nr-danger); border-color: var(--nr-danger-soft); }
+
+/* Social sharing fields in PageEditor */
+.nr-admin .seo-image-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.nr-admin .seo-image-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.nr-admin .seo-image-upload-btn {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.nr-admin .seo-image-preview {
+  display: block;
+  margin-top: 0.5rem;
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid var(--nr-border);
+}

@@ -135,8 +135,14 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
   }
 
   function renderComment(c: CommentNode): HTMLLIElement {
-    const li = el("li", "nb-comment" + (c.deleted ? " nb-comment-deleted" : ""));
+    let cls = "nb-comment";
+    if (c.deleted) cls += " nb-comment-deleted";
+    if (c.pinned) cls += " nb-comment-pinned";
+    const li = el("li", cls);
     const meta = el("div", "nb-comment-meta");
+    if (c.pinned) {
+      meta.appendChild(el("span", "nb-comment-pinned-badge", "Pinned"));
+    }
     meta.appendChild(
       el("span", "nb-comment-author", c.deleted ? "—" : c.authorName),
     );
@@ -177,6 +183,19 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
         if (res.ok) await reload();
       });
       actions.appendChild(delBtn);
+    }
+
+    if (!c.deleted && canModerate) {
+      const pinBtn = el("button", null, c.pinned ? "Unpin" : "Pin");
+      pinBtn.type = "button";
+      pinBtn.addEventListener("click", async () => {
+        const res = await request(
+          apiBase + "/comments/" + encodeURIComponent(c.id) + "/pin",
+          "POST",
+        );
+        if (res.ok) await reload();
+      });
+      actions.appendChild(pinBtn);
     }
     li.appendChild(actions);
     li.appendChild(replySlot);

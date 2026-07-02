@@ -82,6 +82,7 @@ export interface Page {
   kind: PageKind; // "home" | "page" | "post"
   nav?: PageNav; // If present, page appears in the top bar
   commentsEnabled: boolean; // Whether readers can comment on this post
+  inFeed: boolean; // Whether this post appears in the RSS feed
 }
 
 /** An uploaded media file (image, video, audio, etc.). */

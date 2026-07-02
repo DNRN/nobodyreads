@@ -13,6 +13,7 @@ import {
   getCommentById,
   listComments,
   softDeleteComment,
+  setPinnedComment,
 } from "./db.js";
 
 export interface CommentRouterOptions {
@@ -47,6 +48,7 @@ function toPublic(comment: Comment, viewer: MemberIdentity | null) {
     body: comment.deleted ? null : comment.body,
     createdAt: comment.createdAt,
     deleted: comment.deleted,
+    pinned: comment.pinned,
     mine,
   };
 }
@@ -135,6 +137,25 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
 
     await softDeleteComment(db, tenantId, existing.id);
     return c.json({ deleted: true });
+  });
+
+  app.post("/comments/:id/pin", async (c) => {
+    const existing = await getCommentById(db, tenantId, c.req.param("id"));
+    if (!existing) return c.json({ error: "not_found" }, 404);
+    if (existing.deleted) return c.json({ error: "comment_deleted" }, 400);
+
+    const canMod = options.canModerate ? await options.canModerate(c) : false;
+    if (!canMod) {
+      const identity = await resolveMember(c);
+      return c.json(
+        { error: identity ? "forbidden" : "unauthorized" },
+        identity ? 403 : 401,
+      );
+    }
+
+    const nowPinned = !existing.pinned;
+    await setPinnedComment(db, tenantId, existing.id, existing.pageId, nowPinned);
+    return c.json({ pinned: nowPinned });
   });
 
   return app;

@@ -13,6 +13,7 @@ import { streamSSE } from "hono/streaming";
 import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/routes.js";
+import { createFeedRoutes } from "./content/feed.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
   createSubscriptionApiRoutes,
@@ -257,6 +258,17 @@ async function start() {
     if (served) return alreadySent();
     return c.text("Not found", 404);
   });
+
+  // ---- RSS feed ----
+  app.route(
+    "/",
+    createFeedRoutes({
+      db,
+      urlPrefix: process.env.URL_PREFIX || "",
+      siteName: process.env.SITE_NAME,
+      siteTagline: process.env.SITE_TAGLINE,
+    })
+  );
 
   // ---- Public API: blog + subscriptions + community ----
   app.route("/api", createBlogApiRoutes({ db }));

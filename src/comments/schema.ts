@@ -23,6 +23,7 @@ export const comment = sqliteTable(
       .default(sql`(datetime('now'))`),
     updatedAt: text("updated_at"),
     deletedAt: text("deleted_at"),
+    pinnedAt: text("pinned_at"),
   },
   (table) => [
     primaryKey({ columns: [table.commentId, table.tenantId] }),

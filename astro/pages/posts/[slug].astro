@@ -1,5 +1,6 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
+import ShareBar from "../../components/ShareBar.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
 import { renderContent } from "../../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
@@ -67,6 +68,11 @@ const options = page
         <h2 class="post-title">{page.title}</h2>
       </div>
       <div class="post-body" set:html={htmlBody} />
+      <ShareBar
+        url={`${process.env.SITE_URL || ""}${urlPrefix}/posts/${page.slug}`}
+        title={page.title}
+        excerpt={page.excerpt}
+      />
       <div
         class="nb-community"
         data-community

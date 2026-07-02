@@ -51,7 +51,7 @@ if (!latestPostsView) {
 const existingHome = await findPageByKind(db, "home", TENANT_ID);
 if (!existingHome) {
   const today = new Date().toISOString().slice(0, 10);
-  const title = process.env.SITE_NAME ?? "My site";
+  const title = process.env.SITE_NAME ?? "My plot";
   await upsertPage(db, defaultHomePage({ title, date: today }), TENANT_ID);
   console.log(`Seeded starter home page for tenant ${TENANT_ID}.`);
 } else {

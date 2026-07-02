@@ -34,4 +34,6 @@ export const COMMENTS_CSS = [
   ".nb-comment-form-row{display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem;}",
   ".nb-comment-error{color:#e0245e;font-size:0.85rem;margin-top:0.4rem;}",
   ".nb-comments-closed{opacity:0.7;font-style:italic;}",
+  ".nb-comment-pinned{background:rgba(127,127,127,0.06);border-radius:4px;padding:0.5rem 0.75rem 0.75rem;margin-bottom:0.25rem;}",
+  ".nb-comment-pinned-badge{font-size:0.72rem;font-weight:700;letter-spacing:0.04em;opacity:0.65;margin-right:0.4rem;}",
 ].join("\n");

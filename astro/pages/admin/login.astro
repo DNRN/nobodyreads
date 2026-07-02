@@ -6,19 +6,21 @@ if (!guardAuth(Astro.request)) return Astro.redirect("/admin");
 
 const error = Astro.url.searchParams.get("error");
 ---
-<AdminLayout title="Login — Admin">
-  <main class="container">
+<AdminLayout title="Login — Admin" chrome={false}>
+  <div class="nr-auth-shell">
     <div class="auth-card">
-      <h2>Admin Login</h2>
-      <p>Enter the editor password to continue.</p>
+      <div class="nr-auth-wordmark">nobodyreads<span class="nr-dot">.</span></div>
+      <h2>Welcome back.</h2>
+      <p>Your plot's right where you left it. Enter the editor password to pick up writing.</p>
       {error ? (
         <ul class="form-errors"><li>Incorrect password.</li></ul>
       ) : null}
       <form method="POST" action="/admin/login">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required autofocus />
+        <input type="password" id="password" name="password" placeholder="••••••••" required autofocus />
         <button type="submit">Sign in</button>
       </form>
+      <div class="nr-auth-footnote">No feed. No algorithm. Just your work.</div>
     </div>
-  </main>
+  </div>
 </AdminLayout>

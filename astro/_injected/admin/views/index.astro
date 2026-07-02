@@ -18,7 +18,13 @@ const views = await listContentViews(db, ctx.tenantId);
       </div>
       <p class="hint">Embed in markdown using <code>{"{{view:slug}}"}</code>. You can include multiple views per page.</p>
       {views.length === 0 ? (
-        <p class="editor-empty">No views yet. Create your first reusable view.</p>
+        <div class="nr-empty">
+          <div class="nr-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="nr-empty-title">Nothing here yet</div>
+          <p class="nr-empty-sub">Zero views, beautifully rendered. Create your first reusable view to get going.</p>
+        </div>
       ) : (
         <table class="editor-table">
           <thead>

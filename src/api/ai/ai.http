@@ -1,0 +1,8 @@
+### Generate theme
+
+POST http://localhost:3000/api/ai/theme
+Content-Type: application/json
+
+{
+  "input": "a cozy dark theme with warm orange accents"
+}

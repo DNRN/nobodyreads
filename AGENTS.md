@@ -95,6 +95,38 @@ If you are unsure whether a change warrants a doc update, update
    through a `package.json` `exports` entry. Keep runtime assets (CSS,
    injected `.astro` files) listed under `files`.
 
+## Commits
+
+- **Author.** Commits use the identity already configured in git
+  (`git config user.name` / `user.email`) — never override it per-commit or
+  edit the global/repo git config to attribute work to someone else.
+- **Precision.** Subject line under ~70 characters, imperative mood
+  (`fix(admin): ...`, `feat(template): ...`), describing the actual change,
+  not a vague label like "updates" or "fixes". If the change needs
+  explaining beyond the subject, use a body focused on *why*, not a
+  restatement of the diff. Only commit what was actually asked for — don't
+  fold in unrelated cleanup.
+
+## Pull requests
+
+- **Author.** PRs are opened under the currently authenticated `gh` user
+  (`gh auth status`) — never fabricate a different author, override git
+  commit identity, or rewrite `user.name`/`user.email` to attribute work to
+  someone else. Agents assisting with a PR are contributors, not authors;
+  commit trailers may credit an assisting agent (e.g.
+  `Co-Authored-By: Claude <noreply@anthropic.com>`) but must not replace the
+  human author.
+- **Precision.** Title under ~70 characters, written as a specific summary
+  of the change (not "fix bug" or "update code"). The body must describe
+  what changed and why, grounded in the actual diff — read every commit
+  being merged, not just the latest one. Do not restate the template's
+  section headers with placeholder or filler content; every claim in the
+  PR body should be verifiable against the diff.
+- **Template.** `.github/pull_request_template.md` defines the default body
+  shape (Summary, What changed, Test plan). `gh pr create` picks it up
+  automatically when no `--body`/`--body-file`/`--fill` is given; fill in
+  the sections with specifics rather than leaving them templated.
+
 ## Repo layout cheatsheet
 
 ```

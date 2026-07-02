@@ -23,6 +23,10 @@ export type { MediaModalOptions } from "./core/media.js";
 
 export { renderImage, DEFAULT_IMAGE_WIDTH } from "../../shared/image-markdown.js";
 
+// Client-safe template helpers for admin islands (no server/node deps).
+export { generateCss } from "../../template/generate.js";
+export type { SiteTemplateDefinition } from "../../template/types.js";
+
 export type {
   EditorInstance,
   PageEditorOptions,

@@ -1,4 +1,6 @@
 ---
+import { getAdminContext } from "nobodyreads/astro/context";
+
 const {
   title = "Admin",
   adminBase = "/admin",
@@ -12,6 +14,10 @@ const {
   scripts?: string;
   fullWidth?: boolean;
 };
+
+// AI theming is only offered when the host has configured a provider. Read the
+// flag from the admin context so no per-page prop threading is required.
+const aiEnabled = getAdminContext(Astro.locals)?.aiEnabled ?? false;
 
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
@@ -38,6 +44,8 @@ const navGroups = [
   {
     label: "Customize",
     items: [
+      // AI first: describing a mood is more natural than hand-editing tokens.
+      ...(aiEnabled ? [{ href: `${adminBase}/ai`, label: "AI" }] : []),
       { href: `${adminBase}/layout`, label: "Design" },
       { href: `${adminBase}/views`, label: "Views" },
     ],

@@ -2,6 +2,17 @@ import type { Database } from "../../../db/index.js";
 import type { MediaStorage } from "../../../media/storage.js";
 import type { EmailResolvable } from "../../../subscription/email.js";
 
+/**
+ * OpenAI-compatible provider config for AI theming. The engine is vendor- and
+ * key-agnostic: the host supplies these; when absent, AI routes return 503 and
+ * the host should hide the AI admin panel.
+ */
+export interface AiProviderConfig {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+}
+
 export interface AdminModuleContext {
   db: Database;
   storage?: MediaStorage;
@@ -18,4 +29,6 @@ export interface AdminModuleContext {
   siteUrl?: string;
   /** Display name used in notification email branding. */
   siteName?: string;
+  /** OpenAI-compatible provider config for AI theming. When absent, AI is off. */
+  ai?: AiProviderConfig;
 }

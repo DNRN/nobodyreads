@@ -379,18 +379,91 @@ responsibility of the host acting as identity provider, not this package.
 
 ## Embedding as a library
 
-A minimal host wires route factories onto its own Hono app:
+nobodyreads ships as two deployment modes:
+
+- **Standalone** (`npx nobodyreads` / `standalone.ts`) — a self-contained server. Everything is wired internally; you only supply environment variables and config files.
+- **Library / embedded** — your own Hono server imports route factories and mounts them at the paths you choose. You own auth, tenant resolution, and the outer server. This is how `nobodyreads.me` works.
+
+Choose embedded when you need custom auth (e.g. JWT platform sessions), multi-tenancy, or want to mount the engine under an arbitrary URL prefix alongside your own routes.
+
+### 1. Database and storage
 
 ```ts
-const db = await initDb();
-const storage = createMediaStorage();
+import { initDb, getPublicDir } from "nobodyreads";
+import { createMediaStorage, type LocalMediaStorage } from "nobodyreads/storage";
 
-app.route("/api", createBlogApiRoutes({ db, tenantId }));
-app.route("/api", createSubscriptionApiRoutes({ db, tenantId }));
-app.route("/admin", createAdminRoutes({ db, storage, tenantId, urlPrefix }));
+const db = await initDb(); // reads DATABASE_URL env var; applies schema
+const storage = createMediaStorage(); // reads config/storage.config.json
+if ("init" in storage) {
+  await (storage as LocalMediaStorage).init(); // creates local media dir if needed
+}
 ```
 
-For the admin UI, the host's Astro config adds the integration:
+`getPublicDir()` returns the path to the package's `public/` directory (editor CSS, client JS bundles). The host is responsible for serving those static files — either by copying them or serving them directly.
+
+### 2. Hono route factories
+
+Mount the route factories on your Hono app, passing `tenantId` and `urlPrefix` so routes generate correct links:
+
+```ts
+import {
+  createBlogApiRoutes,
+  createAdminRoutes,
+  createSubscriptionApiRoutes,
+  createMemberAuthRoutes,
+  createCommunityRoutes,
+} from "nobodyreads";
+
+// Public content + subscription API
+app.route(`/${nickname}/api`, createBlogApiRoutes({ db, tenantId }));
+app.route(`/${nickname}/api`, createSubscriptionApiRoutes({ db, tenantId }));
+
+// Community (memberships, likes)
+app.route(`/${nickname}/api`, createMemberAuthRoutes({ db, tenantId }));
+app.route(`/${nickname}/api`, createCommunityRoutes({ db, tenantId, resolveMember }));
+
+// Admin mutations (guarded by your own auth middleware before this)
+app.route(
+  `/${nickname}/admin`,
+  createAdminRoutes({ db, storage, tenantId, urlPrefix: `/${nickname}` }),
+);
+```
+
+`urlPrefix` is prepended to every link the route factories generate (e.g. `/admin/editor/save` becomes `/alice/admin/editor/save`). Omit it and links break in multi-tenant setups.
+
+### 3. Authentication
+
+Standalone uses a simple `EDITOR_PASSWORD` session cookie. In embedded mode, **the host owns authentication entirely** — the package does not call any auth helper on your behalf. Apply your own middleware before the admin routes:
+
+```ts
+app.use(`/${nickname}/admin/*`, async (c, next) => {
+  const session = getSessionFromRequest(c.req.raw);
+  if (!session || session.id !== tenantId) {
+    return c.redirect("/login");
+  }
+  return next();
+});
+```
+
+### 4. Static files
+
+Serve the package's bundled editor assets from the path returned by `getPublicDir()`, and the Astro client build output (`dist/astro/client`) so hashed island/transition assets resolve at `/_astro/*`:
+
+```ts
+import { getPublicDir } from "nobodyreads";
+const PUBLIC_DIR = getPublicDir();
+
+app.use("*", async (c, next) => {
+  // serve PUBLIC_DIR files, fall through on miss
+});
+app.use("*", async (c, next) => {
+  // serve ASTRO_CLIENT_DIR files, fall through on miss
+});
+```
+
+### 5. Astro integration and middleware
+
+Add the integration to your Astro config. Set `pattern` to match how your host routes admin URLs:
 
 ```ts
 import { nobodyreadsAdmin } from "nobodyreads/astro";
@@ -400,7 +473,52 @@ export default defineConfig({
 });
 ```
 
-The host must provide Astro middleware that resolves the tenant from the URL, authenticates the user, and calls `makeAdminContext()` to populate `Astro.locals.nobodyreadsAdmin`.
+The integration injects admin pages from the package into your Astro app. Those pages read `Astro.locals.nobodyreadsAdmin` — **the host's Astro middleware must populate this** before any admin page renders:
+
+```ts
+// astro/middleware.ts
+import { defineMiddleware } from "astro:middleware";
+import { ADMIN_CONTEXT_LOCALS_KEY, makeAdminContext } from "nobodyreads/astro/context";
+
+export const onRequest = defineMiddleware(async (context, next) => {
+  const match = context.url.pathname.match(/^\/([^/]+)\/admin(?:\/|$)/);
+  if (!match) return next();
+
+  const nickname = decodeURIComponent(match[1]);
+  const tenant = await getTenantByNickname(db, nickname);
+  if (!tenant) return next();
+
+  const session = getSessionFromRequest(context.request);
+  if (!session || session.id !== tenant.id) {
+    return context.redirect("/login");
+  }
+
+  (context.locals as Record<string, unknown>)[ADMIN_CONTEXT_LOCALS_KEY] =
+    makeAdminContext({
+      tenantId: tenant.id,
+      adminBase: `/${nickname}/admin`,
+      siteBase: `/${nickname}`,
+      loginHref: "/login",
+    });
+
+  return next();
+});
+```
+
+Admin pages **must not** perform auth themselves — by convention they trust that middleware has already approved the request and set the context.
+
+### 6. Dev mode (HMR proxy)
+
+When proxying to the Astro dev server, also proxy WebSocket upgrade requests so Astro HMR works:
+
+```ts
+server.on("upgrade", (req, socket, head) => {
+  socket.on("error", () => socket.destroy());
+  // forward the upgrade to the Astro dev server TCP port
+});
+```
+
+See [`standalone.ts`](../src/standalone.ts) for the full reference implementation of the dev proxy and WebSocket forwarding. `nobodyreads.me/src/main.ts` is the canonical real-world example of the embedded pattern.
 
 ---
 

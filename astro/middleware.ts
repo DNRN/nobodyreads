@@ -28,6 +28,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       adminBase: "/admin",
       siteBase: "/",
       loginHref: LOGIN_PATH,
+      aiEnabled: !!process.env.OPENAI_API_KEY,
     });
   return next();
 });

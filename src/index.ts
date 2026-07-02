@@ -3,6 +3,8 @@ export { createPublicApiRoutes } from "./api/public.js";
 export type { PublicApiOptions } from "./api/public.js";
 export { createInterfaceApiRoutes } from "./api/interface.js";
 export type { InterfaceApiOptions } from "./api/interface.js";
+export { createAiApiRoutes } from "./api/ai/ai.routes.js";
+export type { AiApiOptions } from "./api/ai/ai.routes.js";
 
 // Routers (Hono sub-apps)
 export { createBlogApiRoutes } from "./content/routes.js";
@@ -29,6 +31,7 @@ export { createAdminRoutes, createEditorRoutes } from "./admin/server/routes.js"
 export type { AdminRouterOptions, EditorRouterOptions } from "./admin/server/routes.js";
 export { createContentRoutes } from "./admin/server/modules/content.js";
 export { createThemeRoutes } from "./admin/server/modules/theme.js";
+export { createAiRoutes } from "./admin/server/modules/ai.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
@@ -219,7 +222,11 @@ export {
   serializeRegistry,
   validateTheme,
   normalizeComponents,
+  themeDiffSchema,
+  themeDiffJsonSchema,
+  applyThemeDiff,
 } from "./template/index.js";
+export type { ThemeDiff } from "./template/index.js";
 export type {
   SiteTemplateDefinition,
   TokenSet,

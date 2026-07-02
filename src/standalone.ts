@@ -261,6 +261,7 @@ async function start() {
 		return c.text("Not found", 404);
 	});
 
+<<<<<<< HEAD
 	// ---- RSS feed ----
 	app.route(
 		"/",
@@ -271,6 +272,23 @@ async function start() {
 			siteTagline: process.env.SITE_TAGLINE,
 		}),
 	);
+=======
+  // ---- RSS feed ----
+  app.route(
+    "/",
+    createFeedRoutes({
+      db,
+      urlPrefix: process.env.URL_PREFIX || "",
+      siteName: process.env.SITE_NAME,
+      siteTagline: process.env.SITE_TAGLINE,
+    })
+  );
+
+  // ---- Public API: blog + subscriptions + community ----
+  app.route("/api", createBlogApiRoutes({ db }));
+  app.route("/api", createSubscriptionApiRoutes({ db }));
+  app.route("/api", createMemberAuthRoutes({ db }));
+>>>>>>> 3dc01c5d31bd1b550614eb83ddd640e8744fd590
 
 	// ---- Public API: blog + subscriptions + community ----
 	app.route("/api", createBlogApiRoutes({ db }));

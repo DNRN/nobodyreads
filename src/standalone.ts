@@ -272,6 +272,17 @@ async function start() {
 		}),
 	);
 
+	// ---- RSS feed ----
+	app.route(
+		"/",
+		createFeedRoutes({
+			db,
+			urlPrefix: process.env.URL_PREFIX || "",
+			siteName: process.env.SITE_NAME,
+			siteTagline: process.env.SITE_TAGLINE,
+		}),
+	);
+
 	// ---- Public API: blog + subscriptions + community ----
 	app.route("/api", createBlogApiRoutes({ db }));
 	app.route("/api", createSubscriptionApiRoutes({ db }));
@@ -294,6 +305,10 @@ async function start() {
 		app.route("/api", createFederatedAuthRoutes());
 	}
 
+	app.route(
+		"/api",
+		createCommunityRoutes({ db, resolveMember: memberResolver }),
+	);
 	app.route(
 		"/api",
 		createCommunityRoutes({ db, resolveMember: memberResolver }),
@@ -323,7 +338,10 @@ async function start() {
 	});
 
 	// ---- Admin routes ----
-	app.route("/admin", createAdminRoutes({ db, storage, ai: resolveAiProviderConfig() }));
+	app.route(
+		"/admin",
+		createAdminRoutes({ db, storage, ai: resolveAiProviderConfig() }),
+	);
 	app.route("/admin", createSubscriptionAdminRoutes({ db }));
 
 	// ---- Catchall: Astro SSR or dev proxy ----

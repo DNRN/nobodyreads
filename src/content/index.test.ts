@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createTestDb, type TestDb } from "../test/db.js";
-import { createBlogApiRoutes } from "./index.js";
+import { createBlogApiRoutes } from "./routes.js";
 import { upsertPage } from "./db.js";
 import type { Hono } from "hono";
 import type { Page } from "./types.js";

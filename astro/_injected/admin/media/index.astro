@@ -85,7 +85,13 @@ function isImage(mimeType: string): boolean {
       </div>
 
       <!-- Media grid -->
-      <p class="editor-empty" id="media-empty" hidden={items.length !== 0}>No media uploaded yet.</p>
+      <div class="nr-empty" id="media-empty" hidden={items.length !== 0}>
+        <div class="nr-empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2.4"/><circle cx="9" cy="10" r="1.7"/><path d="m5 17 4.5-4 4 3.5L17 12l3 3"/></svg>
+        </div>
+        <div class="nr-empty-title">Nothing here yet</div>
+        <p class="nr-empty-sub">Drop images here — nobody's judging the alt text.</p>
+      </div>
       <div class="media-grid" id="media-grid" hidden={items.length === 0}>
         {items.map((m) => (
           <div class="media-card" data-id={m.id}>

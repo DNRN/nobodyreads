@@ -90,10 +90,15 @@
   bind:this={formEl}
 >
   <div class="editor-list-header">
-    <h2>Theme Editor</h2>
+    <div>
+      <h2>Design</h2>
+      <p class="home-substat" style="margin-top:6px">
+        Your site's template — edit gently. Changes save as a draft first.
+      </p>
+    </div>
     <div class="editor-actions">
+      <span bind:this={saveStatus} class="editor-save-status" aria-live="polite">Saved</span>
       <button type="submit" class="btn btn-primary">Save draft</button>
-      <span bind:this={saveStatus} class="editor-save-status" aria-live="polite">Ready</span>
     </div>
   </div>
 
@@ -113,7 +118,7 @@
     <!-- HTML Layout tab -->
     <div class="site-editor-pane" data-pane="html">
       <label for="site-html">Layout HTML</label>
-      <details class="editor-tokens">
+      <details class="editor-tokens" open>
         <summary>Available tokens</summary>
         <div class="editor-tokens-body">
           <p class="hint">Use these tokens in your HTML layout. They will be replaced with actual content at render time.</p>

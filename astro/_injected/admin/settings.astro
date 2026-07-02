@@ -11,31 +11,40 @@ const emailEnabled = isEmailEnabled();
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
-        <h2>Settings</h2>
+        <div>
+          <h2>Settings</h2>
+          <p class="home-substat" style="margin-top:6px">The essentials. Nothing you don't need.</p>
+        </div>
       </div>
 
-      <section class="editor-home" aria-label="Site identity">
-        <div class="editor-home-main">
-          <span class="editor-home-label">Site identity</span>
-          <a href={`${ctx.editorBase}/site`} class="editor-home-title">
+      <section class="settings-card" aria-label="Site identity">
+        <div>
+          <span class="settings-eyebrow">Site identity</span>
+          <a href={`${ctx.editorBase}/site`} class="settings-card-title">
             Name, tagline, logo, favicon &amp; social image
           </a>
         </div>
-        <div class="editor-home-meta">
-          <a href={`${ctx.editorBase}/site`} class="btn btn-sm btn-ghost">Edit</a>
-        </div>
+        <a href={`${ctx.editorBase}/site`} class="btn btn-sm">Edit</a>
       </section>
 
-      <div class="editor-list-section">
+      <div class="editor-list-section" style="margin-top:2rem">
         <h3>Email subscriptions</h3>
 
-        <div class="env-status">
-          <div class="env-row">
-            <span class="env-label">Status</span>
-            <span class={emailEnabled ? "env-value env-on" : "env-value env-off"}>
-              {emailEnabled ? "Enabled" : "Disabled"}
-            </span>
+        <div class="settings-toggle-row">
+          <div>
+            <div class="env-label">Send new posts to subscribers</div>
+            <div class="env-value">
+              Currently
+              <span class={emailEnabled ? "env-on" : "env-off"}>
+                {emailEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
           </div>
+          <span
+            class:list={["nr-toggle", { "is-on": emailEnabled }]}
+            role="img"
+            aria-label={emailEnabled ? "Email subscriptions enabled" : "Email subscriptions disabled"}
+          ></span>
         </div>
         <p class="hint">
           Subscriber numbers live under <a href={`${ctx.adminBase}/community`}>Community</a>.

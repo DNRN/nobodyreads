@@ -33,7 +33,12 @@ function applyTheme(theme: Theme): void {
   root.dataset.theme = resolved;
   if (themeToggle) {
     const isDark = resolved === "dark";
-    themeToggle.textContent = isDark ? "Light" : "Dark";
+    // Icon toggles (e.g. the admin header, with moon/sun SVGs) manage their
+    // own visuals via CSS keyed on [data-theme]; only rewrite the label for
+    // plain text toggles so we don't clobber inline markup.
+    if (!themeToggle.querySelector("svg")) {
+      themeToggle.textContent = isDark ? "Light" : "Dark";
+    }
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute(
       "aria-label",

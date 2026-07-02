@@ -14,12 +14,23 @@ const homePage = pages.find((p) => p.kind === "home");
 const publishedPosts = posts.filter((p) => p.published).length;
 const drafts = pages.filter((p) => !p.published).length;
 
-const recent = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5);
+const recent = [...posts].sort((a, b) => (a.date < b.date ? 1 : -1));
+const resumePost = recent[0];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
+
+const today = new Date().toLocaleDateString("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
+// Sub-line stats, pluralized so a fresh site reads naturally.
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const substat = `${plural(publishedPosts, "post")} out in the world · ${plural(drafts, "draft")} waiting · ${plural(staticPages.length, "page")}`;
 
 // First-run checklist — nudges a brand-new site toward a real first post. Hidden
 // once every step is done so it doesn't clutter an established site. A fresh site
@@ -36,88 +47,80 @@ const checklist = [
   { done: posts.length > 0, label: "Write your first post", href: `${ctx.editorBase}/new?kind=post` },
   { done: publishedPosts > 0, label: "Publish a post", href: ctx.editorBase },
 ];
-const setupComplete = checklist.every((c) => c.done);
+const setupTotal = checklist.length;
+const setupDone = checklist.filter((c) => c.done).length;
+const setupComplete = setupDone >= setupTotal;
+const nextStep = checklist.find((c) => !c.done);
+const setupPct = Math.round((setupDone / setupTotal) * 100);
 ---
 <AdminLayout title="Home — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
-    <div class="dashboard-header">
-      <div>
-        <h2>Home</h2>
-        <p>Write, publish, and shape your site.</p>
-      </div>
-      <a href={`${ctx.editorBase}/new?kind=post`} class="btn btn-primary">Write a post</a>
+    <div class="home-eyebrow">{today}</div>
+    <h1 class="home-greeting">A quiet day to write.</h1>
+    <p class="home-substat">{substat}</p>
+
+    <div class="home-actions">
+      <a href={`${ctx.editorBase}/new?kind=post`} class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New post
+      </a>
+      <a href={`${ctx.editorBase}/new?kind=page`} class="btn">New page</a>
     </div>
 
-    {!setupComplete ? (
-      <div class="editor-list-section">
-        <h3>Get started</h3>
-        <ul class="dashboard-checklist">
-          {checklist.map((step) => (
-            <li class:list={["dashboard-check", { done: step.done }]}>
-              <span class="dashboard-check-mark">{step.done ? "✓" : "○"}</span>
-              {step.done ? <span>{step.label}</span> : <a href={step.href}>{step.label}</a>}
-            </li>
-          ))}
-        </ul>
+    {setupComplete ? (
+      <div class="setup-done">
+        <span class="setup-icon">✓</span>
+        <div class="setup-card-body">
+          <div class="setup-card-title">You're all set up.</div>
+          <div class="setup-card-sub">Now go write. Nobody's stopping you.</div>
+        </div>
       </div>
+    ) : (
+      <div class="setup-card">
+        <div class="setup-card-row">
+          <span class="setup-icon">✎</span>
+          <div class="setup-card-body">
+            <div class="setup-card-title">One thing left — {nextStep?.label.toLowerCase()}</div>
+            <div class="setup-card-sub">{setupDone} of {setupTotal} setup steps done.</div>
+          </div>
+          <a href={nextStep?.href} class="btn btn-primary btn-sm">Finish</a>
+        </div>
+        <div class="setup-progress">
+          <div class="setup-progress-fill" style={`width:${setupPct}%`}></div>
+        </div>
+      </div>
+    )}
+
+    {resumePost ? (
+      <>
+        <div class="section-label">Pick up where you left off</div>
+        <a href={`${ctx.editorBase}/${resumePost.id}`} class="resume-card">
+          <div>
+            <div class="resume-eyebrow">
+              {resumePost.published ? "Published" : "Draft"} · {formatDate(resumePost.date)}
+            </div>
+            <div class="resume-title">{resumePost.title}</div>
+            <div class="resume-url">/posts/{resumePost.slug}</div>
+          </div>
+          <span class="resume-arrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </span>
+        </a>
+      </>
     ) : null}
-
-    <div class="dashboard-stats">
-      <div class="dashboard-stat">
-        <span class="dashboard-stat-num">{publishedPosts}</span>
-        <span class="dashboard-stat-label">Published posts</span>
-      </div>
-      <div class="dashboard-stat">
-        <span class="dashboard-stat-num">{staticPages.length}</span>
-        <span class="dashboard-stat-label">Pages</span>
-      </div>
-      <div class="dashboard-stat">
-        <span class="dashboard-stat-num">{drafts}</span>
-        <span class="dashboard-stat-label">Drafts</span>
-      </div>
-    </div>
-
-    <div class="editor-list-section">
-      <div class="editor-list-header">
-        <h3>Recent posts</h3>
-        <a href={ctx.editorBase} class="btn btn-sm btn-ghost">All content</a>
-      </div>
-      {recent.length === 0 ? (
-        <p class="editor-empty">
-          No posts yet. <a href={`${ctx.editorBase}/new?kind=post`}>Write your first one.</a>
-        </p>
-      ) : (
-        <table class="editor-table">
-          <thead><tr><th>Title</th><th>Status</th><th>Date</th></tr></thead>
-          <tbody>
-            {recent.map((p) => (
-              <tr>
-                <td><a href={`${ctx.editorBase}/${p.id}`}>{p.title}</a></td>
-                <td class="cell-status">
-                  {p.published
-                    ? <span class="badge badge-published">published</span>
-                    : <span class="badge badge-draft">draft</span>}
-                </td>
-                <td class="cell-date">{formatDate(p.date)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
 
     <div class="dashboard-grid">
       <a href={`${ctx.adminBase}/layout`} class="dashboard-card">
         <h3>Design</h3>
-        <p>Edit your site template, colors, and structure.</p>
+        <p>Template &amp; colors</p>
       </a>
       <a href={`${ctx.adminBase}/media`} class="dashboard-card">
         <h3>Media</h3>
-        <p>Upload and manage images and files.</p>
+        <p>Images &amp; files</p>
       </a>
       <a href={`${ctx.adminBase}/settings`} class="dashboard-card">
         <h3>Settings</h3>
-        <p>Site identity, email, and configuration.</p>
+        <p>Identity &amp; email</p>
       </a>
     </div>
   </main>

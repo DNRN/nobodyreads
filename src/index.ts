@@ -5,6 +5,23 @@ export { createInterfaceApiRoutes } from "./api/interface.js";
 export type { InterfaceApiOptions } from "./api/interface.js";
 export { createAiApiRoutes } from "./api/ai/ai.routes.js";
 export type { AiApiOptions } from "./api/ai/ai.routes.js";
+export { createThemeProvider } from "./api/ai/provider.js";
+export type { AIThemeProvider } from "./api/ai/provider.js";
+export {
+  resolveAiProviderConfig,
+  getTenantAiConfig,
+  isAiConfigured,
+  SETTING_AI_PROVIDER,
+  SETTING_AI_MODEL,
+  SETTING_AI_BASE_URL,
+  SETTING_AI_API_KEY_ENC,
+} from "./api/ai/config.js";
+export { recordThemeGeneration } from "./api/ai/metering.js";
+export {
+  encryptSecret,
+  decryptSecret,
+  isSecretsEncryptionAvailable,
+} from "./shared/secrets.js";
 
 // Routers (Hono sub-apps)
 export { createBlogApiRoutes } from "./content/routes.js";
@@ -35,7 +52,7 @@ export { createAiRoutes } from "./admin/server/modules/ai.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
-export type { AdminModuleContext } from "./admin/server/modules/types.js";
+export type { AdminModuleContext, AiProviderConfig, AiProvider } from "./admin/server/modules/types.js";
 export {
   createSubscriptionApiRoutes,
   createSubscriptionAdminRoutes,

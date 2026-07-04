@@ -1,0 +1,123 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import {
+  initDb,
+  getPageByKind,
+  getNavItems,
+  renderContent,
+  getLatestSiteTemplateRevision,
+  getLatestSiteTemplateRevisionId,
+} from "nobodyreads";
+
+// Preview shows unsaved drafts, so it is owner-only. The host middleware is
+// responsible for auth + populating the admin context; injected pages only
+// read from it (parity with single-tenant `/preview`, but tenant-scoped).
+const ctx = requireAdminContext(Astro.locals);
+
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
+
+const tenantId = ctx.tenantId;
+const previewUrlPrefix = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
+const siteName = ctx.siteName || "nobodyreads.me";
+
+const db = await initDb();
+const [siteTemplate, latestRevisionId, page, navItems] = await Promise.all([
+  getLatestSiteTemplateRevision(db, tenantId),
+  getLatestSiteTemplateRevisionId(db, tenantId),
+  getPageByKind(db, "home", tenantId),
+  getNavItems(db, tenantId),
+]);
+
+const autoReloadScript = `(() => {
+  let currentRevisionId = ${latestRevisionId ?? "null"};
+  const pollIntervalMs = 1500;
+  const endpoint = "${previewUrlPrefix}/revision.json";
+
+  const schedule = () => window.setTimeout(check, pollIntervalMs);
+
+  async function check() {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("${ctx.loginHref}");
+        return;
+      }
+
+      if (!response.ok) {
+        schedule();
+        return;
+      }
+
+      const data = await response.json();
+      const nextRevisionId = typeof data.revisionId === "number" ? data.revisionId : null;
+      if (nextRevisionId !== currentRevisionId) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Keep polling even on transient network/runtime errors.
+    }
+
+    schedule();
+  }
+
+  schedule();
+})();`;
+
+let htmlBody = "";
+if (page?.content?.trim()) {
+  htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
+    includeDrafts: true,
+    showMissingPlaceholders: true,
+  });
+}
+
+if (!page) {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      tenantId,
+      title: page.title || siteName,
+      navItems,
+      activePageId: page.id,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: previewUrlPrefix,
+      ogType: "website",
+      seo: page.seo,
+      page,
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    }
+  : {
+      tenantId,
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    };
+---
+<SiteLayout options={options} templateOverride={siteTemplate}>
+  {page ? (
+    <>
+      {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h2 class="post-title">Not found</h2>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+    </>
+  )}
+  <script is:inline set:html={autoReloadScript}></script>
+</SiteLayout>

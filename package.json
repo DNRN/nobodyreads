@@ -72,6 +72,7 @@
     "site:use-minimal-css": "tsx scripts/use-minimal-css.ts",
     "site:bootstrap": "tsx scripts/bootstrap-site.ts",
     "site:remove-site-script": "tsx scripts/remove-site-script.ts",
+    "theme:smoke": "tsx scripts/theme-generation-smoke.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
     "post": "tsx scripts/publish.ts"
@@ -90,9 +91,11 @@
     "url": "https://github.com/nobodyreads/nobodyreads"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@astrojs/node": "^9.5.2",
     "@astrojs/svelte": "^7.2.5",
     "@google-cloud/storage": "^7.21.0",
+    "@google/genai": "^2.10.0",
     "@hono/node-server": "^1.19.12",
     "@hono/zod-validator": "^0.7.6",
     "@libsql/client": "^0.14.0",

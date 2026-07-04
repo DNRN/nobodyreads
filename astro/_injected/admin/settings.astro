@@ -27,6 +27,42 @@ const emailEnabled = isEmailEnabled();
         <a href={`${ctx.editorBase}/site`} class="btn btn-sm">Edit</a>
       </section>
 
+      {ctx.aiEnabled && (
+        <div class="editor-list-section" style="margin-top:2rem">
+          <h3>AI theming provider</h3>
+          <p class="hint" style="margin-top:0">
+            By default your plot uses the free built-in model. Bring your own
+            provider and key to use your own quota instead. Your key is encrypted
+            and never shown again.
+          </p>
+          <form id="ai-provider-form" data-admin-base={ctx.adminBase} class="ai-provider-form">
+            <label class="env-label" for="ai-provider">Provider</label>
+            <select id="ai-provider" name="provider">
+              <option value="openai-compatible">OpenAI-compatible (OpenAI, OpenRouter, Together, Groq, vLLM…)</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="gemini">Google (Gemini)</option>
+              <option value="local">Local (Ollama / llama.cpp)</option>
+            </select>
+
+            <label class="env-label" for="ai-model">Model</label>
+            <input id="ai-model" name="model" type="text" placeholder="e.g. gpt-4o-mini, claude-haiku-4-5, qwen2.5" autocomplete="off" />
+
+            <label class="env-label" for="ai-base-url">Base URL <span class="hint">(optional)</span></label>
+            <input id="ai-base-url" name="baseURL" type="text" placeholder="Override endpoint (required for local / custom gateways)" autocomplete="off" />
+
+            <label class="env-label" for="ai-api-key">API key</label>
+            <input id="ai-api-key" name="apiKey" type="password" placeholder="Leave blank to keep the current key" autocomplete="off" />
+            <p id="ai-key-status" class="hint" style="margin-top:2px"></p>
+
+            <div style="display:flex; gap:8px; margin-top:10px">
+              <button type="submit" class="btn btn-sm">Save provider</button>
+              <button type="button" id="ai-clear" class="btn btn-sm">Use free model</button>
+            </div>
+            <p id="ai-provider-msg" class="hint" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      )}
+
       <div class="editor-list-section" style="margin-top:2rem">
         <h3>Email subscriptions</h3>
 
@@ -53,3 +89,74 @@ const emailEnabled = isEmailEnabled();
     </div>
   </main>
 </AdminLayout>
+
+<script>
+  const form = document.getElementById("ai-provider-form") as HTMLFormElement | null;
+  if (form) {
+    const adminBase = form.dataset.adminBase ?? "";
+    const msg = document.getElementById("ai-provider-msg")!;
+    const keyStatus = document.getElementById("ai-key-status")!;
+    const providerEl = document.getElementById("ai-provider") as HTMLSelectElement;
+    const modelEl = document.getElementById("ai-model") as HTMLInputElement;
+    const baseUrlEl = document.getElementById("ai-base-url") as HTMLInputElement;
+    const keyEl = document.getElementById("ai-api-key") as HTMLInputElement;
+
+    async function load() {
+      try {
+        const res = await fetch(`${adminBase}/ai/settings`, {
+          headers: { accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const s = await res.json();
+        if (s.provider) providerEl.value = s.provider;
+        modelEl.value = s.model ?? "";
+        baseUrlEl.value = s.baseURL ?? "";
+        if (!s.encryptionAvailable) {
+          keyStatus.textContent = "Key storage is disabled on this host (no encryption key configured).";
+          keyEl.disabled = true;
+        } else if (s.hasKey) {
+          keyStatus.textContent = "A key is stored. Leave blank to keep it.";
+        } else if (s.platformDefault) {
+          keyStatus.textContent = "Currently using the free built-in model.";
+        }
+      } catch {
+        /* leave defaults */
+      }
+    }
+    load();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "Saving…";
+      const res = await fetch(`${adminBase}/ai/settings`, {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body: new FormData(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      msg.textContent = res.ok ? "Saved." : `Error: ${data.error ?? res.status}`;
+      if (res.ok) {
+        keyEl.value = "";
+        load();
+      }
+    });
+
+    document.getElementById("ai-clear")?.addEventListener("click", async () => {
+      msg.textContent = "Reverting to the free model…";
+      const body = new FormData();
+      body.set("clear", "1");
+      const res = await fetch(`${adminBase}/ai/settings`, {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body,
+      });
+      msg.textContent = res.ok ? "Now using the free built-in model." : "Failed to clear.";
+      if (res.ok) {
+        modelEl.value = "";
+        baseUrlEl.value = "";
+        keyEl.value = "";
+        load();
+      }
+    });
+  }
+</script>

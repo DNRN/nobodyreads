@@ -1,0 +1,169 @@
+---
+import SiteLayout from "../../layouts/SiteLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import {
+  initDb,
+  getPageBySlug,
+  getNavItems,
+  renderContent,
+  getLatestSiteTemplateRevision,
+  getLatestSiteTemplateRevisionId,
+} from "nobodyreads";
+import type { Page } from "nobodyreads";
+
+// Owner-only draft preview. Auth + admin context are provided by the host
+// middleware; this page only reads from the context (tenant-scoped `/preview`).
+const ctx = requireAdminContext(Astro.locals);
+
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
+
+const tenantId = ctx.tenantId;
+const previewUrlPrefix = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
+const siteName = ctx.siteName || "nobodyreads.me";
+
+const db = await initDb();
+const [siteTemplate, latestRevisionId, navItems] = await Promise.all([
+  getLatestSiteTemplateRevision(db, tenantId),
+  getLatestSiteTemplateRevisionId(db, tenantId),
+  getNavItems(db, tenantId),
+]);
+
+const autoReloadScript = `(() => {
+  let currentRevisionId = ${latestRevisionId ?? "null"};
+  const pollIntervalMs = 1500;
+  const endpoint = "${previewUrlPrefix}/revision.json";
+
+  const schedule = () => window.setTimeout(check, pollIntervalMs);
+
+  async function check() {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("${ctx.loginHref}");
+        return;
+      }
+
+      if (!response.ok) {
+        schedule();
+        return;
+      }
+
+      const data = await response.json();
+      const nextRevisionId = typeof data.revisionId === "number" ? data.revisionId : null;
+      if (nextRevisionId !== currentRevisionId) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Keep polling even on transient network/runtime errors.
+    }
+
+    schedule();
+  }
+
+  schedule();
+})();`;
+
+// Small, self-contained formatting helpers (kept inline so this injected page
+// has no dependency on the host app's lib/).
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+function pagePath(p: { kind: string; slug: string }, prefix = ""): string {
+  if (p.kind === "home") return prefix || "/";
+  if (p.kind === "post") return `${prefix}/posts/${p.slug}`;
+  return `${prefix}/${p.slug}`;
+}
+
+const rawPath = Astro.params.path ?? "";
+const segments = rawPath
+  .split("/")
+  .map((segment) => segment.trim())
+  .filter(Boolean);
+
+let page: Page | null = null;
+let pageKind: "post" | "page" | null = null;
+
+if (segments.length === 2 && segments[0] === "posts") {
+  page = await getPageBySlug(db, segments[1], "post", tenantId);
+  pageKind = "post";
+} else if (segments.length === 1) {
+  page = await getPageBySlug(db, segments[0], "page", tenantId);
+  pageKind = "page";
+} else {
+  Astro.response.status = 404;
+}
+
+if (page?.seo?.noAiTraining) {
+  Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
+}
+
+let htmlBody = "";
+if (page) {
+  htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
+    includeDrafts: true,
+    showMissingPlaceholders: true,
+  });
+} else {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      tenantId,
+      title: `${page.title} — ${siteName}`,
+      navItems,
+      activePageId: page.id,
+      scripts: page.scripts,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: pagePath(page, previewUrlPrefix),
+      ogType: pageKind === "post" ? "article" : undefined,
+      seo: page.seo,
+      page,
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    }
+  : {
+      tenantId,
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    };
+---
+<SiteLayout options={options} templateOverride={siteTemplate}>
+  {page ? (
+    <>
+      <div class="post-header">
+        {pageKind === "post" ? (
+          <time class="post-date" datetime={page.date}>{formatDate(page.date)}</time>
+        ) : null}
+        <h2 class="post-title">{page.title}</h2>
+      </div>
+      <div class={pageKind === "post" ? "post-body" : "page-body"} set:html={htmlBody} />
+      {pageKind !== "post" ? (
+        <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+      ) : null}
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h2 class="post-title">Not found</h2>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+    </>
+  )}
+  <script is:inline set:html={autoReloadScript}></script>
+</SiteLayout>

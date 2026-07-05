@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import OpenAI from "openai";
 import type { Database } from "../../db/index.js";
 import { DEFAULT_TENANT_ID } from "../../shared/types.js";
-import { AIGenerate } from "./ai.js";
+import { createThemeProvider } from "./provider.js";
 
 export interface AiApiOptions {
 	db: Database;
@@ -36,8 +36,13 @@ export function createAiApiRoutes(options: AiApiOptions): Hono {
 		return next();
 	});
 
-	/// Create AIGenerate
-	const aiGen = AIGenerate(openaiApiKey, openaiBaseRoute, process.env.AI_THEME_MODEL ?? "");
+	// OpenAI-compatible provider for the standalone /api/ai/theme endpoint.
+	const provider = createThemeProvider({
+		provider: "openai-compatible",
+		apiKey: openaiApiKey,
+		baseURL: openaiBaseRoute,
+		model: process.env.AI_THEME_MODEL ?? "",
+	});
 
 	app.get("/ai", async (c) => {
 		return c.json("AI Gen configured", 200);
@@ -48,7 +53,7 @@ export function createAiApiRoutes(options: AiApiOptions): Hono {
 		const { input } = body;
 
 		try {
-			const response = await aiGen.theme(input);
+			const response = await provider.generateThemeDiff(input);
 			return c.json(response);
 		} catch (err) {
 			if (err instanceof OpenAI.APIError) {

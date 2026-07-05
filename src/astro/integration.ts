@@ -14,6 +14,21 @@ export interface NobodyreadsAdminIntegrationOptions {
    * Trailing slashes are stripped.
    */
   pattern?: string;
+  /**
+   * URL pattern for the public site base under which the owner-only draft
+   * **preview** pages are mounted (`{sitePattern}/preview`, `/preview/[...path]`,
+   * `/preview/revision.json`). This is the AI/Design editors' live-preview
+   * iframe target.
+   *
+   * Multi-tenant hosts pass the site base, e.g. `"/[nickname]"`, and must have
+   * middleware that authorizes the owner and populates
+   * `Astro.locals.nobodyreadsAdmin` for `{sitePattern}/preview` too.
+   *
+   * When omitted, no preview routes are injected — single-tenant hosts that
+   * already ship their own `/preview` pages (or don't want them) are unaffected.
+   * Trailing slashes are stripped.
+   */
+  sitePattern?: string;
 }
 
 /**
@@ -26,13 +41,19 @@ export function nobodyreadsAdmin(
   options: NobodyreadsAdminIntegrationOptions = {}
 ): AstroIntegration {
   const pattern = (options.pattern ?? "/admin").replace(/\/+$/, "") || "/admin";
+  const sitePattern = options.sitePattern
+    ? options.sitePattern.replace(/\/+$/, "")
+    : null;
 
   // This file compiles to `dist/astro/integration.js`. The injected pages live
-  // at `<pkg>/astro/_injected/admin/*.astro` — resolve them relative to here.
+  // at `<pkg>/astro/_injected/**` — resolve them relative to here.
   const here = dirname(fileURLToPath(import.meta.url));
-  const adminPagesRoot = resolve(here, "..", "..", "astro", "_injected", "admin");
+  const injectedRoot = resolve(here, "..", "..", "astro", "_injected");
+  const adminPagesRoot = resolve(injectedRoot, "admin");
+  const previewPagesRoot = resolve(injectedRoot, "preview");
 
   const entry = (relative: string) => resolve(adminPagesRoot, relative);
+  const previewEntry = (relative: string) => resolve(previewPagesRoot, relative);
 
   return {
     name: "nobodyreads-admin",
@@ -87,6 +108,24 @@ export function nobodyreadsAdmin(
           pattern: `${pattern}/settings`,
           entrypoint: entry("settings.astro"),
         });
+
+        // Owner-only draft preview surface (the editors' live-preview iframe).
+        // Only injected when a host opts in via `sitePattern`; single-tenant
+        // hosts keep their own `/preview` pages.
+        if (sitePattern) {
+          injectRoute({
+            pattern: `${sitePattern}/preview`,
+            entrypoint: previewEntry("index.astro"),
+          });
+          injectRoute({
+            pattern: `${sitePattern}/preview/revision.json`,
+            entrypoint: previewEntry("revision.json.ts"),
+          });
+          injectRoute({
+            pattern: `${sitePattern}/preview/[...path]`,
+            entrypoint: previewEntry("[...path].astro"),
+          });
+        }
       },
     },
   };

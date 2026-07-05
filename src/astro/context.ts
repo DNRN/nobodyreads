@@ -19,6 +19,12 @@ export interface NobodyreadsAdminContext {
   loginHref: string;
   /** Whether AI theming is configured for this host (shows/hides the AI panel). */
   aiEnabled?: boolean;
+  /**
+   * Human-readable site/plot name for branding (page titles etc.). Optional so
+   * single-tenant hosts can fall back to a build-time default; multi-tenant
+   * hosts pass the tenant's display name.
+   */
+  siteName?: string;
 }
 
 export const ADMIN_CONTEXT_LOCALS_KEY = "nobodyreadsAdmin" as const;
@@ -68,5 +74,6 @@ export function makeAdminContext(
     siteBase: input.siteBase,
     loginHref: input.loginHref,
     aiEnabled: input.aiEnabled,
+    siteName: input.siteName,
   };
 }

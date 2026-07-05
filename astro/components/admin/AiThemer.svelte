@@ -27,6 +27,11 @@
   // and becomes the last AI result; follow-up prompts refine this one.
   let previewTemplate: SiteTemplateDefinition = savedTemplate;
 
+  // Each generation is auto-saved as a draft revision so the full site is
+  // navigable at the /preview pages while iterating. Refinements replace the
+  // previous auto-draft; "Save as draft" keeps the current one.
+  let autoDraftId: number | null = null;
+
   let preview: HTMLIFrameElement;
 
   function showToast(message: string, type: "info" | "success" | "error" = "info", ms = 3000) {
@@ -74,11 +79,54 @@
       previewTemplate = data.template;
       hasResult = true;
       injectPreviewCss(previewTemplate);
-      showToast("Preview updated — save it as a draft when you're happy", "success");
+      await autoSaveDraft();
+      showToast("Preview updated — browse the full site from “Open in new tab”", "success", 5000);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Generation failed", "error", 5000);
     } finally {
       generating = false;
+    }
+  }
+
+  /** POST the current preview to /layout/save and return the new revision id. */
+  async function postDraft(): Promise<number> {
+    const body = new URLSearchParams();
+    body.set("template", JSON.stringify(previewTemplate));
+    const res = await fetch(`${adminBase}/layout/save`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Accept: "application/json",
+      },
+      credentials: "same-origin",
+      body,
+    });
+    if (!res.ok) throw new Error(`Save failed (${res.status})`);
+    const data = (await res.json().catch(() => ({}))) as { revisionId?: number };
+    if (typeof data.revisionId !== "number") throw new Error("Save failed (no revision id)");
+    return data.revisionId;
+  }
+
+  /**
+   * Persist the latest generation as a draft revision so the /preview pages
+   * (which render the newest revision, published or not) show it site-wide.
+   * The previous auto-draft is deleted so refinements don't fill up revision
+   * history. Failures are silent — the iframe preview still works and the
+   * explicit save button remains available.
+   */
+  async function autoSaveDraft() {
+    const previous = autoDraftId;
+    try {
+      autoDraftId = await postDraft();
+    } catch {
+      return;
+    }
+    if (previous != null) {
+      fetch(`${adminBase}/layout/revision/delete/${previous}?ifUnpublished=1`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      }).catch(() => {});
     }
   }
 
@@ -87,18 +135,10 @@
     saving = true;
     showToast("Saving draft…", "info", 0);
     try {
-      const body = new URLSearchParams();
-      body.set("template", JSON.stringify(previewTemplate));
-      const res = await fetch(`${adminBase}/layout/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-        body,
-      });
-      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      // The preview is usually already stored as an auto-draft; keeping it just
+      // means no longer replacing it on the next generation.
+      if (autoDraftId == null) await postDraft();
+      autoDraftId = null;
       showToast("Saved as a draft revision — publish it from Design", "success", 6000);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Save failed", "error", 5000);
@@ -138,7 +178,9 @@
       {#if hasResult}
         <p class="hint">
           Keep refining with follow-up prompts ("more whitespace", "swap to a serif"), or save
-          the current preview.
+          the current preview. You can browse your whole site with this theme at
+          <a href={previewUrl} target="_blank" rel="noreferrer">{previewUrl}</a> — it follows
+          along as you refine.
         </p>
       {/if}
 

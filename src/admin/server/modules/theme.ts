@@ -7,6 +7,7 @@ import {
   addSiteTemplateRevision,
   deleteSiteTemplateRevision,
   setCurrentSiteTemplateRevision,
+  getCurrentSiteTemplateRevisionId,
 } from "../../../shared/site-bundle.js";
 import {
   getSiteSettings,
@@ -64,7 +65,23 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
 
   const deleteRevision = async (c: Context) => {
     const revisionId = parseInt(c.req.param("id") ?? "0", 10);
-    await deleteSiteTemplateRevision(db, revisionId, tenantId);
+
+    // ?ifUnpublished=1 makes this a no-op when the revision is the currently
+    // published one, so automated cleanup (e.g. the AI themer replacing its
+    // auto-saved draft) can never re-point the live site.
+    let deleted = true;
+    if (c.req.query("ifUnpublished") != null) {
+      const currentId = await getCurrentSiteTemplateRevisionId(db, tenantId);
+      deleted = currentId !== revisionId;
+    }
+    if (deleted) {
+      await deleteSiteTemplateRevision(db, revisionId, tenantId);
+    }
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) {
+      return c.json({ ok: true, deleted });
+    }
     return c.redirect(`${adminBase}/layout`);
   };
   app.post("/site/revision/delete/:id", deleteRevision);

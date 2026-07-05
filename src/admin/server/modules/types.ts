@@ -2,14 +2,21 @@ import type { Database } from "../../../db/index.js";
 import type { MediaStorage } from "../../../media/storage.js";
 import type { EmailResolvable } from "../../../subscription/email.js";
 
+/** AI backend an {@link AiProviderConfig} targets. */
+export type AiProvider = "openai-compatible" | "anthropic" | "gemini" | "local";
+
 /**
- * OpenAI-compatible provider config for AI theming. The engine is vendor- and
- * key-agnostic: the host supplies these; when absent, AI routes return 503 and
- * the host should hide the AI admin panel.
+ * Vendor-neutral AI provider config, used for theme generation today and reused
+ * by later AI features (e.g. comment moderation). The engine is vendor- and
+ * key-agnostic: the host supplies this; when absent, AI routes return 503 and
+ * the host should hide the AI admin panel. `apiKey`/`baseURL` are optional
+ * because the `local` (Ollama/llama.cpp) provider needs neither, and hosted
+ * providers supply their own default endpoint.
  */
 export interface AiProviderConfig {
-  apiKey: string;
-  baseURL: string;
+  provider: AiProvider;
+  apiKey?: string;
+  baseURL?: string;
   model: string;
 }
 

@@ -1,12 +1,29 @@
 import { Hono } from "hono";
 import OpenAI from "openai";
-import { AIGenerate } from "../../../api/ai/ai.js";
+import { createThemeProvider } from "../../../api/ai/provider.js";
+import { generateTheme } from "../../../api/ai/generate-theme.js";
+import {
+  getTenantAiConfig,
+  isAiConfigured,
+  SETTING_AI_PROVIDER,
+  SETTING_AI_MODEL,
+  SETTING_AI_BASE_URL,
+  SETTING_AI_API_KEY_ENC,
+} from "../../../api/ai/config.js";
+import { recordThemeGeneration } from "../../../api/ai/metering.js";
 import { getSiteTemplate } from "../../../shared/site-bundle.js";
+import {
+  getSiteSettings,
+  setSiteSetting,
+  deleteSiteSetting,
+} from "../../../shared/site-settings.js";
+import { encryptSecret, isSecretsEncryptionAvailable } from "../../../shared/secrets.js";
 import { DEFAULT_TEMPLATE } from "../../../template/defaults.js";
-import { applyThemeDiff } from "../../../template/ai-theme.js";
 import { validateTheme } from "../../../template/theme-io.js";
 import type { SiteTemplateDefinition } from "../../../template/types.js";
-import type { AdminModuleContext } from "./types.js";
+import type { AiProvider, AdminModuleContext } from "./types.js";
+
+const AI_PROVIDERS: AiProvider[] = ["openai-compatible", "anthropic", "gemini", "local"];
 
 /**
  * AI theming routes (per-tenant). Generation only — it never persists. The
@@ -24,7 +41,11 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
   const app = new Hono();
 
   app.post("/ai/generate", async (c) => {
-    if (!ai?.apiKey || !ai.baseURL || !ai.model) {
+    // A per-tenant BYO provider config in site_settings overrides the platform
+    // default (ctx.ai). Either can serve the request; 503 only when neither
+    // resolves to a usable config.
+    const effectiveAi = (await getTenantAiConfig(db, tenantId)) ?? ai;
+    if (!isAiConfigured(effectiveAi)) {
       return c.json({ error: "AI theming is not configured" }, 503);
     }
 
@@ -45,15 +66,15 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
     }
 
     try {
-      const diff = await AIGenerate(ai.apiKey, ai.baseURL, ai.model).theme(prompt);
-      const merged = applyThemeDiff(current, diff);
-
-      const validation = validateTheme(merged);
-      if (!validation.ok) {
-        return c.json({ error: `Generated theme was invalid: ${validation.error}` }, 400);
+      const provider = createThemeProvider(effectiveAi);
+      const result = await generateTheme(provider, current, prompt);
+      if (!result.ok) {
+        return c.json({ error: `Generated theme was invalid: ${result.error}` }, 400);
       }
 
-      return c.json({ template: validation.theme, diff });
+      // Metering hook for per-plan generation limits (Phase 9). No-op today.
+      await recordThemeGeneration(tenantId);
+      return c.json({ template: result.template, diff: result.diff });
     } catch (err) {
       if (err instanceof OpenAI.APIError) {
         return c.json({ error: err.message }, err.status ?? 502);
@@ -61,6 +82,72 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
       console.error("AI theme generation failed:", err);
       return c.json({ error: "Failed to generate theme" }, 500);
     }
+  });
+
+  // --- BYO provider settings (per-tenant, stored in site_settings) ---
+  // The API key is encrypted at rest and never returned to the client; the GET
+  // reports only whether one is stored. This same surface + secrets util is
+  // reused by later AI features (e.g. Phase 4 moderation).
+
+  app.get("/ai/settings", async (c) => {
+    const settings = await getSiteSettings(db, tenantId);
+    return c.json({
+      provider: settings[SETTING_AI_PROVIDER] ?? "",
+      model: settings[SETTING_AI_MODEL] ?? "",
+      baseURL: settings[SETTING_AI_BASE_URL] ?? "",
+      hasKey: !!settings[SETTING_AI_API_KEY_ENC],
+      // Whether the host can encrypt a BYO key at all (SETTINGS_ENC_KEY set).
+      encryptionAvailable: isSecretsEncryptionAvailable(),
+      // Whether a platform default exists, so the UI can say "using the free model".
+      platformDefault: isAiConfigured(ai),
+    });
+  });
+
+  app.post("/ai/settings", async (c) => {
+    const body = await c.req.parseBody();
+    const provider = String(body.provider ?? "").trim();
+    const model = String(body.model ?? "").trim();
+    const baseURL = String(body.baseURL ?? "").trim();
+    const apiKey = String(body.apiKey ?? "").trim();
+    const clear = body.clear != null;
+
+    // Clearing reverts the tenant to the platform default.
+    if (clear || (!provider && !model && !baseURL && !apiKey)) {
+      await deleteSiteSetting(db, tenantId, SETTING_AI_PROVIDER);
+      await deleteSiteSetting(db, tenantId, SETTING_AI_MODEL);
+      await deleteSiteSetting(db, tenantId, SETTING_AI_BASE_URL);
+      await deleteSiteSetting(db, tenantId, SETTING_AI_API_KEY_ENC);
+      return c.json({ ok: true, cleared: true });
+    }
+
+    if (!AI_PROVIDERS.includes(provider as AiProvider)) {
+      return c.json({ error: "Unknown provider" }, 400);
+    }
+    if (!model) {
+      return c.json({ error: "A model is required" }, 400);
+    }
+    if (provider !== "local" && !apiKey) {
+      // Allow keeping an already-stored key: only require one when none exists.
+      const existing = await getSiteSettings(db, tenantId);
+      if (!existing[SETTING_AI_API_KEY_ENC]) {
+        return c.json({ error: "An API key is required for this provider" }, 400);
+      }
+    }
+
+    await setSiteSetting(db, tenantId, SETTING_AI_PROVIDER, provider);
+    await setSiteSetting(db, tenantId, SETTING_AI_MODEL, model);
+    if (baseURL) {
+      await setSiteSetting(db, tenantId, SETTING_AI_BASE_URL, baseURL);
+    } else {
+      await deleteSiteSetting(db, tenantId, SETTING_AI_BASE_URL);
+    }
+    if (apiKey) {
+      if (!isSecretsEncryptionAvailable()) {
+        return c.json({ error: "Secret encryption is not configured on this host" }, 503);
+      }
+      await setSiteSetting(db, tenantId, SETTING_AI_API_KEY_ENC, encryptSecret(apiKey));
+    }
+    return c.json({ ok: true });
   });
 
   return app;

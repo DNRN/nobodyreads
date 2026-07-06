@@ -81,6 +81,9 @@ async function migrateColumns(client: Client): Promise<void> {
     "ALTER TABLE page ADD COLUMN comments_enabled INTEGER NOT NULL DEFAULT 1",
     "ALTER TABLE page ADD COLUMN in_feed INTEGER NOT NULL DEFAULT 1",
     "ALTER TABLE comment ADD COLUMN pinned_at TEXT",
+    "ALTER TABLE comment ADD COLUMN held_at TEXT",
+    "ALTER TABLE page ADD COLUMN moderation_mode TEXT NOT NULL DEFAULT 'inherit'",
+    "ALTER TABLE page ADD COLUMN moderation_rules TEXT",
   ];
   for (const sql of migrations) {
     try {

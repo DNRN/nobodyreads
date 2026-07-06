@@ -69,6 +69,8 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
 
   let signedIn = false;
   let comments: CommentNode[] = [];
+  // Set when the last submission was held for review; consumed by render().
+  let pendingNotice = false;
 
   function commentForm(
     parentId: string | null,
@@ -111,7 +113,7 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
       error.style.display = "none";
       const payload: { body: string; parentId?: string } = { body };
       if (parentId) payload.parentId = parentId;
-      const res = await request(threadUrl, "POST", payload);
+      const res = await request<CommentNode>(threadUrl, "POST", payload);
       submit.disabled = false;
       if (res.status === 401) {
         location.href = loginUrl(loginHref);
@@ -128,6 +130,7 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
         return;
       }
       textarea.value = "";
+      if (res.body && res.body.pending) pendingNotice = true;
       if (onDone) onDone();
       await reload();
     });
@@ -138,10 +141,14 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
     let cls = "nb-comment";
     if (c.deleted) cls += " nb-comment-deleted";
     if (c.pinned) cls += " nb-comment-pinned";
+    if (c.pending) cls += " nb-comment-pending";
     const li = el("li", cls);
     const meta = el("div", "nb-comment-meta");
     if (c.pinned) {
       meta.appendChild(el("span", "nb-comment-pinned-badge", "Pinned"));
+    }
+    if (c.pending) {
+      meta.appendChild(el("span", "nb-comment-pending-badge", "Pending review"));
     }
     meta.appendChild(
       el("span", "nb-comment-author", c.deleted ? "—" : c.authorName),
@@ -156,7 +163,8 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
     let replyOpen = false;
     const replySlot = el("div");
 
-    if (!c.deleted) {
+    // Pending comments are leaves — the server rejects replies to them.
+    if (!c.deleted && !c.pending) {
       const replyBtn = el("button", null, "Reply");
       replyBtn.type = "button";
       replyBtn.addEventListener("click", () => {
@@ -214,10 +222,17 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
     root.innerHTML = "";
     root.className = "nb-comments";
 
-    const count = comments.filter((c) => !c.deleted).length;
+    const count = comments.filter((c) => !c.deleted && !c.pending).length;
     root.appendChild(
       el("h2", null, count === 1 ? "1 comment" : count + " comments"),
     );
+
+    if (pendingNotice) {
+      root.appendChild(
+        el("p", "nb-comment-notice", "Your comment is awaiting review."),
+      );
+      pendingNotice = false;
+    }
 
     // Top-level composer first, so the call to action is visible.
     root.appendChild(commentForm(null, null));

@@ -16,3 +16,4 @@ export { media } from "../../media/schema.js";
 export { member, plotMembership, postLike } from "../../community/schema.js";
 export { comment } from "../../comments/schema.js";
 export { subscriber } from "../../subscription/schema.js";
+export { spaceRuleset, moderationQueue } from "../../moderation/schema.js";

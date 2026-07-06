@@ -4,7 +4,7 @@ import type { Database } from "../db/index.js";
 import type { ResolveMember } from "../community/types.js";
 import type { EmailResolvable } from "../subscription/email.js";
 import { createCommunityRoutes, createMemberAuthRoutes } from "../community/routes.js";
-import { createCommentRoutes } from "../comments/routes.js";
+import { createCommentRoutes, type CommentModerationOptions } from "../comments/routes.js";
 import { createSubscriptionApiRoutes } from "../subscription/index.js";
 import { createFederatedAuthRoutes } from "../federation/routes.js";
 
@@ -26,6 +26,8 @@ export interface InterfaceApiOptions {
   commentRateLimitPerMinute?: number;
   /** Returns true when the requester may remove any comment (post owner/admin). */
   canModerateComments?: (c: Context) => boolean | Promise<boolean>;
+  /** AI-assisted pre-publish comment moderation (Phase 4). Off when omitted. */
+  commentModeration?: CommentModerationOptions;
 }
 
 /**
@@ -53,6 +55,7 @@ export function createInterfaceApiRoutes(options: InterfaceApiOptions): Hono {
       resolveMember,
       rateLimitPerMinute: options.commentRateLimitPerMinute,
       canModerate: options.canModerateComments,
+      moderation: options.commentModeration,
     })
   );
 

@@ -9,6 +9,7 @@ import type {
   NavItem,
   LinkTarget,
   PageKind,
+  ModerationMode,
   ContentView,
   ContentViewKind,
   ContentViewConfig,
@@ -41,6 +42,8 @@ function toPage(row: PageRow): Page {
         : undefined,
     commentsEnabled: row.commentsEnabled ?? true,
     inFeed: row.inFeed ?? true,
+    moderationMode: (row.moderationMode as ModerationMode) ?? "inherit",
+    moderationRules: row.moderationRules ?? undefined,
   };
 }
 
@@ -458,6 +461,8 @@ export async function upsertPage(
       navOrder: p.nav?.order ?? null,
       commentsEnabled: p.commentsEnabled,
       inFeed: p.inFeed,
+      moderationMode: p.moderationMode,
+      moderationRules: p.moderationRules ?? null,
     })
     .onConflictDoUpdate({
       target: [page.pageId, page.tenantId],
@@ -477,6 +482,8 @@ export async function upsertPage(
         navOrder: p.nav?.order ?? null,
         commentsEnabled: p.commentsEnabled,
         inFeed: p.inFeed,
+        moderationMode: p.moderationMode,
+        moderationRules: p.moderationRules ?? null,
       },
     });
 }

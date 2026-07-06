@@ -105,6 +105,10 @@ export function nobodyreadsAdmin(
           entrypoint: entry("community/index.astro"),
         });
         injectRoute({
+          pattern: `${pattern}/moderation`,
+          entrypoint: entry("moderation/index.astro"),
+        });
+        injectRoute({
           pattern: `${pattern}/settings`,
           entrypoint: entry("settings.astro"),
         });

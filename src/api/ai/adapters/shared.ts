@@ -23,8 +23,46 @@ export const SYSTEM_PROMPT =
  */
 export const MAX_TOKENS = 8192;
 
-/** Parse a model response into a ThemeDiff, tolerating surrounding prose/fences. */
-export function parseThemeDiff(raw: string): ThemeDiff | null {
+/**
+ * A single schema-constrained model call, independent of what the schema
+ * describes. Both AI features (theme generation, moderation verdicts) reduce to
+ * this shape; each adapter maps it to its backend's native constraint
+ * mechanism (OpenAI `json_schema`, Anthropic forced tool use, Gemini
+ * `responseJsonSchema`, Ollama `format`).
+ */
+export interface StructuredCallSpec {
+  /** System instruction for the call. */
+  system: string;
+  /** User content the model responds to. */
+  user: string;
+  /** snake_case name for the schema/tool (e.g. "theme_diff", "set_verdict"). */
+  schemaName: string;
+  /** JSON Schema the response must conform to. */
+  schema: Record<string, unknown>;
+  /** Tool description for backends that constrain via a forced tool call. */
+  toolDescription?: string;
+  /**
+   * Extra guidance appended to the system prompt when a backend falls back to
+   * plain JSON mode (schema embedded in the prompt instead of enforced).
+   */
+  jsonModeInstruction?: string;
+  /** Sampling temperature where the backend supports it. Default 0.4. */
+  temperature?: number;
+  /** Completion budget. Default {@link MAX_TOKENS}. */
+  maxTokens?: number;
+}
+
+/**
+ * Backend-specific executor for a {@link StructuredCallSpec}. Returns the
+ * parsed JSON value; callers validate it against their own zod schema — the
+ * JSON Schema constraint is a guide for the model, not the safety boundary.
+ */
+export interface StructuredCaller {
+  callStructured(spec: StructuredCallSpec): Promise<unknown>;
+}
+
+/** Parse a model response as JSON, tolerating surrounding prose/fences. */
+export function parseLooseJson(raw: string): unknown | null {
   const attempts = [raw];
   // Some models wrap the object in markdown fences or preamble; fall back to
   // the outermost {...} span.
@@ -33,10 +71,15 @@ export function parseThemeDiff(raw: string): ThemeDiff | null {
   if (first !== -1 && last > first) attempts.push(raw.slice(first, last + 1));
   for (const candidate of attempts) {
     try {
-      return JSON.parse(candidate) as ThemeDiff;
+      return JSON.parse(candidate);
     } catch {
       // try the next candidate
     }
   }
   return null;
+}
+
+/** Parse a model response into a ThemeDiff, tolerating surrounding prose/fences. */
+export function parseThemeDiff(raw: string): ThemeDiff | null {
+  return parseLooseJson(raw) as ThemeDiff | null;
 }

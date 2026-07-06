@@ -42,6 +42,7 @@
     nav: undefined,
     commentsEnabled: true,
     inFeed: true,
+    moderationMode: "inherit",
   } as Page);
 
   // --- Form state ---
@@ -56,6 +57,8 @@
   let navOrder = $state(p.nav?.order != null ? String(p.nav.order) : "");
   let commentsEnabled = $state(p.commentsEnabled ?? true);
   let inFeed = $state(p.inFeed ?? true);
+  let moderationMode = $state<"inherit" | "custom" | "off">(p.moderationMode ?? "inherit");
+  let moderationRules = $state(p.moderationRules ?? "");
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
   let content = $state(p.content ?? "");
@@ -99,7 +102,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, moderationMode, moderationRules, seoOgImage, seoTwitterCard });
   }
   let baseline = snapshot();
 
@@ -121,6 +124,8 @@
     body.set("nav_order", navOrder);
     body.set("comments_enabled", commentsEnabled ? "on" : "off");
     body.set("in_feed", inFeed ? "on" : "off");
+    body.set("moderation_mode", moderationMode);
+    body.set("moderation_rules", moderationRules);
     body.set("seo_og_image", seoOgImage);
     body.set("seo_twitter_card", seoTwitterCard);
     body.set("content", content);
@@ -178,7 +183,7 @@
   // Any edit to content or metadata (re)arms the autosave timer. The baseline
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, moderationMode, moderationRules, seoOgImage, seoTwitterCard];
     if (editorReady) scheduleAutosave();
   });
 
@@ -476,6 +481,30 @@
               : "Comments are closed for this post."}
           </p>
         </div>
+        {#if commentsEnabled}
+          <div class="field">
+            <label for="moderation_mode">Comment moderation</label>
+            <select id="moderation_mode" bind:value={moderationMode}>
+              <option value="inherit">Use my space rules</option>
+              <option value="custom">Custom rules for this post</option>
+              <option value="off">Off for this post</option>
+            </select>
+            {#if moderationMode === "custom"}
+              <textarea
+                rows="3"
+                placeholder="e.g. Keep it strictly on the topic of this post."
+                bind:value={moderationRules}
+              ></textarea>
+            {/if}
+            <p class="hint">
+              {moderationMode === "inherit"
+                ? "New comments are checked against the rules under Moderation."
+                : moderationMode === "custom"
+                  ? "New comments here are checked against these rules instead."
+                  : "New comments on this post are never checked."}
+            </p>
+          </div>
+        {/if}
         <div class="field">
           <label class="checkbox-label">
             <input type="checkbox" bind:checked={inFeed} />

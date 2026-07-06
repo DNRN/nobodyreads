@@ -30,6 +30,12 @@ export interface PageMeta {
 
 export type PageKind = "home" | "page" | "post";
 
+/**
+ * How comments on a post are AI-moderated: inherit the space ruleset, use
+ * custom rules attached to this post, or skip moderation entirely.
+ */
+export type ModerationMode = "inherit" | "custom" | "off";
+
 export interface PageNav {
   label: string; // Display text in the navigation bar
   order: number; // Sort position (0 = leftmost)
@@ -83,6 +89,8 @@ export interface Page {
   nav?: PageNav; // If present, page appears in the top bar
   commentsEnabled: boolean; // Whether readers can comment on this post
   inFeed: boolean; // Whether this post appears in the RSS feed
+  moderationMode: ModerationMode; // How comments here are AI-moderated
+  moderationRules?: string; // Custom rules used when moderationMode is "custom"
 }
 
 /** An uploaded media file (image, video, audio, etc.). */

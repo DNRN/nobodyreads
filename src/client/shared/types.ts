@@ -22,6 +22,8 @@ export interface CommentNode {
   createdAt: string;
   deleted: boolean;
   pinned: boolean;
+  /** True when the comment is held for moderation review (author-only view). */
+  pending?: boolean;
   mine: boolean;
   /** Populated client-side by buildTree(); absent in the raw response. */
   children?: CommentNode[];

@@ -20,6 +20,7 @@ function toComment(row: typeof comment.$inferSelect): Comment {
     updatedAt: row.updatedAt ?? undefined,
     deleted: row.deletedAt != null,
     pinned: row.pinnedAt != null,
+    held: row.heldAt != null,
   };
 }
 
@@ -69,10 +70,23 @@ export async function createComment(
     memberSubject: input.identity.subject,
     authorName: input.identity.displayName,
     body: input.body,
+    heldAt: input.held ? new Date().toISOString() : null,
   });
   const created = await getCommentById(db, tenantId, commentId);
   // The row was just inserted, so this is always present.
   return created!;
+}
+
+/** Release a held comment so it becomes public (moderation approve/dismiss). */
+export async function unholdComment(
+  db: Database,
+  tenantId: string,
+  commentId: string
+): Promise<void> {
+  await db
+    .update(comment)
+    .set({ heldAt: null })
+    .where(and(eq(comment.tenantId, tenantId), eq(comment.commentId, commentId)));
 }
 
 /** Soft-delete a comment (keeps its place in the thread). */

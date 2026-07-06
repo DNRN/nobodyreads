@@ -1,0 +1,185 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, getSpaceRuleset, listModerationQueue } from "nobodyreads";
+import type { ModerationQueueStatus } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+
+const db = await initDb();
+const ruleset = await getSpaceRuleset(db, ctx.tenantId);
+
+const statusParam = Astro.url.searchParams.get("status");
+const status: ModerationQueueStatus =
+  statusParam === "dismissed" || statusParam === "actioned" ? statusParam : "pending";
+const items = await listModerationQueue(db, ctx.tenantId, status);
+
+const statusTabs: Array<{ value: ModerationQueueStatus; label: string }> = [
+  { value: "pending", label: "Pending" },
+  { value: "dismissed", label: "Kept" },
+  { value: "actioned", label: "Removed" },
+];
+
+function excerpt(text: string, limit = 280): string {
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+function confidencePct(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso.replace(" ", "T") + (iso.includes("Z") ? "" : "Z"));
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+---
+<AdminLayout title="Moderation — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <div>
+          <h2>Moderation</h2>
+          <p class="home-substat" style="margin-top:6px">
+            Set the tone of your plot's discussion. Comments that cross the line are held for your review.
+          </p>
+        </div>
+      </div>
+
+      <div class="editor-list-section">
+        <h3>Discussion rules</h3>
+        {!ctx.aiEnabled && (
+          <p class="hint" style="margin-top:0">
+            AI validation is inactive until an AI provider is configured in
+            <a href={`${ctx.adminBase}/settings`}>Settings</a>. Your rules are saved either way.
+          </p>
+        )}
+        <form id="ruleset-form" data-admin-base={ctx.adminBase}>
+          <label class="settings-toggle-row" style="margin-bottom:0.75rem">
+            <span class="env-label">Check new comments against my rules</span>
+            <input type="hidden" name="enabled" value="off" />
+            <input type="checkbox" name="enabled" value="on" checked={ruleset?.enabled ?? false} />
+          </label>
+
+          <label class="env-label" for="rules">Rules</label>
+          <textarea id="rules" name="rules" rows="4"
+            placeholder="e.g. Discuss in good faith. No personal attacks. Stay on the topic of the post.">{ruleset?.rules ?? ""}</textarea>
+
+          <label class="env-label" for="tone">Desired tone <span class="hint">(optional)</span></label>
+          <input id="tone" name="tone" type="text" placeholder="e.g. curious, constructive, welcoming to newcomers"
+            value={ruleset?.tone ?? ""} autocomplete="off" />
+
+          <label class="env-label" for="no-go-topics">Off-limits topics <span class="hint">(optional, one per line)</span></label>
+          <textarea id="no-go-topics" name="noGoTopics" rows="2">{ruleset?.noGoTopics ?? ""}</textarea>
+
+          <label class="env-label" for="off-topic-examples">Examples of off-topic comments <span class="hint">(optional, one per line)</span></label>
+          <textarea id="off-topic-examples" name="offTopicExamples" rows="2">{ruleset?.offTopicExamples ?? ""}</textarea>
+
+          <label class="settings-toggle-row" style="margin:0.75rem 0">
+            <span>
+              <span class="env-label">Hold flagged comments before they go public</span>
+              <span class="hint" style="display:block">When off, flagged comments publish immediately but still appear in the inbox.</span>
+            </span>
+            <input type="hidden" name="autoHide" value="off" />
+            <input type="checkbox" name="autoHide" value="on" checked={ruleset?.autoHide ?? true} />
+          </label>
+
+          <div style="display:flex; gap:8px; margin-top:10px">
+            <button type="submit" class="btn btn-sm">Save rules</button>
+          </div>
+          <p id="ruleset-msg" class="hint" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="editor-list-section" style="margin-top:2rem">
+        <h3>Inbox</h3>
+        <div style="display:flex; gap:12px; margin-bottom:0.75rem">
+          {statusTabs.map((tab) => (
+            <a
+              href={`${ctx.adminBase}/moderation?status=${tab.value}`}
+              class:list={["hint", { "env-on": status === tab.value }]}
+            >{tab.label}</a>
+          ))}
+        </div>
+
+        {items.length === 0 ? (
+          <p class="hint">
+            {status === "pending"
+              ? "Nothing awaiting review. Quiet is good."
+              : "Nothing here yet."}
+          </p>
+        ) : (
+          <ul style="list-style:none; margin:0; padding:0" data-admin-base={ctx.adminBase} id="moderation-inbox">
+            {items.map((item) => (
+              <li class="settings-card" style="display:block; margin-bottom:0.75rem" data-queue-id={item.id}>
+                <div class="hint" style="margin-bottom:4px">
+                  <strong>{item.comment.authorName}</strong>
+                  {" on "}
+                  <a href={`${ctx.siteBase.replace(/\/$/, "")}/posts/${item.page.slug}`} target="_blank">{item.page.title}</a>
+                  {" · "}{formatDate(item.createdAt)}
+                  {" · "}{item.comment.held ? "held" : "published"}
+                </div>
+                <div style="white-space:pre-wrap; overflow-wrap:anywhere; margin:0.25rem 0 0.5rem">{excerpt(item.comment.body)}</div>
+                <div class="hint" style="margin-bottom:0.5rem">
+                  {item.flagReason}
+                  {item.rule ? ` (rule: ${item.rule})` : ""}
+                  {" · confidence "}{confidencePct(item.confidence)}
+                </div>
+                {status === "pending" && (
+                  <div style="display:flex; gap:8px">
+                    <button type="button" class="btn btn-sm" data-action={item.comment.held ? "approve" : "dismiss"}>
+                      {item.comment.held ? "Approve" : "Dismiss"}
+                    </button>
+                    <button type="button" class="btn btn-sm" data-action="remove">Remove comment</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  </main>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById("ruleset-form") as HTMLFormElement | null;
+  if (form) {
+    const adminBase = form.dataset.adminBase ?? "";
+    const msg = document.getElementById("ruleset-msg")!;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "Saving…";
+      const res = await fetch(`${adminBase}/moderation/ruleset`, {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body: new FormData(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      msg.textContent = res.ok ? "Saved." : `Error: ${data.error ?? res.status}`;
+    });
+  }
+
+  const inbox = document.getElementById("moderation-inbox");
+  if (inbox) {
+    const adminBase = inbox.dataset.adminBase ?? "";
+    inbox.addEventListener("click", async (e) => {
+      const button = (e.target as HTMLElement).closest("button[data-action]");
+      if (!button) return;
+      const item = button.closest("[data-queue-id]") as HTMLElement | null;
+      if (!item) return;
+      const action = button.getAttribute("data-action");
+      if (action === "remove" && !confirm("Remove this comment?")) return;
+      (button as HTMLButtonElement).disabled = true;
+      const res = await fetch(
+        `${adminBase}/moderation/queue/${encodeURIComponent(item.dataset.queueId!)}/${action}`,
+        { method: "POST", headers: { accept: "application/json" } },
+      );
+      if (res.ok) {
+        item.remove();
+      } else {
+        (button as HTMLButtonElement).disabled = false;
+      }
+    });
+  }
+</script>

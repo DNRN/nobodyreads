@@ -7,3 +7,8 @@ export async function recordThemeGeneration(_tenantId: string): Promise<void> {
   // TODO(phase-9): count per-tenant generations and enforce plan limits /
   // metering for the free model. BYO-key and unlimited tiers skip the cap.
 }
+
+/** Same seam for AI moderation checks (one per judged comment). */
+export async function recordModerationCheck(_tenantId: string): Promise<void> {
+  // TODO(phase-9): count per-tenant moderation checks and enforce plan limits.
+}

@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS page (
   nav_order  INTEGER,
   comments_enabled INTEGER NOT NULL DEFAULT 1,
   in_feed          INTEGER NOT NULL DEFAULT 1,
+  moderation_mode  TEXT NOT NULL DEFAULT 'inherit',
+  moderation_rules TEXT,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -151,10 +153,40 @@ CREATE TABLE IF NOT EXISTS comment (
   updated_at     TEXT,
   deleted_at     TEXT,
   pinned_at      TEXT,
+  held_at        TEXT,
   PRIMARY KEY (comment_id, tenant_id)
 );
 CREATE INDEX IF NOT EXISTS comment_page_idx ON comment (tenant_id, page_id, created_at);
 CREATE INDEX IF NOT EXISTS comment_parent_idx ON comment (parent_id);
+
+-- Space ruleset (per-tenant discussion rules for AI-assisted moderation)
+CREATE TABLE IF NOT EXISTS space_ruleset (
+  tenant_id          TEXT PRIMARY KEY DEFAULT '_default',
+  enabled            INTEGER NOT NULL DEFAULT 0,
+  rules              TEXT NOT NULL DEFAULT '',
+  tone               TEXT NOT NULL DEFAULT '',
+  no_go_topics       TEXT NOT NULL DEFAULT '',
+  off_topic_examples TEXT NOT NULL DEFAULT '',
+  auto_hide          INTEGER NOT NULL DEFAULT 1,
+  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Moderation queue (comments flagged by the AI pre-publish check)
+CREATE TABLE IF NOT EXISTS moderation_queue (
+  queue_id    TEXT NOT NULL,
+  tenant_id   TEXT NOT NULL DEFAULT '_default',
+  comment_id  TEXT NOT NULL,
+  page_id     TEXT NOT NULL,
+  verdict     TEXT NOT NULL CHECK(verdict IN ('hold','reject')),
+  flag_reason TEXT NOT NULL,
+  rule        TEXT,
+  confidence  REAL NOT NULL,
+  status      TEXT NOT NULL CHECK(status IN ('pending','dismissed','actioned')) DEFAULT 'pending',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at TEXT,
+  PRIMARY KEY (queue_id, tenant_id)
+);
+CREATE INDEX IF NOT EXISTS moderation_queue_status_idx ON moderation_queue (tenant_id, status, created_at);
 
 -- Email subscribers
 CREATE TABLE IF NOT EXISTS subscriber (

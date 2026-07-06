@@ -27,6 +27,8 @@ export const page = sqliteTable(
     inFeed: integer("in_feed", { mode: "boolean" })
       .notNull()
       .default(true),
+    moderationMode: text("moderation_mode").notNull().default("inherit"),
+    moderationRules: text("moderation_rules"),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),

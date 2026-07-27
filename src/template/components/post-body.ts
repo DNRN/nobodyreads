@@ -14,6 +14,13 @@ const BASE_CSS = `.post-header {
   font-size: 1.6rem;
 }
 
+/* On a post page the date is a byline under the title, not an eyebrow above
+   it — unlike in the post-preview listing, where .post-date leads. */
+.post-header .post-date {
+  margin-top: 0.45rem;
+  margin-bottom: 0;
+}
+
 .post-body p {
   margin-bottom: 1.2rem;
 }

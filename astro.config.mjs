@@ -32,6 +32,7 @@ export default defineConfig({
         { find: /^nobodyreads\/astro$/, replacement: r("./src/astro/index.ts") },
         { find: /^nobodyreads\/editor\/milkdown$/, replacement: r("./src/admin/client/milkdown/index.ts") },
         { find: /^nobodyreads\/editor$/, replacement: r("./src/admin/client/index.ts") },
+        { find: /^nobodyreads\/image-markdown$/, replacement: r("./src/shared/image-markdown.ts") },
         { find: /^nobodyreads\/storage$/, replacement: r("./src/media/storage.ts") },
         { find: /^nobodyreads\/schema$/, replacement: r("./src/db/schema.ts") },
         { find: /^nobodyreads$/, replacement: r("./src/index.ts") },

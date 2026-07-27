@@ -5,6 +5,8 @@
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/frame.css";
   import type { Page, PageKind } from "nobodyreads";
+  import { altFromName, altWithDefaultWidth, imageMarkdown } from "nobodyreads/image-markdown";
+  import MediaPicker from "./MediaPicker.svelte";
 
   interface Props {
     page?: Page;
@@ -56,15 +58,20 @@
   let inFeed = $state(p.inFeed ?? true);
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
-  let seoImageUploading = $state(false);
   let content = $state(p.content ?? "");
   let slugManuallyEdited = false;
 
   let editorReady = $state(false);
   let sourceMode = $state(false);
+  let pickerOpen = $state(false);
+  // Which field an open MediaPicker selection should land in: the post body
+  // (inserted at the caret) or the Share image field (replaces its value).
+  let pickerTarget: "body" | "seo" = "body";
 
   let formEl: HTMLFormElement;
   let crepeMount: HTMLElement;
+  let sourceEl: HTMLTextAreaElement;
+  let imageBtnEl: HTMLButtonElement;
   let crepe: CrepeType | null = null;
 
   function onTitleInput() {
@@ -203,15 +210,53 @@
     return data.url as string;
   }
 
-  async function uploadSeoImage(file: File): Promise<void> {
-    seoImageUploading = true;
-    try {
-      seoOgImage = await uploadImage(file);
-    } catch {
-      showToast("Image upload failed", "error", 4000);
-    } finally {
-      seoImageUploading = false;
+  // --- Image insertion -----------------------------------------------------
+  // Two paths, because the two modes hold the document in different places:
+  // Crepe owns a ProseMirror doc, Source mode is a plain textarea.
+
+  async function insertImageWysiwyg(url: string, name: string) {
+    if (!crepe) return;
+    const { editorViewCtx } = await import("@milkdown/kit/core");
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const imageType = view.state.schema.nodes.image;
+      if (!imageType) return;
+      const node = imageType.create({ src: url, alt: altWithDefaultWidth(name) });
+      view.dispatch(view.state.tr.replaceSelectionWith(node, false).scrollIntoView());
+      view.focus();
+    });
+    // markdownUpdated also fires, but it is debounced 200ms — sync now so an
+    // immediate Source toggle or save sees the image.
+    content = crepe.getMarkdown();
+  }
+
+  async function insertImageSource(url: string, name: string) {
+    const md = imageMarkdown(altFromName(name), url);
+    const start = sourceEl?.selectionStart ?? content.length;
+    const end = sourceEl?.selectionEnd ?? start;
+    content = content.slice(0, start) + md + content.slice(end);
+    await tick(); // let bind:value flush before moving the caret
+    sourceEl?.focus();
+    sourceEl?.setSelectionRange(start + md.length, start + md.length);
+  }
+
+  function insertImage({ url, name }: { url: string; name: string }) {
+    pickerOpen = false;
+    if (pickerTarget === "seo") {
+      seoOgImage = url;
+      return;
     }
+    return sourceMode ? insertImageSource(url, name) : insertImageWysiwyg(url, name);
+  }
+
+  function openPicker(target: "body" | "seo") {
+    pickerTarget = target;
+    pickerOpen = true;
+  }
+
+  function closePicker() {
+    pickerOpen = false;
+    if (pickerTarget === "body") imageBtnEl?.focus();
   }
 
   async function createCrepe(initial: string) {
@@ -248,7 +293,7 @@
             for (const file of Array.from(files)) {
               if (!file.type.startsWith("image/")) continue;
               const url = await uploadImage(file);
-              nodes.push(image.create({ src: url, alt: file.name.replace(/\.[^.]+$/, "") }));
+              nodes.push(image.create({ src: url, alt: altWithDefaultWidth(file.name) }));
             }
             return nodes;
           },
@@ -317,10 +362,38 @@
       <div class="editor-pane editor-pane-write">
         <div class="editor-toolbar editor-toolbar--wysiwyg">
           <span class="editor-mode-label">{sourceMode ? "Markdown source" : "Visual editor"}</span>
-          <button type="button" class="btn btn-sm btn-ghost" onclick={toggleSource}>
-            {sourceMode ? "Visual" : "Source"}
-          </button>
+          <div class="editor-toolbar-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-ghost"
+              bind:this={imageBtnEl}
+              onclick={() => openPicker("body")}
+            >
+              Image
+            </button>
+            <button type="button" class="btn btn-sm btn-ghost" onclick={toggleSource}>
+              {sourceMode ? "Visual" : "Source"}
+            </button>
+          </div>
         </div>
+
+        <!--
+          The title heads the writing column rather than sitting in the sidebar:
+          it becomes the document's <h1> on the published page, so it has to
+          read as part of the document. Tucked into the sidebar it looks like
+          metadata, and authors re-type it as a `# ` heading in the body.
+        -->
+        <label class="visually-hidden" for="title">Title</label>
+        <input
+          type="text"
+          id="title"
+          name="title"
+          class="editor-doc-title"
+          placeholder="Title"
+          bind:value={title}
+          oninput={onTitleInput}
+          required
+        />
 
         <div bind:this={crepeMount} class="nbr-milkdown" class:hidden={sourceMode}></div>
 
@@ -331,17 +404,13 @@
           class:hidden={editorReady && !sourceMode}
           placeholder="Write your markdown here..."
           spellcheck="true"
+          bind:this={sourceEl}
           bind:value={content}
         ></textarea>
       </div>
     </div>
 
     <aside class="editor-sidebar">
-      <div class="field">
-        <label for="title">Title</label>
-        <input type="text" id="title" name="title" bind:value={title} oninput={onTitleInput} required />
-      </div>
-
       {#if kind === "home"}
         <input type="hidden" name="slug" value={slug || "home"} />
       {:else}
@@ -425,28 +494,21 @@
           <summary>Social sharing</summary>
           <div class="field">
             <label for="seo_og_image">Share image</label>
-            <p class="hint">Overrides the site default when this post is shared on social networks.</p>
+            <p class="hint">
+              Defaults to the first image in the post, or the site default if there isn't one.
+              Pick a different image or paste a URL to override it.
+            </p>
             <div class="seo-image-row">
               <input
                 type="text"
                 id="seo_og_image"
                 name="seo_og_image"
-                placeholder="https://… or upload below"
+                placeholder="https://… or choose below"
                 bind:value={seoOgImage}
               />
-              <label class="btn btn-sm btn-ghost seo-image-upload-btn" aria-busy={seoImageUploading}>
-                {seoImageUploading ? "Uploading…" : "Upload"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onchange={async (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) await uploadSeoImage(file);
-                    (e.target as HTMLInputElement).value = "";
-                  }}
-                />
-              </label>
+              <button type="button" class="btn btn-sm btn-ghost" onclick={() => openPicker("seo")}>
+                Choose…
+              </button>
             </div>
             {#if seoOgImage}
               <img
@@ -467,17 +529,19 @@
         </details>
       {/if}
 
-      <details class="field">
-        <summary>Navigation</summary>
-        <div class="field">
-          <label for="nav_label">Nav label</label>
-          <input type="text" id="nav_label" name="nav_label" bind:value={navLabel} />
-        </div>
-        <div class="field">
-          <label for="nav_order">Nav order</label>
-          <input type="number" id="nav_order" name="nav_order" bind:value={navOrder} />
-        </div>
-      </details>
+      {#if kind === "page" || kind === "home"}
+        <details class="field">
+          <summary>Navigation</summary>
+          <div class="field">
+            <label for="nav_label">Nav label</label>
+            <input type="text" id="nav_label" name="nav_label" bind:value={navLabel} />
+          </div>
+          <div class="field">
+            <label for="nav_order">Nav order</label>
+            <input type="number" id="nav_order" name="nav_order" bind:value={navOrder} />
+          </div>
+        </details>
+      {/if}
 
       <details class="field">
         <summary>Markdown reference</summary>
@@ -508,6 +572,16 @@
       </div>
     </aside>
   </form>
+
+  {#if pickerOpen}
+    <MediaPicker
+      listUrl={`${adminBase}/media/list`}
+      upload={uploadImage}
+      onSelect={insertImage}
+      onClose={closePicker}
+      onError={(m) => showToast(m, "error", 4000)}
+    />
+  {/if}
 
   {#if toast}
     <div class={`nbr-toast nbr-toast--${toast.type}`} role="status" aria-live="polite" transition:fade={{ duration: 150 }}>

@@ -1,8 +1,22 @@
 import type { Page, PageMeta, FaqItem, LayoutOptions } from "../content/types.js";
 import { escapeHtml } from "./http.js";
+import { firstImageUrl } from "./image-markdown.js";
 
 const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
 const SITE_NAME = process.env.SITE_NAME || "nobodyreads.me";
+
+/**
+ * The social share image for a page: an explicit `seo.ogImage` always wins
+ * (so authors can pick whatever they like), otherwise fall back to the first
+ * image embedded in the post body, and finally the site-wide default.
+ */
+function resolveOgImage(options: LayoutOptions): string | undefined {
+  return (
+    options.seo?.ogImage ||
+    (options.page?.content ? firstImageUrl(options.page.content) : undefined) ||
+    options.defaultOgImage
+  );
+}
 
 export function buildMetaTags(options: LayoutOptions): string {
   const lines: string[] = [];
@@ -34,8 +48,8 @@ export function buildMetaTags(options: LayoutOptions): string {
     lines.push(`  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">`);
   }
 
-  // Social image: page-level override, else site-wide default.
-  const ogImage = seo?.ogImage || options.defaultOgImage;
+  // Social image: page-level override, else first in-post image, else site-wide default.
+  const ogImage = resolveOgImage(options);
 
   // Open Graph tags
   lines.push(`  <meta property="og:site_name" content="${escapeHtml(options.siteName || SITE_NAME)}">`);
@@ -121,10 +135,9 @@ export function buildStructuredData(options: LayoutOptions): string {
 
     if (page.updated) article.dateModified = page.updated;
     if (page.tags.length > 0) article.keywords = page.tags.join(", ");
-    if (seo?.ogImage) {
-      article.image = seo.ogImage.startsWith("http")
-        ? seo.ogImage
-        : `${SITE_URL}${seo.ogImage}`;
+    const ogImage = resolveOgImage(options);
+    if (ogImage) {
+      article.image = ogImage.startsWith("http") ? ogImage : `${SITE_URL}${ogImage}`;
     }
 
     // GEO: Author with expertise for AI citation quality

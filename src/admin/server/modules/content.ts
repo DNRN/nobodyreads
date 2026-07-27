@@ -18,9 +18,12 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
   // client-side `marked` pass cannot resolve (no DB / no SQL / no JS template).
   app.post("/editor/preview", async (c) => {
     let content = "";
+    let pageTitle: string | undefined;
     try {
-      const body = (await c.req.json()) as { content?: unknown };
+      const body = (await c.req.json()) as { content?: unknown; title?: unknown };
       if (typeof body.content === "string") content = body.content;
+      // Sent so the preview applies the same H1 normalisation as the live page.
+      if (typeof body.title === "string") pageTitle = body.title;
     } catch {
       return c.json({ error: "Invalid JSON body" }, 400);
     }
@@ -29,6 +32,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       const html = await renderContent(db, content, tenantId, urlPrefix, {
         includeDrafts: true,
         showMissingPlaceholders: true,
+        pageTitle,
       });
       return c.json({ html });
     } catch (err) {

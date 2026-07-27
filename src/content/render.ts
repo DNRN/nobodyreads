@@ -1,5 +1,6 @@
 import type { Database } from "../db/index.js";
 import { Marked, type MarkedExtension } from "marked";
+import { normalizeHeadings } from "../shared/markdown-headings.js";
 import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustomViewQuery } from "./db.js";
 import { renderPostListView } from "./templates.js";
 import { escapeHtml } from "../shared/http.js";
@@ -169,7 +170,28 @@ async function renderCustomView(
 
 // --- Markdown rendering ---
 
-export function renderMarkdown(content: string): string {
+export interface RenderMarkdownOptions {
+  /**
+   * The title the page chrome renders as the document's `<h1>`.
+   *
+   * When set, the body is normalised so it cannot compete with that heading:
+   * a leading `# ` whose text matches the title is dropped (authors habitually
+   * repeat it), and any remaining body `# ` is demoted to `<h2>` so the page
+   * keeps exactly one `<h1>`. Omit it for pages that render no chrome title
+   * (the home page) — there the body owns its own heading levels.
+   */
+  pageTitle?: string;
+}
+
+export function renderMarkdown(content: string, options: RenderMarkdownOptions = {}): string {
+  const { pageTitle } = options;
+
+  if (pageTitle?.trim()) {
+    const tokens = marked.lexer(content);
+    normalizeHeadings(tokens, pageTitle);
+    return marked.parser(tokens);
+  }
+
   const html = marked.parse(content);
   if (typeof html !== "string") {
     throw new Error("Unexpected async markdown rendering");
@@ -178,6 +200,8 @@ export function renderMarkdown(content: string): string {
 }
 
 // --- Full content rendering pipeline ---
+
+export interface RenderContentOptions extends ResolveViewsOptions, RenderMarkdownOptions {}
 
 /**
  * Render a page's markdown content to HTML, resolving [[id]] links and
@@ -194,7 +218,7 @@ export async function renderContent(
   markdown: string,
   tenantId: string,
   urlPrefix: string = "",
-  viewOptions: ResolveViewsOptions = {}
+  options: RenderContentOptions = {}
 ): Promise<string> {
   const withLinks = await resolveLinks(db, markdown, tenantId, urlPrefix);
 
@@ -203,10 +227,10 @@ export async function renderContent(
     withLinks,
     tenantId,
     urlPrefix,
-    viewOptions
+    options
   );
 
-  let html = renderMarkdown(withPlaceholders);
+  let html = renderMarkdown(withPlaceholders, options);
 
   if (viewHtml.size > 0) {
     html = html.replace(VIEW_PLACEHOLDER_RE, (_match, slug: string) => viewHtml.get(slug) ?? "");

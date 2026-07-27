@@ -2225,6 +2225,51 @@
 	color: var(--nr-muted);
 }
 
+/* The toolbar is space-between, so the buttons need their own group to sit
+   together on the right instead of spreading. */
+.nr-admin .editor-toolbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* The document title. Deliberately chrome-less and sharing the ProseMirror
+   column's measure and horizontal padding below, so it reads as the first line
+   of the document rather than as a form field. */
+.nr-admin .editor-doc-title {
+	flex-shrink: 0;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 1.75rem max(2rem, calc((100% - 44rem) / 2)) 0;
+	border: none;
+	background: var(--nr-bg);
+	color: var(--nr-text);
+	font-family: inherit;
+	font-size: 1.75rem;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.nr-admin .editor-doc-title::placeholder {
+	color: var(--nr-muted);
+	opacity: 0.55;
+}
+
+.nr-admin .editor-doc-title:focus {
+	outline: none;
+}
+
+/* Focus is still discoverable without a box: keyboard users get a ring. */
+.nr-admin .editor-doc-title:focus-visible {
+	outline: 2px solid var(--nr-accent, currentColor);
+	outline-offset: 2px;
+}
+
+/* The title supplies the column's top padding, so the body starts flush. */
+.nr-admin .editor-doc-title + .nbr-milkdown .milkdown > .ProseMirror {
+	padding-top: 1rem;
+}
+
 .nr-admin .nbr-milkdown {
 	flex: 1;
 	min-height: 0;
@@ -2302,6 +2347,14 @@
 	--crepe-color-error: var(--nr-danger);
 }
 
+/* The editor hides the native caret and draws its own via
+   prosemirror-virtual-cursor, colored by --crepe-color-outline. That token
+   is a subtle hairline-border color, so the caret was nearly invisible
+   against the background. Give it a proper high-contrast color instead. */
+.nr-admin .nbr-milkdown .milkdown .ProseMirror-focused {
+	--prosemirror-virtual-cursor-color: var(--nr-accent);
+}
+
 /* Save toast (page editor) */
 .nr-admin .nbr-toast {
 	position: fixed;
@@ -2351,9 +2404,8 @@
 	min-width: 0;
 }
 
-.nr-admin .seo-image-upload-btn {
+.nr-admin .seo-image-row .btn {
 	flex-shrink: 0;
-	cursor: pointer;
 }
 
 .nr-admin .seo-image-preview {

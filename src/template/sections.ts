@@ -26,8 +26,10 @@ function headerSectionHtml(config: HeaderSectionConfig): string {
 
   if (config.showHero) {
     const wmXl = wordmarkHtml("xl", config.logoText, config.logoDotText);
+    // Not an <h1>: the hero repeats the site wordmark on every page, so the
+    // document's single <h1> belongs to the page's own title instead.
     html += `\n    <div class="site-hero">
-      <h1 class="hero-title">${wmXl}</h1>`;
+      <p class="hero-title">${wmXl}</p>`;
     if (config.showTagline) {
       html += `\n      <p class="hero-tagline">{{siteTagline}}</p>`;
     }

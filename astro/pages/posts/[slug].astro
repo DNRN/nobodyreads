@@ -26,7 +26,9 @@ if (page?.seo?.noAiTraining) {
 
 let htmlBody = "";
 if (page) {
-  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix);
+  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix, {
+    pageTitle: page.title,
+  });
 } else {
   Astro.response.status = 404;
 }
@@ -64,8 +66,8 @@ const options = page
   {page ? (
     <>
       <div class="post-header">
+        <h1 class="post-title">{page.title}</h1>
         <time class="post-date" datetime={page.date}>{formatDate(page.date)}</time>
-        <h2 class="post-title">{page.title}</h2>
       </div>
       <div class="post-body" set:html={htmlBody} />
       <ShareBar
@@ -85,7 +87,7 @@ const options = page
   ) : (
     <>
       <div class="post-header">
-        <h2 class="post-title">Not found</h2>
+        <h1 class="post-title">Not found</h1>
       </div>
       <p>There's nothing here.</p>
       <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>

@@ -23,6 +23,41 @@
 /** Width pre-filled into the markdown when an image is inserted from the toolbar. */
 export const DEFAULT_IMAGE_WIDTH = "600px";
 
+/** Strip the file extension from a filename for use as alt text. */
+export function altFromName(name: string): string {
+  return name.replace(/\.[^.]+$/, "");
+}
+
+/**
+ * Alt-text slot carrying the default width hint, e.g. `"sunset|600px"`.
+ *
+ * Used where an image node is built directly (the WYSIWYG editor) rather than
+ * as a markdown string, so every insertion path agrees on the default size.
+ */
+export function altWithDefaultWidth(name: string): string {
+  return `${altFromName(name)}|${DEFAULT_IMAGE_WIDTH}`;
+}
+
+/**
+ * Build the markdown snippet inserted when an image is added. We pre-fill a
+ * sensible default width so the author immediately sees the size syntax and
+ * can tweak the number (or add `|left` / `|right` to wrap text) without
+ * having to remember it.
+ */
+export function imageMarkdown(alt: string, url: string): string {
+  return `![${alt}|${DEFAULT_IMAGE_WIDTH}](${url})`;
+}
+
+const FIRST_IMAGE_RE = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/;
+
+/**
+ * Find the first image embedded in a post's Markdown body, used as the
+ * fallback social share image when the author hasn't picked one explicitly.
+ */
+export function firstImageUrl(markdown: string): string | undefined {
+  return markdown.match(FIRST_IMAGE_RE)?.[1];
+}
+
 const SIZE_RE = /^\d+(?:px|%|em|rem|vw)$/;
 const DIM_RE = /^(\d+)x(\d+)$/;
 const ALIGNMENTS = new Set(["left", "right", "center"]);

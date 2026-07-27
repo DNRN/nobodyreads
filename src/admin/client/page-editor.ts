@@ -20,6 +20,7 @@ import {
   createMediaModal,
 } from "./core/media.js";
 import { renderImage } from "../../shared/image-markdown.js";
+import { normalizeHeadings } from "../../shared/markdown-headings.js";
 import type { PageEditorOptions, PageEditorInstance } from "./types.js";
 
 const markedInstance = new Marked({ gfm: true, breaks: false });
@@ -77,7 +78,21 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
     previewTimer = setTimeout(updatePreview, 150);
   }
 
+  /** The title the published page will render above the body, if any. */
+  function currentPageTitle(): string {
+    return titleInput?.value.trim() ?? "";
+  }
+
   function renderLocal(text: string) {
+    const pageTitle = currentPageTitle();
+    if (pageTitle) {
+      // Mirror the server pipeline so the preview shows the same headings the
+      // published page will (no duplicated title, body H1s demoted).
+      const tokens = markedInstance.lexer(text);
+      normalizeHeadings(tokens, pageTitle);
+      previewElement.innerHTML = markedInstance.parser(tokens);
+      return;
+    }
     const rendered = markedInstance.parse(text);
     previewElement.innerHTML = typeof rendered === "string" ? rendered : text;
   }
@@ -102,7 +117,7 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
       const resp = await fetch(previewUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({ content: text, title: currentPageTitle() }),
       });
       if (!resp.ok) throw new Error(`Preview request failed: ${resp.status}`);
       const data = (await resp.json()) as { html?: string };

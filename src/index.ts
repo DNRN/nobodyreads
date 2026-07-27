@@ -191,6 +191,7 @@ export type { DefaultHomePageOptions } from "./content/defaults.js";
 // Templates & rendering
 export { renderPostListView } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
+export type { RenderMarkdownOptions, RenderContentOptions } from "./content/render.js";
 
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";

@@ -24,6 +24,10 @@
       "types": "./dist/admin/client/index.d.ts",
       "import": "./dist/admin/client/index.js"
     },
+    "./image-markdown": {
+      "types": "./dist/shared/image-markdown.d.ts",
+      "import": "./dist/shared/image-markdown.js"
+    },
     "./editor/milkdown": {
       "types": "./dist/admin/client/milkdown/index.d.ts",
       "import": "./dist/admin/client/milkdown/index.js"

@@ -1,21 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { insertTextAtCursor } from "./toolbar.js";
-import { DEFAULT_IMAGE_WIDTH } from "../../../shared/image-markdown.js";
-
-/** Strip the file extension from a filename for use as alt text. */
-function altFromName(name: string): string {
-  return name.replace(/\.[^.]+$/, "");
-}
-
-/**
- * Build the markdown snippet inserted when an image is added. We pre-fill a
- * sensible default width so the author immediately sees the size syntax and
- * can tweak the number (or add `|left` / `|right` to wrap text) without
- * having to remember it.
- */
-function imageMarkdown(alt: string, url: string): string {
-  return `![${alt}|${DEFAULT_IMAGE_WIDTH}](${url})`;
-}
+import { altFromName, imageMarkdown } from "../../../shared/image-markdown.js";
 
 /**
  * Upload a file and insert a markdown image link into the editor.

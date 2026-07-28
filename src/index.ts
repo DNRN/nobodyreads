@@ -50,11 +50,16 @@ export type {
   NewComment,
 } from "./comments/index.js";
 
-// Moderation (space rulesets + AI-assisted comment review)
+// Moderation (file-sourced ruleset + AI-assisted comment review)
 export {
   reviewComment,
-  getSpaceRuleset,
-  upsertSpaceRuleset,
+  DEFAULT_RULESET_PATH,
+  loadRulesetFile,
+  clearRulesetCache,
+  fileRulesetSource,
+  SETTING_MODERATION_AUTO_HIDE,
+  getModerationAutoHide,
+  setModerationAutoHide,
   enqueueModerationFlag,
   listModerationQueue,
   getModerationFlagById,
@@ -70,9 +75,7 @@ export type {
   ModerationDecision,
   ReviewCommentOptions,
   ModerationCallInput,
-  ModerationRulesetInput,
-  SpaceRuleset,
-  SpaceRulesetInput,
+  RulesetSource,
   ModerationVerdict,
   ModerationVerdictKind,
   ModerationFlag,
@@ -147,7 +150,6 @@ export {
   plotMembership,
   postLike,
   comment,
-  spaceRuleset,
   moderationQueue,
 } from "./db/schema/index.js";
 export {
@@ -314,7 +316,6 @@ export type {
   PageMeta,
   PageKind,
   PageNav,
-  ModerationMode,
   FaqItem,
 } from "./content/types.js";
 export { DEFAULT_TENANT_ID, PLATFORM_TENANT_ID } from "./shared/types.js";

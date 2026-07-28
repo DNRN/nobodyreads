@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import {
-  getSpaceRuleset,
-  upsertSpaceRuleset,
+  getModerationAutoHide,
+  setModerationAutoHide,
   listModerationQueue,
   getModerationFlagById,
   resolveModerationFlag,
@@ -15,13 +15,13 @@ import type { AdminModuleContext } from "./types.js";
 const QUEUE_STATUSES: ModerationQueueStatus[] = ["pending", "dismissed", "actioned"];
 
 /**
- * Moderation routes (per-tenant): the space ruleset editor and the flagged-
- * comment inbox. Owner-gating happens in the host's admin handler, like every
- * other admin module.
+ * Moderation routes (per-tenant): the flagged-comment inbox and the one
+ * setting a space owner controls. The ruleset itself is deployment config, not
+ * a resource this API exposes for editing. Owner-gating happens in the host's
+ * admin handler, like every other admin module.
  *
  * Routes (mounted under the tenant admin base):
- *   GET  /moderation/ruleset             -> the tenant's ruleset (or defaults)
- *   POST /moderation/ruleset             -> upsert the ruleset
+ *   POST /moderation/settings            -> set auto-hide for `hold` verdicts
  *   GET  /moderation/queue?status=...    -> inbox rows (default: pending)
  *   POST /moderation/queue/:id/approve   -> unhold the comment, dismiss the flag
  *   POST /moderation/queue/:id/dismiss   -> same effect, for published-but-flagged rows
@@ -32,33 +32,17 @@ export function createModerationRoutes(ctx: AdminModuleContext): Hono {
   const { db, tenantId } = ctx;
   const app = new Hono();
 
-  app.get("/moderation/ruleset", async (c) => {
-    const ruleset = await getSpaceRuleset(db, tenantId);
-    return c.json({
-      enabled: ruleset?.enabled ?? false,
-      rules: ruleset?.rules ?? "",
-      tone: ruleset?.tone ?? "",
-      noGoTopics: ruleset?.noGoTopics ?? "",
-      offTopicExamples: ruleset?.offTopicExamples ?? "",
-      autoHide: ruleset?.autoHide ?? true,
-    });
+  app.get("/moderation/settings", async (c) => {
+    return c.json({ autoHide: await getModerationAutoHide(db, tenantId) });
   });
 
-  app.post("/moderation/ruleset", async (c) => {
+  app.post("/moderation/settings", async (c) => {
     const body = await c.req.parseBody();
-    const rules = String(body.rules ?? "").trim();
-    const enabled = body.enabled != null && body.enabled !== "off";
-    if (enabled && !rules) {
-      return c.json({ error: "Rules are required to enable moderation" }, 400);
-    }
-    await upsertSpaceRuleset(db, tenantId, {
-      enabled,
-      rules,
-      tone: String(body.tone ?? "").trim(),
-      noGoTopics: String(body.noGoTopics ?? "").trim(),
-      offTopicExamples: String(body.offTopicExamples ?? "").trim(),
-      autoHide: body.autoHide == null || body.autoHide !== "off",
-    });
+    await setModerationAutoHide(
+      db,
+      tenantId,
+      body.autoHide == null || body.autoHide !== "off"
+    );
     return c.json({ ok: true });
   });
 

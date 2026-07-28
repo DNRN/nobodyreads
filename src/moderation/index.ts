@@ -1,8 +1,16 @@
 export { reviewComment } from "./pipeline.js";
 export type { ModerationDecision, ReviewCommentOptions } from "./pipeline.js";
 export {
-  getSpaceRuleset,
-  upsertSpaceRuleset,
+  DEFAULT_RULESET_PATH,
+  loadRulesetFile,
+  clearRulesetCache,
+  fileRulesetSource,
+} from "./ruleset.js";
+export type { RulesetSource } from "./ruleset.js";
+export {
+  SETTING_MODERATION_AUTO_HIDE,
+  getModerationAutoHide,
+  setModerationAutoHide,
   enqueueModerationFlag,
   listModerationQueue,
   getModerationFlagById,
@@ -16,10 +24,8 @@ export {
   buildModerationUserPrompt,
   parseModerationVerdict,
 } from "./verdict.js";
-export type { ModerationCallInput, ModerationRulesetInput } from "./verdict.js";
+export type { ModerationCallInput } from "./verdict.js";
 export type {
-  SpaceRuleset,
-  SpaceRulesetInput,
   ModerationVerdict,
   ModerationVerdictKind,
   ModerationFlag,

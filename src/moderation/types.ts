@@ -1,33 +1,13 @@
 // --- Moderation types ---
-// Space rulesets and the AI-assisted moderation queue. A ruleset describes the
-// tone and boundaries the owner wants for discussion; the pipeline judges new
-// comments against it before they go public.
+// The AI-assisted moderation queue. The ruleset a comment is judged against is
+// plain markdown supplied by the host (see ruleset.ts); only per-comment state
+// lives in the database.
 
 /** A verdict from the moderation model. `allow` publishes immediately. */
 export type ModerationVerdictKind = "allow" | "hold" | "reject";
 
 /** Queue lifecycle: pending → dismissed (kept public/unheld) or actioned (removed). */
 export type ModerationQueueStatus = "pending" | "dismissed" | "actioned";
-
-/** Per-tenant discussion ruleset, one row per tenant (like site_template). */
-export interface SpaceRuleset {
-  /** Master switch — when false the pipeline publishes everything untouched. */
-  enabled: boolean;
-  /** Free-text rules; the main field the model judges against. */
-  rules: string;
-  /** Optional structured hint: desired tone of discussion. */
-  tone: string;
-  /** Optional structured hint: topics that are off-limits (newline-separated). */
-  noGoTopics: string;
-  /** Optional structured hint: examples of off-topic comments (newline-separated). */
-  offTopicExamples: string;
-  /** When true, flagged comments are held before publication; when false they publish but are queued for review. */
-  autoHide: boolean;
-  updatedAt: string;
-}
-
-/** Editable fields of a ruleset (everything except updatedAt). */
-export type SpaceRulesetInput = Omit<SpaceRuleset, "updatedAt">;
 
 /** The structured result of a `set_verdict` model call. */
 export interface ModerationVerdict {

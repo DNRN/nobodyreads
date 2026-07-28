@@ -9,6 +9,7 @@ import type { MemberIdentity, ResolveMember } from "../community/types.js";
 import type { AiProviderConfig } from "../admin/server/modules/types.js";
 import { reviewComment } from "../moderation/pipeline.js";
 import { enqueueModerationFlag } from "../moderation/db.js";
+import type { RulesetSource } from "../moderation/ruleset.js";
 import type { FlaggedCommentEvent } from "../moderation/types.js";
 import type { Comment } from "./types.js";
 import {
@@ -21,8 +22,15 @@ import {
 } from "./db.js";
 
 export interface CommentModerationOptions {
-  /** Host/platform default AI config; per-tenant BYO settings override it. */
+  /** AI config for the moderation call. Host-owned, never a reader's key. */
   ai?: AiProviderConfig;
+  /**
+   * Where the ruleset text comes from. Defaults to reading
+   * `config/ruleset.md` (override the path with `MODERATION_RULESET`); a
+   * multi-tenant host can supply its own source instead. Returning null for a
+   * tenant leaves their comments unmoderated.
+   */
+  rulesetSource?: RulesetSource;
   /** Minimum confidence for a non-allow verdict to take effect. Default 0.7. */
   confidenceThreshold?: number;
   /**
@@ -163,6 +171,7 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
           db,
           tenantId,
           ai: options.moderation.ai,
+          rulesetSource: options.moderation.rulesetSource,
           post,
           parentChain,
           authorName: identity.displayName,

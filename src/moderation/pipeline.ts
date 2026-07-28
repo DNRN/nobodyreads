@@ -1,18 +1,18 @@
 import type { Database } from "../db/index.js";
 import type { AiProviderConfig } from "../admin/server/modules/types.js";
-import { getTenantAiConfig, isAiConfigured } from "../api/ai/config.js";
+import { isAiConfigured } from "../api/ai/config.js";
 import { createModerationProvider } from "../api/ai/moderation-provider.js";
 import { recordModerationCheck } from "../api/ai/metering.js";
 import type { Page } from "../content/types.js";
 import type { Comment } from "../comments/types.js";
-import { getSpaceRuleset } from "./db.js";
+import { getModerationAutoHide } from "./db.js";
+import { fileRulesetSource, type RulesetSource } from "./ruleset.js";
 import type { ModerationFlag, ModerationVerdict } from "./types.js";
-import type { ModerationRulesetInput } from "./verdict.js";
 
 /** What the pre-publish check decided about a new comment. */
 export interface ModerationDecision {
   action: "publish" | "hold";
-  /** Present on non-allow verdicts — recorded in the queue even when publishing (auto-hide off). */
+  /** Present on non-allow verdicts — recorded in the queue even when publishing. */
   flag?: ModerationFlag;
 }
 
@@ -22,9 +22,11 @@ const VERDICT_TIMEOUT_MS = 10_000;
 export interface ReviewCommentOptions {
   db: Database;
   tenantId: string;
-  /** Host/platform default AI config; per-tenant BYO settings are layered over it. */
+  /** AI config for the moderation call. Host-owned; never a reader's key. */
   ai?: AiProviderConfig;
-  /** The post being commented on (carries the per-post moderation override). */
+  /** Where the ruleset text comes from. Defaults to `config/ruleset.md`. */
+  rulesetSource?: RulesetSource;
+  /** The post being commented on. */
   post: Page;
   /** Parent chain of the new comment, oldest first (empty for top-level). */
   parentChain: Comment[];
@@ -37,7 +39,7 @@ export interface ReviewCommentOptions {
 async function generateVerdictWithTimeout(
   config: AiProviderConfig,
   opts: ReviewCommentOptions,
-  ruleset: ModerationRulesetInput
+  ruleset: string
 ): Promise<ModerationVerdict> {
   const provider = createModerationProvider(config);
   const input = {
@@ -70,50 +72,37 @@ async function generateVerdictWithTimeout(
 /**
  * Pre-publish moderation check for a new comment.
  *
- * Resolves the effective ruleset (per-post override → space ruleset), the
- * effective AI config (tenant BYO → host default), and asks the model for a
- * verdict. **Fails open**: when moderation is off, unconfigured, or the model
- * errors/times out, the comment publishes — moderation is an assist, and
- * degrading to pre-moderation behavior beats silently swallowing every comment
- * during a provider outage. The owner keeps the manual delete path either way.
+ * Resolves the ruleset text from the host's {@link RulesetSource} and asks the
+ * model for a verdict. **Fails open**: when no ruleset exists, the AI is
+ * unconfigured, or the model errors or times out, the comment publishes —
+ * moderation is an assist, and degrading to unmoderated beats silently
+ * swallowing every comment during a provider outage. The owner keeps the
+ * manual delete path either way.
+ *
+ * Enforcement is split by severity. A `reject` verdict always holds: it is the
+ * deployment's own policy floor, not something an individual space opts out
+ * of. A `hold` verdict is a judgement call, so it respects the space's
+ * auto-hide setting — off means the comment publishes but still lands in the
+ * owner's inbox for review.
  */
 export async function reviewComment(opts: ReviewCommentOptions): Promise<ModerationDecision> {
   const publish: ModerationDecision = { action: "publish" };
 
-  // 1. Effective ruleset.
-  if (opts.post.moderationMode === "off") return publish;
+  // 1. Effective ruleset. Nothing configured → nothing to enforce.
+  const source = opts.rulesetSource ?? fileRulesetSource;
+  const ruleset = (await source(opts.tenantId))?.trim();
+  if (!ruleset) return publish;
 
-  const spaceRules = await getSpaceRuleset(opts.db, opts.tenantId);
-  let ruleset: ModerationRulesetInput;
-  let autoHide: boolean;
-
-  if (opts.post.moderationMode === "custom") {
-    // Custom rules attached to the post work even when the space ruleset is
-    // absent or disabled — the author opted this post in explicitly.
-    const rules = opts.post.moderationRules?.trim();
-    if (!rules) return publish;
-    ruleset = { rules };
-    autoHide = spaceRules?.autoHide ?? true;
-  } else {
-    if (!spaceRules || !spaceRules.enabled || !spaceRules.rules.trim()) return publish;
-    ruleset = {
-      rules: spaceRules.rules,
-      tone: spaceRules.tone,
-      noGoTopics: spaceRules.noGoTopics,
-      offTopicExamples: spaceRules.offTopicExamples,
-    };
-    autoHide = spaceRules.autoHide;
-  }
-
-  // 2. Effective AI config: tenant BYO key first, then the host default.
-  const tenantConfig = await getTenantAiConfig(opts.db, opts.tenantId);
-  const config = tenantConfig ?? opts.ai;
-  if (!isAiConfigured(config)) return publish;
+  // 2. AI config is host-owned. A tenant's BYO theming key deliberately does
+  //    not apply here — moderation enforces the deployment's policy, judged
+  //    with the deployment's model, not with whatever key a space happens to
+  //    have pasted in for theme generation.
+  if (!isAiConfigured(opts.ai)) return publish;
 
   // 3. Ask the model — fail open on error or timeout.
   let verdict: ModerationVerdict;
   try {
-    verdict = await generateVerdictWithTimeout(config, opts, ruleset);
+    verdict = await generateVerdictWithTimeout(opts.ai, opts, ruleset);
     await recordModerationCheck(opts.tenantId);
   } catch (err) {
     console.error("moderation check failed (comment published):", err);
@@ -130,5 +119,10 @@ export async function reviewComment(opts: ReviewCommentOptions): Promise<Moderat
     rule: verdict.rule,
     confidence: verdict.confidence,
   };
+
+  // `reject` is the policy floor and always holds; `hold` is the owner's call.
+  if (verdict.verdict === "reject") return { action: "hold", flag };
+
+  const autoHide = await getModerationAutoHide(opts.db, opts.tenantId);
   return { action: autoHide ? "hold" : "publish", flag };
 }

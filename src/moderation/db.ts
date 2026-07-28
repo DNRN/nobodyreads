@@ -3,61 +3,45 @@ import { and, eq, desc, count } from "drizzle-orm";
 import type { Database } from "../db/index.js";
 import { comment } from "../comments/schema.js";
 import { page } from "../content/schema.js";
-import { spaceRuleset, moderationQueue } from "./schema.js";
+import { getSiteSetting, setSiteSetting } from "../shared/site-settings.js";
+import { moderationQueue } from "./schema.js";
 import type {
-  SpaceRuleset,
-  SpaceRulesetInput,
   ModerationFlag,
   ModerationQueueItem,
   ModerationQueueStatus,
 } from "./types.js";
 
-// --- Space ruleset ---
+// --- Auto-hide setting ---
+// The one moderation knob a space owner controls. The ruleset itself is
+// deployment config (see ruleset.ts), so this lives in `site_settings` rather
+// than earning a table of its own.
 
-function toRuleset(row: typeof spaceRuleset.$inferSelect): SpaceRuleset {
-  return {
-    enabled: row.enabled,
-    rules: row.rules,
-    tone: row.tone,
-    noGoTopics: row.noGoTopics,
-    offTopicExamples: row.offTopicExamples,
-    autoHide: row.autoHide,
-    updatedAt: row.updatedAt,
-  };
-}
+export const SETTING_MODERATION_AUTO_HIDE = "moderation_auto_hide";
 
-/** The tenant's ruleset, or null when none has been saved yet. */
-export async function getSpaceRuleset(
+/**
+ * Whether `hold` verdicts are withheld from readers pending review.
+ * Defaults to true — a space that has never touched the setting gets the
+ * cautious behavior. `reject` verdicts ignore this and always hold.
+ */
+export async function getModerationAutoHide(
   db: Database,
   tenantId: string
-): Promise<SpaceRuleset | null> {
-  const rows = await db
-    .select()
-    .from(spaceRuleset)
-    .where(eq(spaceRuleset.tenantId, tenantId))
-    .limit(1);
-  return rows.length > 0 ? toRuleset(rows[0]) : null;
+): Promise<boolean> {
+  const value = await getSiteSetting(db, tenantId, SETTING_MODERATION_AUTO_HIDE);
+  return value == null ? true : value !== "off";
 }
 
-/** Create or update the tenant's ruleset (one row per tenant). */
-export async function upsertSpaceRuleset(
+export async function setModerationAutoHide(
   db: Database,
   tenantId: string,
-  input: SpaceRulesetInput
+  autoHide: boolean
 ): Promise<void> {
-  const values = {
-    enabled: input.enabled,
-    rules: input.rules,
-    tone: input.tone,
-    noGoTopics: input.noGoTopics,
-    offTopicExamples: input.offTopicExamples,
-    autoHide: input.autoHide,
-    updatedAt: new Date().toISOString(),
-  };
-  await db
-    .insert(spaceRuleset)
-    .values({ tenantId, ...values })
-    .onConflictDoUpdate({ target: spaceRuleset.tenantId, set: values });
+  await setSiteSetting(
+    db,
+    tenantId,
+    SETTING_MODERATION_AUTO_HIDE,
+    autoHide ? "on" : "off"
+  );
 }
 
 // --- Moderation queue ---

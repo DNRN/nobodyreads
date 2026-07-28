@@ -40,8 +40,6 @@ CREATE TABLE IF NOT EXISTS page (
   nav_order  INTEGER,
   comments_enabled INTEGER NOT NULL DEFAULT 1,
   in_feed          INTEGER NOT NULL DEFAULT 1,
-  moderation_mode  TEXT NOT NULL DEFAULT 'inherit',
-  moderation_rules TEXT,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -158,18 +156,6 @@ CREATE TABLE IF NOT EXISTS comment (
 );
 CREATE INDEX IF NOT EXISTS comment_page_idx ON comment (tenant_id, page_id, created_at);
 CREATE INDEX IF NOT EXISTS comment_parent_idx ON comment (parent_id);
-
--- Space ruleset (per-tenant discussion rules for AI-assisted moderation)
-CREATE TABLE IF NOT EXISTS space_ruleset (
-  tenant_id          TEXT PRIMARY KEY DEFAULT '_default',
-  enabled            INTEGER NOT NULL DEFAULT 0,
-  rules              TEXT NOT NULL DEFAULT '',
-  tone               TEXT NOT NULL DEFAULT '',
-  no_go_topics       TEXT NOT NULL DEFAULT '',
-  off_topic_examples TEXT NOT NULL DEFAULT '',
-  auto_hide          INTEGER NOT NULL DEFAULT 1,
-  updated_at         TEXT NOT NULL DEFAULT (datetime('now'))
-);
 
 -- Moderation queue (comments flagged by the AI pre-publish check)
 CREATE TABLE IF NOT EXISTS moderation_queue (

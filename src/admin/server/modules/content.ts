@@ -70,8 +70,6 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       let existingCommentsEnabled: boolean | undefined;
       let existingInFeed: boolean | undefined;
       let existingSeo: Page["seo"] | undefined;
-      let existingModerationMode: Page["moderationMode"] | undefined;
-      let existingModerationRules: string | undefined;
       let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
@@ -79,8 +77,6 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         existingCommentsEnabled = existing?.commentsEnabled;
         existingInFeed = existing?.inFeed;
         existingSeo = existing?.seo;
-        existingModerationMode = existing?.moderationMode;
-        existingModerationRules = existing?.moderationRules;
         if (!content && existing?.content) content = existing.content;
       }
 
@@ -130,16 +126,6 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
           data.in_feed === undefined
             ? existingInFeed ?? true
             : data.in_feed === "on",
-        // Same preserve-when-absent contract as comments_enabled: forms
-        // without the moderation controls must not reset them.
-        moderationMode:
-          data.moderation_mode === undefined
-            ? existingModerationMode ?? "inherit"
-            : data.moderation_mode,
-        moderationRules:
-          data.moderation_rules === undefined
-            ? existingModerationRules
-            : data.moderation_rules.trim() || undefined,
         seo,
       };
 

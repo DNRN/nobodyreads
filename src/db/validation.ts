@@ -23,8 +23,6 @@ export const pageFormSchema = z.object({
   // for forms without the control (non-post kinds / older clients).
   comments_enabled: z.string().optional(),
   in_feed: z.string().optional(),
-  moderation_mode: z.enum(["inherit", "custom", "off"]).optional(),
-  moderation_rules: z.string().max(10000).optional(),
   seo_og_image: z.string().trim().max(500).optional(),
   seo_twitter_card: z.enum(["summary", "summary_large_image"]).optional(),
 });

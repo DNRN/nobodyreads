@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working agreement
+
+`AGENTS.md` holds the canonical version (Working agreement, Commits, Pull requests). The condensed form:
+
+- **Ask when in doubt.** If a request is ambiguous, underspecified, or two readings would lead to materially different work, ask before writing code. Always ask when it touches an invariant, the published surface (`exports`, factory signatures, the admin-context contract, the schema, the site-template contract), or when it's unclear whether behavior belongs in this generic engine or in the host platform. Offer the options with a recommendation and do the unambiguous parts meanwhile; if you proceed without an answer, say which assumption you made.
+- **Propose architectural improvements.** Be opinionated about design — duplicated logic, a factory that should take a parameter instead of branching, host assumptions leaking into the package, a missing test seam. Small in-scope improvements: apply and mention. Anything touching `exports`, a factory signature, or the schema: propose first. Never silently expand a request into a refactor; name debt you walked past.
+- **Git.** The human is the author — use the configured git identity, and add **no** `Co-Authored-By: Claude` trailer and no "Generated with Claude Code" footer. Subjects are short, imperative, Conventional-Commit style with a scope; one concern per commit; never commit this repo and `nobodyreads.me` in one go (land this one first).
+- **Pull requests** follow `.github/pull_request_template.md` with a **required, concrete test plan**: the commands, the routes/flows to exercise, the expected result per step, and new/updated tests in `src/**/*.test.ts` (or why the change isn't unit-testable). Tick `[x]` only for steps you actually ran. Call out breaking changes to the published surface with the consumer migration.
+
 ## Commands
 
 ```bash

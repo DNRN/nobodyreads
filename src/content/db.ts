@@ -42,10 +42,28 @@ function toPage(row: PageRow): Page {
         : undefined,
     commentsEnabled: row.commentsEnabled ?? true,
     inFeed: row.inFeed ?? true,
+    // Coerced rather than trusted: an unknown value must not become a tier the
+    // gate does not recognise. Fails closed to "public" for storage; the gate
+    // itself separately fails closed to a teaser.
+    accessTier: normalizeAccessTier(row.accessTier),
+    priceAmount: row.priceAmount ?? null,
   };
 }
 
-function toPageSummary(row: Pick<PageRow, "pageId" | "slug" | "title" | "excerpt" | "tags" | "date">): PageSummary {
+/**
+ * Kept here rather than imported from `payments/` — `content/` must not depend
+ * on `payments/`, and that one-way direction is what stops a page query from
+ * gating itself. The two lists are tiny and both fail closed to "public".
+ */
+const KNOWN_ACCESS_TIERS = new Set(["public", "members", "paid"]);
+
+function normalizeAccessTier(value: string | null | undefined): string {
+  return value && KNOWN_ACCESS_TIERS.has(value) ? value : "public";
+}
+
+function toPageSummary(
+  row: Pick<PageRow, "pageId" | "slug" | "title" | "excerpt" | "tags" | "date" | "accessTier">
+): PageSummary {
   return {
     id: row.pageId,
     slug: row.slug,
@@ -53,6 +71,7 @@ function toPageSummary(row: Pick<PageRow, "pageId" | "slug" | "title" | "excerpt
     excerpt: row.excerpt,
     tags: row.tags,
     date: row.date,
+    accessTier: normalizeAccessTier(row.accessTier),
   };
 }
 
@@ -125,6 +144,9 @@ function toContentView(row: ContentViewRow): ContentView {
 
 // --- Page queries ---
 
+// Note what is *not* here: `content`. Every listing projection stays free of
+// the markdown body, which is why RSS and the newsletter cannot leak a paid
+// post even by accident.
 const pageSummaryCols = {
   pageId: page.pageId,
   slug: page.slug,
@@ -132,6 +154,7 @@ const pageSummaryCols = {
   excerpt: page.excerpt,
   tags: page.tags,
   date: page.date,
+  accessTier: page.accessTier,
 } as const;
 
 /** List published posts, newest first (for the home page listing). */
@@ -481,6 +504,8 @@ export async function upsertPage(
       navOrder: p.nav?.order ?? null,
       commentsEnabled: p.commentsEnabled,
       inFeed: p.inFeed,
+      accessTier: normalizeAccessTier(p.accessTier),
+      priceAmount: p.priceAmount ?? null,
     })
     .onConflictDoUpdate({
       target: [page.pageId, page.tenantId],
@@ -500,6 +525,8 @@ export async function upsertPage(
         navOrder: p.nav?.order ?? null,
         commentsEnabled: p.commentsEnabled,
         inFeed: p.inFeed,
+        accessTier: normalizeAccessTier(p.accessTier),
+        priceAmount: p.priceAmount ?? null,
       },
     });
 }

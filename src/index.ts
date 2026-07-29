@@ -151,6 +151,10 @@ export {
   postLike,
   comment,
   moderationQueue,
+  paidTier,
+  entitlement,
+  paymentEvent,
+  paymentCustomer,
 } from "./db/schema/index.js";
 export {
   listPosts,
@@ -353,3 +357,39 @@ export {
 
 // Package paths
 export { getPublicDir, getSchemaPath, getRobotsTxtPath } from "./paths.js";
+
+// Payments — entitlements, the paywall gate, and paid tiers.
+export {
+  resolvePageAccess,
+  redactPage,
+  getReadableContent,
+  requiresPrivateCache,
+  buildTeaser,
+  nowSeconds,
+  listPaidTiers,
+  getActivePaidTier,
+  getPaidTierById,
+  upsertPaidTier,
+  deletePaidTier,
+  hasPageAccess,
+  listMemberEntitlements,
+  getEntitlement,
+  grantEntitlement,
+  revokeEntitlement,
+  upsertPaymentCustomer,
+  getPaymentCustomerRef,
+  toAccessTier,
+  ACCESS_TIERS,
+  DEFAULT_TEASER_WORDS,
+} from "./payments/index.js";
+export type {
+  AccessTier,
+  AccessDecision,
+  PageAccessOptions,
+  PaidTier,
+  Entitlement,
+  EntitlementScope,
+  TeaserOptions,
+  GrantEntitlementInput,
+  RevokeEntitlementInput,
+} from "./payments/index.js";

@@ -1012,6 +1012,13 @@
 	line-height: 1.4;
 }
 
+/* Non-blocking advisory — the save still goes through. */
+.nr-admin .hint-warn {
+	color: var(--nr-warn-fg, #8a6d1f);
+	border-left: 2px solid var(--nr-warn-border, #e0b750);
+	padding-left: 0.5rem;
+}
+
 .nr-admin .hint code {
 	background: var(--nr-surface);
 	padding: 0.1rem 0.35rem;

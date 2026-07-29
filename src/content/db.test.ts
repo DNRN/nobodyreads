@@ -319,33 +319,8 @@ describe("deleteContentView", () => {
   });
 });
 
-// ---------- validateCustomQuery ----------
-
-describe("validateCustomQuery", () => {
-  it("accepts a valid SELECT", () => {
-    expect(validateCustomQuery("SELECT slug, title FROM page")).toBeNull();
-  });
-
-  it("rejects empty query", () => {
-    expect(validateCustomQuery("")).toBe("Query cannot be empty");
-  });
-
-  it("rejects non-SELECT statements", () => {
-    expect(validateCustomQuery("INSERT INTO page VALUES('x')")).not.toBeNull();
-  });
-
-  it("rejects SELECT with forbidden keywords", () => {
-    expect(validateCustomQuery("SELECT * FROM page; DROP TABLE page")).not.toBeNull();
-  });
-
-  for (const keyword of ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE"]) {
-    it(`rejects query containing ${keyword}`, () => {
-      expect(validateCustomQuery(`SELECT 1; ${keyword} something`)).not.toBeNull();
-    });
-  }
-});
-
 // ---------- executeCustomViewQuery ----------
+// validateCustomQuery itself is covered in custom-view-sql.test.ts.
 
 describe("executeCustomViewQuery", () => {
   it("executes a valid SELECT and returns rows", async () => {
@@ -353,7 +328,7 @@ describe("executeCustomViewQuery", () => {
 
     const rows = await executeCustomViewQuery(
       t.db,
-      "SELECT slug, title FROM page WHERE tenant_id = :tenant_id",
+      "SELECT slug, title FROM page_public WHERE tenant_id = :tenant_id",
       TENANT,
     );
     expect(rows).toHaveLength(1);
@@ -364,6 +339,30 @@ describe("executeCustomViewQuery", () => {
     await expect(
       executeCustomViewQuery(t.db, "DROP TABLE page", TENANT),
     ).rejects.toThrow("Invalid custom view query");
+  });
+
+  it("refuses to read the page table, so markdown content is unreachable", async () => {
+    await upsertPage(t.db, makePage(), TENANT);
+
+    await expect(
+      executeCustomViewQuery(
+        t.db,
+        "SELECT content FROM page WHERE tenant_id = :tenant_id",
+        TENANT,
+      ),
+    ).rejects.toThrow("Invalid custom view query");
+  });
+
+  it("page_public exposes no content column", async () => {
+    await upsertPage(t.db, makePage(), TENANT);
+
+    const rows = await executeCustomViewQuery(
+      t.db,
+      "SELECT * FROM page_public WHERE tenant_id = :tenant_id",
+      TENANT,
+    );
+    expect(rows[0]).not.toHaveProperty("content");
+    expect(rows[0]).toHaveProperty("title");
   });
 });
 

@@ -188,3 +188,19 @@ CREATE TABLE IF NOT EXISTS subscriber (
   PRIMARY KEY (subscriber_id, tenant_id),
   UNIQUE (email, tenant_id)
 );
+
+-- Public projection of `page`, for author-written custom view queries.
+--
+-- Custom views run raw author SQL and render it into public pages, so they may
+-- only read tables that are safe to expose wholesale. `page` is not one: it
+-- carries the markdown `content`. This view is the same table with `content`
+-- projected away.
+--
+-- Recreated on every boot so it always matches the current `page` shape.
+-- ADD ANY NEW `page` COLUMN HERE TOO — the list is explicit on purpose, so a
+-- future sensitive column is withheld by default rather than auto-exposed.
+DROP VIEW IF EXISTS page_public;
+CREATE VIEW page_public AS
+SELECT page_id, tenant_id, slug, title, excerpt, tags, date, updated,
+       published, seo, kind, nav_label, nav_order, comments_enabled, in_feed
+FROM page;

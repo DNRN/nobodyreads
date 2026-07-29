@@ -2,6 +2,7 @@ import { eq, and, desc, asc, inArray, isNotNull } from "drizzle-orm";
 import { page, contentView } from "./schema.js";
 import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
+import { validateCustomQuery } from "./custom-view-sql.js";
 import type { Database } from "../db/index.js";
 import type {
   Page,
@@ -209,6 +210,39 @@ export async function listContentViews(db: Database, tenantId: string): Promise<
   return rows.map(toContentView);
 }
 
+/** A stored custom view whose query the table allowlist now rejects. */
+export interface CustomViewIssue {
+  id: string;
+  slug: string;
+  title: string;
+  error: string;
+}
+
+/**
+ * Find custom views that will no longer run, for the admin banner.
+ *
+ * Queries are never rewritten automatically — the author changes
+ * `FROM page` to `FROM page_public` themselves. See `custom-view-sql.ts`.
+ */
+export async function auditCustomViews(
+  db: Database,
+  tenantId: string
+): Promise<CustomViewIssue[]> {
+  const views = await listContentViews(db, tenantId);
+  const issues: CustomViewIssue[] = [];
+
+  for (const view of views) {
+    if (view.kind !== "custom") continue;
+    const query = (view.config as CustomViewConfig).query;
+    if (!query) continue;
+
+    const error = validateCustomQuery(query);
+    if (error) issues.push({ id: view.id, slug: view.slug, title: view.title, error });
+  }
+
+  return issues;
+}
+
 /** Fetch a single content view by slug. */
 export async function getContentViewBySlug(
   db: Database,
@@ -282,25 +316,14 @@ export async function upsertContentView(
 
 // --- Custom view query execution ---
 
-/**
- * Validate that a SQL string is a safe SELECT query.
- * Returns an error message if invalid, or null if valid.
- */
-export function validateCustomQuery(sql: string): string | null {
-  const trimmed = sql.trim();
-  if (!trimmed) return "Query cannot be empty";
-
-  if (!/^SELECT\b/i.test(trimmed)) {
-    return "Query must be a SELECT statement";
-  }
-
-  const forbidden = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|ATTACH|DETACH|PRAGMA|VACUUM)\b/i;
-  if (forbidden.test(trimmed)) {
-    return "Query contains forbidden keywords (only SELECT is allowed)";
-  }
-
-  return null;
-}
+// Validation lives in its own dependency-free module so the boot-time audit in
+// shared/db.ts can reuse it without an import cycle. Re-exported here because
+// this is where callers expect to find it.
+export {
+  validateCustomQuery,
+  deniedQueryTables,
+  CUSTOM_VIEW_ALLOWED_TABLES,
+} from "./custom-view-sql.js";
 
 /**
  * Execute a custom SQL query for a view.

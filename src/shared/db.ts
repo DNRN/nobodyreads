@@ -4,6 +4,7 @@ import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import * as schema from "../db/schema/index.js";
 import type { Database } from "../db/index.js";
+import { validateCustomQuery } from "../content/custom-view-sql.js";
 
 // --- Database connection ---
 
@@ -48,6 +49,7 @@ export async function initDb(): Promise<Database> {
     await client.executeMultiple(schemaSql);
 
     await migrateColumns(client);
+    await warnOnDeniedCustomViews(client);
 
     rawClient = client;
     database = drizzle(client, { schema });
@@ -92,6 +94,46 @@ async function migrateColumns(client: Client): Promise<void> {
   }
 
   await migrateContentViewKind(client);
+}
+
+/**
+ * Warn about stored custom view queries that the table allowlist now rejects.
+ *
+ * Stored queries are deliberately **not** rewritten: silently editing an
+ * author's SQL is worse than telling them it stopped running. `renderCustomView`
+ * shows its styled error block on the page, the admin views screen shows a
+ * banner, and this warns the operator at boot. The usual fix is
+ * `FROM page` → `FROM page_public`.
+ *
+ * Raw SQL rather than Drizzle so this module stays free of a `content/` import
+ * cycle; `custom-view-sql.js` is dependency-free on purpose.
+ */
+async function warnOnDeniedCustomViews(client: Client): Promise<void> {
+  try {
+    const result = await client.execute(
+      "SELECT tenant_id, slug, config FROM content_view WHERE kind = 'custom'"
+    );
+
+    for (const row of result.rows) {
+      let query = "";
+      try {
+        query = (JSON.parse(String(row.config ?? "{}")) as { query?: string }).query ?? "";
+      } catch {
+        continue;
+      }
+      if (!query) continue;
+
+      const error = validateCustomQuery(query);
+      if (!error) continue;
+
+      console.warn(
+        `[custom view] "${row.slug}" (tenant ${row.tenant_id}) will not run: ${error}`
+      );
+    }
+  } catch (err) {
+    // An audit failure must never stop the server booting.
+    console.warn(`[custom view] audit skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 /**

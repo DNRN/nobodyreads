@@ -2,7 +2,11 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { viewFormSchema } from "../../../db/validation.js";
-import { deleteContentView, upsertContentView } from "../../../content/db.js";
+import {
+  deleteContentView,
+  upsertContentView,
+  validateCustomQuery,
+} from "../../../content/db.js";
 import type { ContentView, ContentViewKind } from "../../../content/types.js";
 import type { AdminModuleContext } from "./types.js";
 
@@ -27,6 +31,13 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
 
       let config: ContentView["config"];
       if (kind === "custom") {
+        // Reject at save time, not only at render time — a custom view's query
+        // runs server-side and its rows land on a public page.
+        const queryError = validateCustomQuery(data.query ?? "");
+        if (queryError) {
+          return c.json({ error: "Validation failed", details: [{ message: queryError }] }, 400);
+        }
+
         config = {
           query: data.query ?? "",
           template: data.template ?? "",

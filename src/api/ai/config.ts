@@ -52,6 +52,50 @@ export function resolveAiProviderConfig(): AiProviderConfig | undefined {
   return isAiConfigured(config) ? config : undefined;
 }
 
+/** Sensible small-model default per provider (moderation is high-volume). */
+function defaultModerationModel(provider: AiProvider): string {
+  switch (provider) {
+    case "openai-compatible":
+      return "gpt-4o-mini";
+    case "anthropic":
+      return "claude-haiku-4-5";
+    default:
+      return ""; // gemini/local: an explicit model is required
+  }
+}
+
+/**
+ * Resolve the moderation AI config from the environment, or `undefined` when
+ * unusable. Moderation runs per comment (cost- and latency-sensitive, usually
+ * a small fast model, possibly a different vendor than theming), so every
+ * field has its own `AI_MODERATION_*` override. Key/baseURL/model fall back to
+ * the theming variables only when moderation uses the *same provider* as
+ * theming — an OpenAI key is useless against Anthropic. A host that sets no
+ * `AI_MODERATION_*` variables gets the same config as theming.
+ */
+export function resolveModerationAiConfig(): AiProviderConfig | undefined {
+  const themeProvider = coerceProvider(process.env.AI_PROVIDER);
+  const provider = coerceProvider(
+    process.env.AI_MODERATION_PROVIDER || process.env.AI_PROVIDER,
+  );
+  const sameProvider = provider === themeProvider;
+  const config: AiProviderConfig = {
+    provider,
+    apiKey:
+      process.env.AI_MODERATION_API_KEY ||
+      (sameProvider ? process.env.OPENAI_API_KEY : undefined),
+    baseURL:
+      process.env.AI_MODERATION_BASE_URL ||
+      (sameProvider ? process.env.OPENAI_BASE_URL : undefined) ||
+      (provider === "openai-compatible" ? "https://api.openai.com/v1" : undefined),
+    model:
+      process.env.AI_MODERATION_MODEL ||
+      (sameProvider ? process.env.AI_THEME_MODEL : undefined) ||
+      defaultModerationModel(provider),
+  };
+  return isAiConfigured(config) ? config : undefined;
+}
+
 /**
  * Per-tenant BYO provider config from `site_settings`, or `undefined` when the
  * tenant hasn't set one. The stored API key is decrypted here; callers layer

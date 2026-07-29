@@ -30,6 +30,11 @@ export interface PageMeta {
 
 export type PageKind = "home" | "page" | "post";
 
+/**
+ * How comments on a post are AI-moderated: inherit the space ruleset, use
+ * custom rules attached to this post, or skip moderation entirely.
+ */
+
 export interface PageNav {
   label: string; // Display text in the navigation bar
   order: number; // Sort position (0 = leftmost)

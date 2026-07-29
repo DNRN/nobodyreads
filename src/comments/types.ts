@@ -13,6 +13,8 @@ export interface Comment {
   deleted: boolean;
   /** True when the plot owner has pinned this comment (shown first). */
   pinned: boolean;
+  /** True when the comment is held for moderation review (not yet public). */
+  held: boolean;
 }
 
 /** Input for creating a comment. */
@@ -21,4 +23,6 @@ export interface NewComment {
   parentId?: string | null;
   identity: MemberIdentity;
   body: string;
+  /** Create the comment in the held (pending review) state. */
+  held?: boolean;
 }

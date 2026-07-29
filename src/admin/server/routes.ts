@@ -8,6 +8,7 @@ import { mountAuthRoutes } from "./modules/auth-routes.js";
 import { createContentRoutes } from "./modules/content.js";
 import { createThemeRoutes } from "./modules/theme.js";
 import { createAiRoutes } from "./modules/ai.js";
+import { createModerationRoutes } from "./modules/moderation.js";
 import { createMediaRoutes } from "./modules/media.js";
 import { createViewRoutes } from "./modules/views.js";
 
@@ -69,6 +70,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
   app.route("/", createMediaRoutes(ctx));
   app.route("/", createThemeRoutes(ctx));
   app.route("/", createAiRoutes(ctx));
+  app.route("/", createModerationRoutes(ctx));
   app.route("/", createContentRoutes(ctx));
   app.route("/", createViewRoutes(ctx));
 

@@ -6,6 +6,11 @@ import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import type { Database } from "../db/index.js";
 import { getPageBySlug } from "../content/db.js";
 import type { MemberIdentity, ResolveMember } from "../community/types.js";
+import type { AiProviderConfig } from "../admin/server/modules/types.js";
+import { reviewComment } from "../moderation/pipeline.js";
+import { enqueueModerationFlag } from "../moderation/db.js";
+import type { RulesetSource } from "../moderation/ruleset.js";
+import type { FlaggedCommentEvent } from "../moderation/types.js";
 import type { Comment } from "./types.js";
 import {
   countRecentCommentsByMember,
@@ -15,6 +20,25 @@ import {
   softDeleteComment,
   setPinnedComment,
 } from "./db.js";
+
+export interface CommentModerationOptions {
+  /** AI config for the moderation call. Host-owned, never a reader's key. */
+  ai?: AiProviderConfig;
+  /**
+   * Where the ruleset text comes from. Defaults to reading
+   * `config/ruleset.md` (override the path with `MODERATION_RULESET`); a
+   * multi-tenant host can supply its own source instead. Returning null for a
+   * tenant leaves their comments unmoderated.
+   */
+  rulesetSource?: RulesetSource;
+  /** Minimum confidence for a non-allow verdict to take effect. Default 0.7. */
+  confidenceThreshold?: number;
+  /**
+   * Fired (without awaiting) after a comment is flagged, so hosts can notify
+   * the owner (email, in-app, …). Errors are logged, never surfaced.
+   */
+  onFlagged?: (event: FlaggedCommentEvent) => void | Promise<void>;
+}
 
 export interface CommentRouterOptions {
   db: Database;
@@ -26,6 +50,8 @@ export interface CommentRouterOptions {
   rateLimitPerMinute?: number;
   /** Returns true when the requester may remove any comment (post owner/admin). */
   canModerate?: (c: Context) => boolean | Promise<boolean>;
+  /** AI-assisted pre-publish moderation (Phase 4). Off when omitted. */
+  moderation?: CommentModerationOptions;
 }
 
 const createSchema = z.object({
@@ -49,8 +75,21 @@ function toPublic(comment: Comment, viewer: MemberIdentity | null) {
     createdAt: comment.createdAt,
     deleted: comment.deleted,
     pinned: comment.pinned,
+    // Held comments are only ever serialized for their author (see
+    // visibleToViewer), who sees them marked pending.
+    pending: comment.held,
     mine,
   };
+}
+
+/**
+ * Whether a comment appears in the public thread for this viewer. Held
+ * comments are visible only to their author (as "pending review"); the owner
+ * reviews them in the admin inbox, not inline.
+ */
+function visibleToViewer(comment: Comment, viewer: MemberIdentity | null): boolean {
+  if (!comment.held) return true;
+  return viewer != null && sameMember(viewer, comment.author);
 }
 
 /**
@@ -75,7 +114,9 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
     const comments = await listComments(db, tenantId, post.id);
     return c.json({
       commentsEnabled: post.commentsEnabled,
-      comments: comments.map((cm) => toPublic(cm, viewer)),
+      comments: comments
+        .filter((cm) => visibleToViewer(cm, viewer))
+        .map((cm) => toPublic(cm, viewer)),
     });
   });
 
@@ -103,11 +144,40 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
 
       const { body, parentId } = c.req.valid("json");
 
+      let parent: Comment | null = null;
       if (parentId) {
-        const parent = await getCommentById(db, tenantId, parentId);
-        if (!parent || parent.pageId !== post.id || parent.deleted) {
+        parent = await getCommentById(db, tenantId, parentId);
+        // Held comments are leaves by construction — nobody but the author can
+        // see them, so nobody can meaningfully reply to them.
+        if (!parent || parent.pageId !== post.id || parent.deleted || parent.held) {
           return c.json({ error: "invalid_parent" }, 400);
         }
+      }
+
+      // Pre-publish moderation check (synchronous: the comment can't render
+      // until the verdict exists; the rate limit above bounds cost, and the
+      // pipeline fails open with a hard timeout).
+      let decision: Awaited<ReturnType<typeof reviewComment>> = { action: "publish" };
+      if (options.moderation) {
+        const parentChain: Comment[] = [];
+        let cursor: Comment | null = parent;
+        while (cursor && parentChain.length < 5) {
+          parentChain.unshift(cursor);
+          cursor = cursor.parentId
+            ? await getCommentById(db, tenantId, cursor.parentId)
+            : null;
+        }
+        decision = await reviewComment({
+          db,
+          tenantId,
+          ai: options.moderation.ai,
+          rulesetSource: options.moderation.rulesetSource,
+          post,
+          parentChain,
+          authorName: identity.displayName,
+          body,
+          confidenceThreshold: options.moderation.confidenceThreshold,
+        });
       }
 
       const created = await createComment(db, tenantId, {
@@ -115,7 +185,35 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
         parentId: parentId ?? null,
         identity,
         body,
+        held: decision.action === "hold",
       });
+
+      if (decision.flag) {
+        const queueId = await enqueueModerationFlag(db, tenantId, {
+          commentId: created.id,
+          pageId: post.id,
+          flag: decision.flag,
+        });
+        const onFlagged = options.moderation?.onFlagged;
+        if (onFlagged) {
+          const event: FlaggedCommentEvent = {
+            queueId,
+            commentId: created.id,
+            pageId: post.id,
+            pageTitle: post.title,
+            pageSlug: post.slug,
+            authorName: identity.displayName,
+            commentExcerpt: body.slice(0, 200),
+            held: decision.action === "hold",
+            flag: decision.flag,
+          };
+          // Fire-and-forget: notification failures must never fail the POST.
+          Promise.resolve()
+            .then(() => onFlagged(event))
+            .catch((err) => console.error("moderation onFlagged hook failed:", err));
+        }
+      }
+
       return c.json(toPublic(created, identity), 201);
     }
   );
@@ -143,6 +241,7 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
     const existing = await getCommentById(db, tenantId, c.req.param("id"));
     if (!existing) return c.json({ error: "not_found" }, 404);
     if (existing.deleted) return c.json({ error: "comment_deleted" }, 400);
+    if (existing.held) return c.json({ error: "comment_held" }, 400);
 
     const canMod = options.canModerate ? await options.canModerate(c) : false;
     if (!canMod) {

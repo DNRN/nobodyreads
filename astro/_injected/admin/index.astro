@@ -1,12 +1,13 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listAllPages } from "nobodyreads";
+import { initDb, listAllPages, countPendingFlags } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 
 const db = await initDb();
 const pages = await listAllPages(db, ctx.tenantId);
+const pendingFlags = await countPendingFlags(db, ctx.tenantId);
 
 const posts = pages.filter((p) => p.kind === "post");
 const staticPages = pages.filter((p) => p.kind === "page");
@@ -66,6 +67,19 @@ const setupPct = Math.round((setupDone / setupTotal) * 100);
       </a>
       <a href={`${ctx.editorBase}/new?kind=page`} class="btn">New page</a>
     </div>
+
+    {pendingFlags > 0 && (
+      <a href={`${ctx.adminBase}/moderation`} class="setup-card" style="display:block; text-decoration:none">
+        <div class="setup-card-row">
+          <span class="setup-icon">⚑</span>
+          <div class="setup-card-body">
+            <div class="setup-card-title">{plural(pendingFlags, "comment")} awaiting review</div>
+            <div class="setup-card-sub">Held by your discussion rules until you decide.</div>
+          </div>
+          <span class="btn btn-primary btn-sm">Review</span>
+        </div>
+      </a>
+    )}
 
     {setupComplete ? (
       <div class="setup-done">

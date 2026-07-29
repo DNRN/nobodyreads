@@ -7,8 +7,11 @@ export { createAiApiRoutes } from "./api/ai/ai.routes.js";
 export type { AiApiOptions } from "./api/ai/ai.routes.js";
 export { createThemeProvider } from "./api/ai/provider.js";
 export type { AIThemeProvider } from "./api/ai/provider.js";
+export { createModerationProvider } from "./api/ai/moderation-provider.js";
+export type { AIModerationProvider } from "./api/ai/moderation-provider.js";
 export {
   resolveAiProviderConfig,
+  resolveModerationAiConfig,
   getTenantAiConfig,
   isAiConfigured,
   SETTING_AI_PROVIDER,
@@ -16,7 +19,7 @@ export {
   SETTING_AI_BASE_URL,
   SETTING_AI_API_KEY_ENC,
 } from "./api/ai/config.js";
-export { recordThemeGeneration } from "./api/ai/metering.js";
+export { recordThemeGeneration, recordModerationCheck } from "./api/ai/metering.js";
 export {
   encryptSecret,
   decryptSecret,
@@ -37,18 +40,55 @@ export {
   createComment,
   softDeleteComment,
   setPinnedComment,
+  unholdComment,
   countRecentCommentsByMember,
 } from "./comments/index.js";
 export type {
   CommentRouterOptions,
+  CommentModerationOptions,
   Comment,
   NewComment,
 } from "./comments/index.js";
+
+// Moderation (file-sourced ruleset + AI-assisted comment review)
+export {
+  reviewComment,
+  DEFAULT_RULESET_PATH,
+  loadRulesetFile,
+  clearRulesetCache,
+  fileRulesetSource,
+  SETTING_MODERATION_AUTO_HIDE,
+  getModerationAutoHide,
+  setModerationAutoHide,
+  enqueueModerationFlag,
+  listModerationQueue,
+  getModerationFlagById,
+  resolveModerationFlag,
+  countPendingFlags,
+  moderationVerdictSchema,
+  moderationVerdictJsonSchema,
+  buildModerationSystemPrompt,
+  buildModerationUserPrompt,
+  parseModerationVerdict,
+} from "./moderation/index.js";
+export type {
+  ModerationDecision,
+  ReviewCommentOptions,
+  ModerationCallInput,
+  RulesetSource,
+  ModerationVerdict,
+  ModerationVerdictKind,
+  ModerationFlag,
+  ModerationQueueItem,
+  ModerationQueueStatus,
+  FlaggedCommentEvent,
+} from "./moderation/index.js";
 export { createAdminRoutes, createEditorRoutes } from "./admin/server/routes.js";
 export type { AdminRouterOptions, EditorRouterOptions } from "./admin/server/routes.js";
 export { createContentRoutes } from "./admin/server/modules/content.js";
 export { createThemeRoutes } from "./admin/server/modules/theme.js";
 export { createAiRoutes } from "./admin/server/modules/ai.js";
+export { createModerationRoutes } from "./admin/server/modules/moderation.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
@@ -110,6 +150,7 @@ export {
   plotMembership,
   postLike,
   comment,
+  moderationQueue,
 } from "./db/schema/index.js";
 export {
   listPosts,

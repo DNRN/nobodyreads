@@ -151,10 +151,28 @@ CREATE TABLE IF NOT EXISTS comment (
   updated_at     TEXT,
   deleted_at     TEXT,
   pinned_at      TEXT,
+  held_at        TEXT,
   PRIMARY KEY (comment_id, tenant_id)
 );
 CREATE INDEX IF NOT EXISTS comment_page_idx ON comment (tenant_id, page_id, created_at);
 CREATE INDEX IF NOT EXISTS comment_parent_idx ON comment (parent_id);
+
+-- Moderation queue (comments flagged by the AI pre-publish check)
+CREATE TABLE IF NOT EXISTS moderation_queue (
+  queue_id    TEXT NOT NULL,
+  tenant_id   TEXT NOT NULL DEFAULT '_default',
+  comment_id  TEXT NOT NULL,
+  page_id     TEXT NOT NULL,
+  verdict     TEXT NOT NULL CHECK(verdict IN ('hold','reject')),
+  flag_reason TEXT NOT NULL,
+  rule        TEXT,
+  confidence  REAL NOT NULL,
+  status      TEXT NOT NULL CHECK(status IN ('pending','dismissed','actioned')) DEFAULT 'pending',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at TEXT,
+  PRIMARY KEY (queue_id, tenant_id)
+);
+CREATE INDEX IF NOT EXISTS moderation_queue_status_idx ON moderation_queue (tenant_id, status, created_at);
 
 -- Email subscribers
 CREATE TABLE IF NOT EXISTS subscriber (

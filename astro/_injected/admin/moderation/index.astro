@@ -1,0 +1,195 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { requireAdminContext } from "nobodyreads/astro/context";
+import {
+  initDb,
+  listModerationQueue,
+  getModerationAutoHide,
+  loadRulesetFile,
+  renderMarkdown,
+} from "nobodyreads";
+import type { ModerationQueueStatus } from "nobodyreads";
+
+const ctx = requireAdminContext(Astro.locals);
+
+const db = await initDb();
+
+// The ruleset is deployment config, shown here read-only so an owner can see
+// what their discussion is judged against. Read from the same file the
+// pipeline uses; a host wiring a non-file RulesetSource shows nothing here.
+const ruleset = loadRulesetFile();
+const rulesetHtml = ruleset ? renderMarkdown(ruleset) : null;
+const autoHide = await getModerationAutoHide(db, ctx.tenantId);
+
+const statusParam = Astro.url.searchParams.get("status");
+const status: ModerationQueueStatus =
+  statusParam === "dismissed" || statusParam === "actioned" ? statusParam : "pending";
+const items = await listModerationQueue(db, ctx.tenantId, status);
+
+const statusTabs: Array<{ value: ModerationQueueStatus; label: string }> = [
+  { value: "pending", label: "Pending" },
+  { value: "dismissed", label: "Kept" },
+  { value: "actioned", label: "Removed" },
+];
+
+function excerpt(text: string, limit = 280): string {
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+function confidencePct(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso.replace(" ", "T") + (iso.includes("Z") ? "" : "Z"));
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+---
+<AdminLayout title="Moderation — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+  <main class="container">
+    <div class="editor-list">
+      <div class="editor-list-header">
+        <div>
+          <h2>Moderation</h2>
+          <p class="home-substat" style="margin-top:6px">
+            New comments are checked against the discussion rules below. Ones that cross the line are held for your review.
+          </p>
+        </div>
+      </div>
+
+      <div class="editor-list-section">
+        <h3>Discussion rules</h3>
+        {!ctx.aiEnabled && (
+          <p class="hint" style="margin-top:0">
+            AI validation is inactive until an AI provider is configured in
+            <a href={`${ctx.adminBase}/settings`}>Settings</a>. Comments publish unchecked until then.
+          </p>
+        )}
+        {rulesetHtml ? (
+          <>
+            <p class="hint" style="margin-top:0">
+              These rules apply to every plot here and are set by the site operator — you can read them, but not change them.
+            </p>
+            <details class="settings-card" style="display:block">
+              <summary style="cursor:pointer">Read the rules</summary>
+              <div class="post-body" style="margin-top:0.75rem" set:html={rulesetHtml} />
+            </details>
+          </>
+        ) : (
+          <p class="hint" style="margin-top:0">
+            No ruleset is configured, so comments publish unchecked.
+          </p>
+        )}
+
+        <form id="moderation-settings-form" data-admin-base={ctx.adminBase} style="margin-top:1rem">
+          <label class="settings-toggle-row">
+            <span>
+              <span class="env-label">Hold borderline comments before they go public</span>
+              <span class="hint" style="display:block">
+                When off, borderline comments publish immediately but still appear in the inbox.
+                Severe violations are always held.
+              </span>
+            </span>
+            <input type="hidden" name="autoHide" value="off" />
+            <input type="checkbox" name="autoHide" value="on" checked={autoHide} />
+          </label>
+          <div style="display:flex; gap:8px; margin-top:10px">
+            <button type="submit" class="btn btn-sm">Save</button>
+          </div>
+          <p id="moderation-settings-msg" class="hint" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="editor-list-section" style="margin-top:2rem">
+        <h3>Inbox</h3>
+        <div style="display:flex; gap:12px; margin-bottom:0.75rem">
+          {statusTabs.map((tab) => (
+            <a
+              href={`${ctx.adminBase}/moderation?status=${tab.value}`}
+              class:list={["hint", { "env-on": status === tab.value }]}
+            >{tab.label}</a>
+          ))}
+        </div>
+
+        {items.length === 0 ? (
+          <p class="hint">
+            {status === "pending"
+              ? "Nothing awaiting review. Quiet is good."
+              : "Nothing here yet."}
+          </p>
+        ) : (
+          <ul style="list-style:none; margin:0; padding:0" data-admin-base={ctx.adminBase} id="moderation-inbox">
+            {items.map((item) => (
+              <li class="settings-card" style="display:block; margin-bottom:0.75rem" data-queue-id={item.id}>
+                <div class="hint" style="margin-bottom:4px">
+                  <strong>{item.comment.authorName}</strong>
+                  {" on "}
+                  <a href={`${ctx.siteBase.replace(/\/$/, "")}/posts/${item.page.slug}`} target="_blank">{item.page.title}</a>
+                  {" · "}{formatDate(item.createdAt)}
+                  {" · "}{item.comment.held ? "held" : "published"}
+                </div>
+                <div style="white-space:pre-wrap; overflow-wrap:anywhere; margin:0.25rem 0 0.5rem">{excerpt(item.comment.body)}</div>
+                <div class="hint" style="margin-bottom:0.5rem">
+                  {item.flagReason}
+                  {item.rule ? ` (rule: ${item.rule})` : ""}
+                  {" · confidence "}{confidencePct(item.confidence)}
+                </div>
+                {status === "pending" && (
+                  <div style="display:flex; gap:8px">
+                    <button type="button" class="btn btn-sm" data-action={item.comment.held ? "approve" : "dismiss"}>
+                      {item.comment.held ? "Approve" : "Dismiss"}
+                    </button>
+                    <button type="button" class="btn btn-sm" data-action="remove">Remove comment</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  </main>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById("moderation-settings-form") as HTMLFormElement | null;
+  if (form) {
+    const adminBase = form.dataset.adminBase ?? "";
+    const msg = document.getElementById("moderation-settings-msg")!;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "Saving…";
+      const res = await fetch(`${adminBase}/moderation/settings`, {
+        method: "POST",
+        headers: { accept: "application/json" },
+        body: new FormData(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      msg.textContent = res.ok ? "Saved." : `Error: ${data.error ?? res.status}`;
+    });
+  }
+
+  const inbox = document.getElementById("moderation-inbox");
+  if (inbox) {
+    const adminBase = inbox.dataset.adminBase ?? "";
+    inbox.addEventListener("click", async (e) => {
+      const button = (e.target as HTMLElement).closest("button[data-action]");
+      if (!button) return;
+      const item = button.closest("[data-queue-id]") as HTMLElement | null;
+      if (!item) return;
+      const action = button.getAttribute("data-action");
+      if (action === "remove" && !confirm("Remove this comment?")) return;
+      (button as HTMLButtonElement).disabled = true;
+      const res = await fetch(
+        `${adminBase}/moderation/queue/${encodeURIComponent(item.dataset.queueId!)}/${action}`,
+        { method: "POST", headers: { accept: "application/json" } },
+      );
+      if (res.ok) {
+        item.remove();
+      } else {
+        (button as HTMLButtonElement).disabled = false;
+      }
+    });
+  }
+</script>

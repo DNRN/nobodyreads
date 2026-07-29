@@ -14,7 +14,7 @@ import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/routes.js";
 import { createAiApiRoutes } from "./api/ai/ai.routes.js";
-import { resolveAiProviderConfig } from "./api/ai/config.js";
+import { resolveAiProviderConfig, resolveModerationAiConfig } from "./api/ai/config.js";
 import { createFeedRoutes } from "./content/feed.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
@@ -314,13 +314,15 @@ async function start() {
 		createCommunityRoutes({ db, resolveMember: memberResolver }),
 	);
 
-	// Comments. Moderation (delete any) is granted to the authenticated editor.
+	// Comments. Moderation (delete any) is granted to the authenticated editor;
+	// the AI pre-publish check runs when a moderation model is configured.
 	app.route(
 		"/api",
 		createCommentRoutes({
 			db,
 			resolveMember: memberResolver,
 			canModerate: (c) => isAuthenticatedRequest(c.req.raw),
+			moderation: { ai: resolveModerationAiConfig() },
 		}),
 	);
 

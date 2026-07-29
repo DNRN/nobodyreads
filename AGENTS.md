@@ -18,6 +18,60 @@ party / OAuth2 client** side only. The authorization server (hub) is the
 responsibility of the host platform (nobodyreads.me in the reference
 implementation).
 
+## Working agreement
+
+These rules govern *how* an agent works in this repo, not what the code does.
+They apply to every agent and every tool (Claude Code, Cursor, Codex, …).
+
+### Ask when in doubt
+
+**Ask rather than guess.** If a request is ambiguous, underspecified, or two
+readings would lead to materially different work, stop and ask before writing
+code. A short clarifying question is cheaper than a confidently wrong
+implementation that has to be unwound — and in a published package, wrong
+guesses become someone else's breaking change.
+
+Ask when:
+
+- The readings diverge in scope, data model, or user-visible behavior.
+- The change would touch one of the **Invariants** below (tenant-agnosticism,
+  no host-specific auth, factories over instances, explicit exports).
+- The change would alter the **published surface** — a `package.json`
+  `exports` entry, a factory signature, the admin-context contract, the
+  database schema, or the site-template contract. These are consumed by hosts
+  (including nobodyreads.me) and cannot be quietly reshaped.
+- It is unclear whether the behavior belongs in this generic engine or in the
+  host platform. When in doubt it belongs in the host — but ask.
+- Anything destructive, secret-touching, or hard to reverse is involved.
+
+State what is ambiguous, offer 2–3 concrete options with a recommendation, and
+do the unambiguous parts of the task while waiting. Read `AGENTS.md`,
+`CLAUDE.md`, `docs/overview.md`, and the code before asking. If you must
+proceed without an answer, say plainly which assumption you made.
+
+### Propose architectural improvements
+
+Agents are expected to be **opinionated about design**, not just compliant.
+While working, look for improvements and surface them — especially obvious
+ones: duplicated logic wanting extraction, a factory that should take a
+parameter instead of branching, a route handler doing data access that belongs
+in a module, a missing index, an abstraction leaking host assumptions into the
+package, an unhandled failure path, a test seam that would make a module
+verifiable.
+
+- **Say it, don't smuggle it.** Propose it in your response — what is wrong,
+  what you would change, what it buys. Do not silently expand the requested
+  change into a refactor; the requested scope stays the deliverable.
+- **Small and in-scope:** apply it inside code you were already editing and
+  note it in your summary.
+- **Large, cross-cutting, or surface-changing:** propose and agree first.
+  Anything touching `exports`, a factory signature, or the schema is in this
+  bucket by definition.
+- **Note debt you deliberately walked past** rather than fixing it uninvited.
+
+Keep every proposal tenant-agnostic and host-agnostic — that is the whole
+value of this package.
+
 ## Tooling
 
 - **Package manager:** npm. This is an OSS project and contributors expect
@@ -98,30 +152,51 @@ If you are unsure whether a change warrants a doc update, update
 ## Commits
 
 - **Author.** Commits use the identity already configured in git
-  (`git config user.name` / `user.email`) — never override it per-commit or
-  edit the global/repo git config to attribute work to someone else.
+  (`git config user.name` / `user.email`) — never override it per-commit
+  (`--author`) or edit the global/repo git config to attribute work to
+  someone else.
+- **No AI attribution.** Do **not** add `Co-Authored-By: Claude`, any other
+  agent co-author trailer, or a "Generated with …" / "🤖" footer to commit
+  messages or PR bodies. An agent working here is a tool, not a contributor.
 - **Precision.** Subject line under ~70 characters, imperative mood
   (`fix(admin): ...`, `feat(template): ...`), describing the actual change,
   not a vague label like "updates" or "fixes". If the change needs
   explaining beyond the subject, use a body focused on *why*, not a
   restatement of the diff. Only commit what was actually asked for — don't
   fold in unrelated cleanup.
+- **One concern per commit**, and never commit this repo and
+  `nobodyreads.me` in one go — separate histories, separate visibility. Land
+  the change here first when it spans both.
+- Commit or push only when asked. If work is on `main`, branch first.
 
 ## Pull requests
 
 - **Author.** PRs are opened under the currently authenticated `gh` user
   (`gh auth status`) — never fabricate a different author, override git
   commit identity, or rewrite `user.name`/`user.email` to attribute work to
-  someone else. Agents assisting with a PR are contributors, not authors;
-  commit trailers may credit an assisting agent (e.g.
-  `Co-Authored-By: Claude <noreply@anthropic.com>`) but must not replace the
-  human author.
+  someone else. The human is the author; no agent co-author trailers or
+  "Generated with …" footers in the PR body (see Commits above).
 - **Precision.** Title under ~70 characters, written as a specific summary
   of the change (not "fix bug" or "update code"). The body must describe
   what changed and why, grounded in the actual diff — read every commit
   being merged, not just the latest one. Do not restate the template's
   section headers with placeholder or filler content; every claim in the
   PR body should be verifiable against the diff.
+- **Test plan — required.** Never hand-wave this section. State exactly what
+  a reviewer must do to prove the PR works:
+  - the concrete commands (`npm run build`, `npm test`, `npm run dev`);
+  - the routes, editor flows, or factory call sites to exercise, with the
+    expected result for each step so "works" is falsifiable;
+  - new or updated tests (`src/**/*.test.ts`) covering the change, or an
+    explicit note on why the change is not unit-testable;
+  - for anything touching the published surface, a check that a consumer
+    still builds — `npm run build` here, then `npm run typecheck` in a
+    consuming host;
+  - `[x]` for steps you actually ran, `[ ]` for steps the reviewer should
+    run. Do not tick a box you did not execute.
+- **Breaking changes.** Call out any change to `exports`, factory
+  signatures, the admin-context contract, or the schema explicitly, with the
+  migration a consumer needs.
 - **Template.** `.github/pull_request_template.md` defines the default body
   shape (Summary, What changed, Test plan). `gh pr create` picks it up
   automatically when no `--body`/`--body-file`/`--fill` is given; fill in

@@ -91,6 +91,7 @@ export { createAiRoutes } from "./admin/server/modules/ai.js";
 export { createModerationRoutes } from "./admin/server/modules/moderation.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
+export { createPaymentsAdminRoutes } from "./admin/server/modules/payments.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
 export type { AdminModuleContext, AiProviderConfig, AiProvider } from "./admin/server/modules/types.js";
 export {

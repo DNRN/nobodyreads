@@ -20,6 +20,12 @@ export interface NobodyreadsAdminContext {
   /** Whether AI theming is configured for this host (shows/hides the AI panel). */
   aiEnabled?: boolean;
   /**
+   * Whether payments are configured for this host (shows/hides the Payments
+   * panel). Presentation only — never a gate. Access is decided server-side by
+   * `resolvePageAccess` on every render.
+   */
+  paymentsEnabled?: boolean;
+  /**
    * Human-readable site/plot name for branding (page titles etc.). Optional so
    * single-tenant hosts can fall back to a build-time default; multi-tenant
    * hosts pass the tenant's display name.
@@ -74,6 +80,7 @@ export function makeAdminContext(
     siteBase: input.siteBase,
     loginHref: input.loginHref,
     aiEnabled: input.aiEnabled,
+    paymentsEnabled: input.paymentsEnabled,
     siteName: input.siteName,
   };
 }

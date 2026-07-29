@@ -11,6 +11,7 @@ import { createAiRoutes } from "./modules/ai.js";
 import { createModerationRoutes } from "./modules/moderation.js";
 import { createMediaRoutes } from "./modules/media.js";
 import { createViewRoutes } from "./modules/views.js";
+import { createPaymentsAdminRoutes } from "./modules/payments.js";
 
 export interface AdminRouterOptions {
   db: Database;
@@ -73,6 +74,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
   app.route("/", createModerationRoutes(ctx));
   app.route("/", createContentRoutes(ctx));
   app.route("/", createViewRoutes(ctx));
+  app.route("/", createPaymentsAdminRoutes(ctx));
 
   return app;
 }

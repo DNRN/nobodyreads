@@ -2,6 +2,7 @@
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageByKind, getNavItems } from "../../../src/content/db.js";
 import { renderContent } from "../../../src/content/render.js";
+import { gatePreviewPage } from "../../lib/gate.js";
 import { guardAuth } from "../../../src/admin/server/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
@@ -19,7 +20,7 @@ const previewUrlPrefix = "/preview";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
 
 const db = await getDbClient();
-const [siteTemplate, latestRevisionId, page, navItems] = await Promise.all([
+const [siteTemplate, latestRevisionId, rawPage, navItems] = await Promise.all([
   getLatestSiteTemplateRevision(db, tenantId),
   getLatestSiteTemplateRevisionId(db, tenantId),
   getPageByKind(db, "home", tenantId),
@@ -66,6 +67,10 @@ const autoReloadScript = `(() => {
 
   schedule();
 })();`;
+
+// Owner preview: `?preview=public` renders what a non-paying reader sees.
+const gate = rawPage ? await gatePreviewPage(db, rawPage, tenantId, Astro.request) : null;
+const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page?.content?.trim()) {

@@ -1,0 +1,165 @@
+---
+/**
+ * The call-to-action shown below a teaser.
+ *
+ * Rendered as a real `<form method="POST">`, not a fetch. Two reasons, both
+ * deliberate: it works with JavaScript off, and it makes visible in the markup
+ * that the gate is server-side. A paywall that looks like a client-side overlay
+ * invites readers to try to remove it — and invites the next developer to
+ * assume it *is* one.
+ */
+import type { AccessDecision } from "../../src/payments/types.js";
+
+interface Props {
+  decision: Extract<AccessDecision, { visibility: "teaser" }>;
+  /** Base for the payments API, e.g. `${urlPrefix}/api`. */
+  apiBase: string;
+  /** Page being gated, sent with a single-post purchase. */
+  pageId: string;
+  /** Where to send a signed-out reader first. */
+  loginHref?: string;
+  /** Whether a reader is signed in. Checkout needs an account. */
+  signedIn?: boolean;
+}
+
+const { decision, apiBase, pageId, loginHref, signedIn = true } = Astro.props;
+
+function formatAmount(minorUnits: number, currency: string): string {
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(minorUnits / 100);
+}
+
+const isMembersOnly = decision.reason === "members_only";
+const tier = decision.tier;
+const monthly = tier?.amountMonthly != null ? formatAmount(tier.amountMonthly, decision.currency) : null;
+const yearly = tier?.amountYearly != null ? formatAmount(tier.amountYearly, decision.currency) : null;
+const single =
+  decision.priceAmount != null ? formatAmount(decision.priceAmount, decision.currency) : null;
+
+const checkoutAction = `${apiBase}/payments/checkout`;
+---
+
+<aside class="nb-paywall" aria-labelledby="nb-paywall-title">
+  <h2 class="nb-paywall__title" id="nb-paywall-title">
+    {isMembersOnly ? "The rest is for members" : "The rest is for supporters"}
+  </h2>
+
+  {isMembersOnly ? (
+    <>
+      <p class="nb-paywall__lede">
+        Join this plot to read the whole thing. It's free.
+      </p>
+      <div class="nb-paywall__actions">
+        <a class="nb-paywall__btn nb-paywall__btn--primary" href={loginHref ?? "#"}>Join</a>
+      </div>
+    </>
+  ) : !signedIn ? (
+    <>
+      <p class="nb-paywall__lede">
+        Sign in to support this plot and read the whole thing.
+      </p>
+      <div class="nb-paywall__actions">
+        <a class="nb-paywall__btn nb-paywall__btn--primary" href={loginHref ?? "#"}>Sign in</a>
+      </div>
+    </>
+  ) : (
+    <>
+      <p class="nb-paywall__lede">
+        Support this plot to read the whole thing — and everything else behind the fold.
+      </p>
+      <div class="nb-paywall__actions">
+        {tier && monthly && (
+          <form method="POST" action={checkoutAction}>
+            <input type="hidden" name="scope_kind" value="tier" />
+            <input type="hidden" name="scope_ref" value={tier.id} />
+            <input type="hidden" name="interval" value="month" />
+            <button type="submit" class="nb-paywall__btn nb-paywall__btn--primary">
+              {monthly} / month
+            </button>
+          </form>
+        )}
+        {tier && yearly && (
+          <form method="POST" action={checkoutAction}>
+            <input type="hidden" name="scope_kind" value="tier" />
+            <input type="hidden" name="scope_ref" value={tier.id} />
+            <input type="hidden" name="interval" value="year" />
+            <button type="submit" class="nb-paywall__btn">
+              {yearly} / year
+            </button>
+          </form>
+        )}
+        {single && (
+          <form method="POST" action={checkoutAction}>
+            <input type="hidden" name="scope_kind" value="page" />
+            <input type="hidden" name="scope_ref" value={pageId} />
+            <button type="submit" class="nb-paywall__btn">
+              Buy just this post — {single}
+            </button>
+          </form>
+        )}
+      </div>
+      {!tier && !single && (
+        <p class="nb-paywall__lede">
+          This plot hasn't set up payments yet. Check back soon.
+        </p>
+      )}
+    </>
+  )}
+</aside>
+
+<style>
+  .nb-paywall {
+    margin: 2.5rem 0 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--nb-border, #d8d4cc);
+    border-radius: 10px;
+    background: var(--nb-surface, #faf8f4);
+  }
+
+  .nb-paywall__title {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+  }
+
+  .nb-paywall__lede {
+    margin: 0 0 1rem;
+    color: var(--nb-muted, #6b665c);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .nb-paywall__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .nb-paywall__actions form {
+    margin: 0;
+  }
+
+  .nb-paywall__btn {
+    display: inline-block;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--nb-border, #d8d4cc);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.92rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .nb-paywall__btn:hover {
+    border-color: var(--nb-accent, #2f6f4f);
+  }
+
+  .nb-paywall__btn--primary {
+    background: var(--nb-accent, #2f6f4f);
+    border-color: var(--nb-accent, #2f6f4f);
+    color: #fff;
+  }
+</style>

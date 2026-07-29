@@ -10,6 +10,20 @@ const SITE_NAME = process.env.SITE_NAME || "nobodyreads.me";
  * (so authors can pick whatever they like), otherwise fall back to the first
  * image embedded in the post body, and finally the site-wide default.
  */
+/**
+ * Pick the social share image: an explicit `seo.ogImage`, else the first image
+ * in the body, else the site default.
+ *
+ * **`options.page` must already be redacted.** This function deliberately knows
+ * nothing about paywalls — it reads `page.content` at face value. That is safe
+ * because every caller passes the page returned by `getReadableContent`, whose
+ * `content` is the teaser for a gated reader. Hand it a raw page and an image
+ * from below the paywall becomes the `og:image` of a post nobody has paid for.
+ *
+ * Teaching this function about access tiers was the alternative, and it would
+ * have made every future consumer of `Page` one more place to remember. See
+ * `payments/access.ts`.
+ */
 function resolveOgImage(options: LayoutOptions): string | undefined {
   return (
     options.seo?.ogImage ||

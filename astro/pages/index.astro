@@ -1,20 +1,29 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
+import Paywall from "../components/Paywall.astro";
 import { getPageByKind, getNavItems } from "../../src/content/db.js";
 import { renderContent } from "../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { isAuthenticatedRequest } from "../../src/admin/server/auth.js";
 import { getDbClient } from "../lib/db.js";
+import { gatePage } from "../lib/gate.js";
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const urlPrefix = process.env.URL_PREFIX || "";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
 
 const db = await getDbClient();
-const [page, navItems] = await Promise.all([
+const [rawPage, navItems] = await Promise.all([
   getPageByKind(db, "home", tenantId),
   getNavItems(db, tenantId),
 ]);
+
+// Gating a home page is unusual but nothing stops an author doing it, and the
+// same rule applies: render only from the redacted page.
+const gate = rawPage
+  ? await gatePage(db, rawPage, tenantId, Astro.request, Astro.response)
+  : null;
+const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page?.content?.trim()) {
@@ -61,6 +70,15 @@ const options = page
   {page ? (
     <>
       {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
+      {gate?.gated && gate.decision.visibility === "teaser" && (
+        <Paywall
+          decision={gate.decision}
+          apiBase={`${urlPrefix}/api`}
+          pageId={page.id}
+          loginHref={`${urlPrefix}/login`}
+          signedIn={gate.signedIn}
+        />
+      )}
     </>
   ) : (
     <>

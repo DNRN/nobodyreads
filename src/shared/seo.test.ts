@@ -67,3 +67,45 @@ describe("social share image resolution", () => {
     );
   });
 });
+
+// ---------- Paywall contract ----------
+
+describe("og:image and gated pages", () => {
+  // `resolveOgImage` deliberately knows nothing about access tiers. The
+  // guarantee is upstream: every caller passes the page returned by
+  // `getReadableContent`, whose content is already the teaser. These two tests
+  // pin both halves of that contract.
+
+  it("does not surface an image from below the paywall, given a redacted page", async () => {
+    const { redactPage } = await import("../payments/access.js");
+
+    const raw = makePage({
+      accessTier: "paid",
+      excerpt: "A teaser with no image.",
+      content: "Free intro.\n\n<!--paywall-->\n\n![secret](/media/below-the-cut.jpg)",
+    });
+
+    const safe = redactPage(raw, {
+      visibility: "teaser",
+      reason: "payment_required",
+      tier: null,
+      priceAmount: null,
+      currency: "eur",
+    });
+
+    const html = buildMetaTags(makeOptions({ page: safe }));
+    expect(html).not.toContain("below-the-cut.jpg");
+  });
+
+  it("still surfaces it for an entitled reader, whose page is not redacted", async () => {
+    const { redactPage } = await import("../payments/access.js");
+
+    const raw = makePage({
+      accessTier: "paid",
+      content: "![cover](/media/paid-cover.jpg)",
+    });
+    const safe = redactPage(raw, { visibility: "full", reason: "entitled" });
+
+    expect(buildMetaTags(makeOptions({ page: safe }))).toContain("paid-cover.jpg");
+  });
+});

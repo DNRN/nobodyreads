@@ -221,10 +221,25 @@ describe("out-of-order events", () => {
     expect((await getEntitlement(t.db, TENANT, bob, tierScope))?.status).toBe("active");
   });
 
-  it("revoking something that was never granted is a no-op", async () => {
+  it("revoking something never granted still writes a tombstone", async () => {
+    // Not a no-op on purpose: the row is what a later, *older* grant loses
+    // against. Without it, a delayed subscription.updated re-grants a
+    // cancelled subscription.
     expect(
-      await revokeEntitlement(t.db, TENANT, { member: bob, scope: tierScope, eventAt: 100 }),
-    ).toBe(false);
+      await revokeEntitlement(t.db, TENANT, { member: bob, scope: tierScope, eventAt: 200 }),
+    ).toBe(true);
+
+    const row = await getEntitlement(t.db, TENANT, bob, tierScope);
+    expect(row).toMatchObject({ status: "revoked", lastEventAt: 200 });
+
+    await grantEntitlement(t.db, TENANT, {
+      member: bob,
+      scope: tierScope,
+      source: "stripe",
+      expiresAt: 9999,
+      eventAt: 100,
+    });
+    expect((await getEntitlement(t.db, TENANT, bob, tierScope))?.status).toBe("revoked");
   });
 
   async function revokeAfterGrant(): Promise<void> {

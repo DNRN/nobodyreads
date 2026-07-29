@@ -287,8 +287,15 @@ export interface RevokeEntitlementInput {
 /**
  * Revoke an entitlement. Same ordering guard as `grantEntitlement`.
  *
- * The row is kept rather than deleted so a later resubscribe reuses it and the
- * revocation stays visible for support.
+ * The row is kept rather than deleted, for two reasons. The obvious one is that
+ * a later resubscribe reuses it and the revocation stays visible for support.
+ *
+ * The load-bearing one is that this **writes a row even when none existed**.
+ * A revoke that found nothing to do used to return without writing, which left
+ * no record of *when* access was cancelled — so a `subscription.updated` that
+ * had been delayed in the network and arrived afterwards found a clean slate
+ * and granted the subscription right back. Recording a revoked row stamped with
+ * `last_event_at` gives the straggler something older to lose against.
  */
 export async function revokeEntitlement(
   db: Database,
@@ -298,21 +305,37 @@ export async function revokeEntitlement(
   const { scopeKind, scopeRef } = scopeColumns(input.scope);
 
   const existing = await getEntitlement(db, tenantId, input.member, input.scope);
-  if (!existing) return false;
-  if (existing.lastEventAt > input.eventAt) return false;
+  if (existing && existing.lastEventAt > input.eventAt) return false;
+
+  const values = {
+    status: "revoked" as const,
+    revokedAt: input.eventAt,
+    lastEventAt: input.eventAt,
+    expiresAt: null,
+  };
 
   await db
-    .update(entitlement)
-    .set({ status: "revoked", revokedAt: input.eventAt, lastEventAt: input.eventAt })
-    .where(
-      and(
-        eq(entitlement.tenantId, tenantId),
-        eq(entitlement.memberIssuer, input.member.issuer),
-        eq(entitlement.memberSubject, input.member.subject),
-        eq(entitlement.scopeKind, scopeKind),
-        eq(entitlement.scopeRef, scopeRef)
-      )
-    );
+    .insert(entitlement)
+    .values({
+      tenantId,
+      memberIssuer: input.member.issuer,
+      memberSubject: input.member.subject,
+      scopeKind,
+      scopeRef,
+      source: existing?.source ?? "unknown",
+      externalRef: existing?.externalRef ?? null,
+      ...values,
+    })
+    .onConflictDoUpdate({
+      target: [
+        entitlement.tenantId,
+        entitlement.memberIssuer,
+        entitlement.memberSubject,
+        entitlement.scopeKind,
+        entitlement.scopeRef,
+      ],
+      set: values,
+    });
 
   return true;
 }

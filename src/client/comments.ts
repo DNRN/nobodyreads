@@ -69,6 +69,10 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
 
   let signedIn = false;
   let comments: CommentNode[] = [];
+  // Set when the post is gated for this reader: the thread is theirs to unlock,
+  // not to read. Purely presentational — the server already withheld the rows.
+  let gated = false;
+  let gatedTier = "";
   // Set when the last submission was held for review; consumed by render().
   let pendingNotice = false;
 
@@ -121,6 +125,13 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
       }
       if (res.status === 429) {
         error.textContent = "You're commenting too fast — try again shortly.";
+        error.style.display = "block";
+        return;
+      }
+      if (res.status === 403) {
+        // The post became gated, or entitlement lapsed, while the page was open.
+        error.textContent =
+          "This discussion is for supporters of this plot. Refresh to see how to join.";
         error.style.display = "block";
         return;
       }
@@ -222,6 +233,20 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
     root.innerHTML = "";
     root.className = "nb-comments";
 
+    if (gated) {
+      root.appendChild(el("h2", null, "Discussion"));
+      root.appendChild(
+        el(
+          "p",
+          "nb-comments-closed",
+          gatedTier === "paid"
+            ? "The discussion on this post is for supporters."
+            : "The discussion on this post is for members of this plot.",
+        ),
+      );
+      return;
+    }
+
     const count = comments.filter((c) => !c.deleted && !c.pending).length;
     root.appendChild(
       el("h2", null, count === 1 ? "1 comment" : count + " comments"),
@@ -248,6 +273,8 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
     const res = await request<CommentThread>(threadUrl);
     if (!res.ok || !res.body) return;
     comments = res.body.comments || [];
+    gated = res.body.gated === true;
+    gatedTier = res.body.accessTier || "";
     render();
   }
 

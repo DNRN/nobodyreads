@@ -29,7 +29,7 @@ import type { AdminModuleContext } from "./types.js";
  *   GET  /payments/subscribers  -> live entitlement counts
  */
 export function createPaymentsAdminRoutes(ctx: AdminModuleContext): Hono {
-  const { db, tenantId } = ctx;
+  const { db, tenantId, adminBase } = ctx;
   const app = new Hono();
 
   app.get("/payments/tier", async (c) => {
@@ -42,13 +42,21 @@ export function createPaymentsAdminRoutes(ctx: AdminModuleContext): Hono {
 
   app.post("/payments/tier", async (c) => {
     const body = await c.req.parseBody();
+    // The tier form is a plain HTML form, not a fetch-driven one like the AI
+    // settings forms — a browser submitting it navigates wherever this
+    // responds, so a bare c.json() would replace the admin UI with raw JSON.
+    // Redirect back to the page for that case; only reply with JSON when the
+    // caller explicitly asked for it (fetch, API use).
+    const wantsJson = (c.req.header("accept") || "").includes("application/json");
 
     const name = String(body.name || "").trim() || "Supporter";
     const amountMonthly = parseMinorUnits(body.amount_monthly);
     const amountYearly = parseMinorUnits(body.amount_yearly);
 
     if (amountMonthly == null && amountYearly == null) {
-      return c.json({ error: "Set a monthly or a yearly price" }, 400);
+      const error = "Set a monthly or a yearly price";
+      if (wantsJson) return c.json({ error }, 400);
+      return c.redirect(`${adminBase}/payments?error=${encodeURIComponent(error)}`);
     }
 
     // No price floor here on purpose. A minimum only makes sense where a
@@ -71,7 +79,10 @@ export function createPaymentsAdminRoutes(ctx: AdminModuleContext): Hono {
       tenantId
     );
 
-    return c.json({ ok: true, tier: await getActivePaidTier(db, tenantId) });
+    if (wantsJson) {
+      return c.json({ ok: true, tier: await getActivePaidTier(db, tenantId) });
+    }
+    return c.redirect(`${adminBase}/payments?saved`);
   });
 
   /**

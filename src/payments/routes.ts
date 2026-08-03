@@ -108,6 +108,17 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
     }
   });
 
+  /**
+   * Checkout is POST-only, but readers land here with a GET all the time:
+   * pressing Back from the provider's hosted page re-issues the form's target
+   * as a GET, and so does a reload or a bookmark. A 404 at that moment looks
+   * like the plot is broken, right after the reader tried to pay.
+   *
+   * Send them back where they came from instead. Nothing is created on a GET —
+   * a checkout session must never be a side effect of navigation.
+   */
+  app.get("/payments/checkout", (c) => c.redirect(urlPrefix || "/"));
+
   app.get("/payments/manage", async (c) => {
     const member = await resolveMember(c);
     if (!member) return c.redirect(loginHref);

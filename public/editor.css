@@ -1918,6 +1918,15 @@
 	margin-top: 3px;
 }
 
+/* A settings-toggle-row can hold a real checkbox (an editable setting) instead
+   of the read-only .nr-toggle status pill below. */
+.nr-admin .settings-toggle-row input[type="checkbox"] {
+	width: 1.25rem;
+	height: 1.25rem;
+	flex-shrink: 0;
+	accent-color: var(--nr-accent);
+}
+
 /* Toggle switch: 48x28 track, 22px knob. Reflects state via .is-on. */
 .nr-admin .nr-toggle {
 	position: relative;

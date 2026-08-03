@@ -29,6 +29,9 @@ function money(minorUnits: number | null | undefined, currency = "eur"): string 
 function major(minorUnits: number | null | undefined): string {
   return minorUnits == null ? "" : (minorUnits / 100).toFixed(2);
 }
+
+const saved = Astro.url.searchParams.has("saved");
+const error = Astro.url.searchParams.get("error");
 ---
 <AdminLayout title="Payments — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -43,6 +46,12 @@ function major(minorUnits: number | null | undefined): string {
 
       <div class="editor-list-section">
         <h3>Supporter tier</h3>
+        {saved ? (
+          <p class="badge badge-published" style="margin-bottom: 1rem; display: inline-block;">Saved</p>
+        ) : null}
+        {error ? (
+          <ul class="form-errors"><li>{error}</li></ul>
+        ) : null}
         <form
           method="POST"
           action={`${ctx.editorBase.replace(/\/editor$/, "")}/payments/tier`}
@@ -50,21 +59,21 @@ function major(minorUnits: number | null | undefined): string {
         >
           <div class="field">
             <label for="name">Name</label>
-            <input type="text" id="name" name="name" maxlength="60"
+            <input type="text" id="name" name="name" maxlength="60" class="editor-input"
                    value={tier?.name || "Supporter"} required />
           </div>
           <div class="field">
             <label for="amount_monthly">Per month</label>
-            <input type="number" id="amount_monthly" name="amount_monthly"
+            <input type="number" id="amount_monthly" name="amount_monthly" class="editor-input"
                    step="0.01" min="0" value={major(tier?.amountMonthly)} />
           </div>
           <div class="field">
             <label for="amount_yearly">Per year <span class="hint">(optional)</span></label>
-            <input type="number" id="amount_yearly" name="amount_yearly"
+            <input type="number" id="amount_yearly" name="amount_yearly" class="editor-input"
                    step="0.01" min="0" value={major(tier?.amountYearly)} />
           </div>
-          <div class="field">
-            <label class="checkbox-label">
+          <div class="field field-row">
+            <label>
               <input type="hidden" name="active" value="off" />
               <input type="checkbox" name="active" value="on" checked={tier?.active ?? true} />
               Offer this tier to readers

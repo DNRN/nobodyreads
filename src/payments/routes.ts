@@ -20,6 +20,13 @@ export interface PaymentsRouterOptions {
   /** Host-supplied member resolver — the package never invents identity. */
   resolveMember: ResolveMember;
   /**
+   * Where to send a signed-out reader. Defaults to `${urlPrefix}/login`, which
+   * is right for a self-host where sign-in lives under the site. A multi-tenant
+   * platform whose login is global must pass its own — otherwise checkout
+   * bounces the reader to a per-plot URL that does not exist.
+   */
+  loginHref?: string;
+  /**
    * Where the provider comes from. Defaulted at the use site, not in the type,
    * so `null` stays the documented off switch. Same shape as `RulesetSource`.
    */
@@ -37,6 +44,7 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
   const { db, resolveMember } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
+  const loginHref = options.loginHref ?? `${urlPrefix}/login`;
   const paymentSource = options.paymentProvider ?? createSiteSettingsPaymentSource(db);
 
   const app = new Hono();
@@ -48,7 +56,7 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
       // entitlement keys off the existing (issuer, subject) identity with no
       // new identity path. Auto-provisioning from the Checkout email is a
       // deliberate follow-up.
-      return c.redirect(`${urlPrefix}/login`);
+      return c.redirect(loginHref);
     }
 
     const provider = await paymentSource(tenantId);
@@ -102,7 +110,7 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
 
   app.get("/payments/manage", async (c) => {
     const member = await resolveMember(c);
-    if (!member) return c.redirect(`${urlPrefix}/login`);
+    if (!member) return c.redirect(loginHref);
 
     const provider = await paymentSource(tenantId);
     if (!provider) return c.json({ error: "Payments are not configured" }, 503);

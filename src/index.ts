@@ -392,6 +392,7 @@ export {
   isPaymentsConfigured,
   createStripeProvider,
   mapStripeEventToEntitlementEvents,
+  invoiceMetadata,
   ENTITLEMENT_GRACE_SECONDS,
   SETTING_PAYMENTS_PROVIDER,
   SETTING_PAYMENTS_PUBLISHABLE_KEY,

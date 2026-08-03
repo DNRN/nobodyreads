@@ -294,3 +294,82 @@ describe("mapStripeEventToEntitlementEvents", () => {
     expect(mapStripeEventToEntitlementEvents(e)[0].eventId).toBe("evt_specific");
   });
 });
+
+// ---------- invoice metadata resolution ----------
+
+describe("invoice.paid metadata, as Stripe actually shapes it", () => {
+  /**
+   * Modelled on a real `invoice.paid` webhook payload. The invoice's own
+   * `metadata` is `{}` — not absent, *empty* — which is what made the old
+   * `invoice.metadata ?? lineMeta` fallback pick the wrong one and drop every
+   * renewal on the floor.
+   */
+  function realInvoice(overrides: Record<string, unknown> = {}) {
+    return {
+      subscription: "sub_1",
+      metadata: {},
+      parent: { subscription_details: { metadata: META, subscription: "sub_1" } },
+      lines: { data: [{ metadata: META, period: { end: 5000 } }] },
+      customer: "cus_1",
+      amount_paid: 500,
+      currency: "eur",
+      ...overrides,
+    };
+  }
+
+  it("finds the metadata even though invoice.metadata is an empty object", () => {
+    const [mapped] = mapStripeEventToEntitlementEvents(event("invoice.paid", realInvoice()));
+    expect(mapped).toBeDefined();
+    expect(mapped).toMatchObject({
+      action: "grant",
+      scope: { kind: "tier", tierId: "tier1" },
+      expiresAt: 5000 + ENTITLEMENT_GRACE_SECONDS,
+    });
+  });
+
+  it("falls back to the line item when parent is absent", () => {
+    const invoice = realInvoice();
+    delete (invoice as Record<string, unknown>).parent;
+    expect(mapStripeEventToEntitlementEvents(event("invoice.paid", invoice))).toHaveLength(1);
+  });
+
+  it("still ignores an invoice that is genuinely not ours", () => {
+    const [none] = mapStripeEventToEntitlementEvents(
+      event("invoice.paid", {
+        subscription: "sub_x",
+        metadata: {},
+        lines: { data: [{ metadata: {}, period: { end: 5000 } }] },
+      }),
+    );
+    expect(none).toBeUndefined();
+  });
+});
+
+describe("a subscription checkout never grants forever", () => {
+  it("uses a provisional window when the period end is not in the payload", () => {
+    // The subscription is not expanded in a webhook, so the period is unknown.
+    // `invoice.paid` follows seconds later with the real one — but if it never
+    // arrives, this must not have handed out permanent access.
+    const [mapped] = mapStripeEventToEntitlementEvents(
+      event("checkout.session.completed", {
+        mode: "subscription",
+        metadata: META,
+        subscription: "sub_1",
+        customer: "cus_1",
+      }),
+    );
+    expect(mapped.expiresAt).toBe(1000 + ENTITLEMENT_GRACE_SECONDS);
+    expect(mapped.expiresAt).not.toBeNull();
+  });
+
+  it("still grants a one-off page purchase forever", () => {
+    const [mapped] = mapStripeEventToEntitlementEvents(
+      event("checkout.session.completed", {
+        mode: "payment",
+        metadata: { ...META, nbr_scope_kind: "page", nbr_scope_ref: "p1" },
+        payment_intent: "pi_1",
+      }),
+    );
+    expect(mapped.expiresAt).toBeNull();
+  });
+});

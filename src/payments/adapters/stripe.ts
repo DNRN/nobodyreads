@@ -167,11 +167,15 @@ export function mapStripeEventToEntitlementEvents(event: Stripe.Event): Entitlem
       const context = readContext(session.metadata, session.client_reference_id);
       if (!context) return [];
 
-      // A subscription checkout grants until the period end; a one-off payment
-      // grants a page forever. Renewals arrive later as `invoice.paid`.
+      // A subscription grants until its period end; a one-off payment grants a
+      // page forever. When the session does not carry the period (the
+      // subscription is not expanded in a webhook payload), fall back to a
+      // provisional grace-length window rather than `null`. `invoice.paid`
+      // arrives seconds later with the real period end and extends it — but if
+      // it never arrives, the reader gets a few days, not permanent access.
       const expiresAt =
         session.mode === "subscription"
-          ? withGrace(readSubscriptionPeriodEnd(session))
+          ? withGrace(readSubscriptionPeriodEnd(session)) ?? occurredAt + ENTITLEMENT_GRACE_SECONDS
           : null;
 
       return [
@@ -355,15 +359,40 @@ function invoicePeriodEnd(invoice: Stripe.Invoice): number | null {
   return ends.length > 0 ? Math.max(...ends) : null;
 }
 
-function invoiceMetadata(invoice: Stripe.Invoice): Stripe.Metadata {
-  // Invoice metadata is not the subscription's, so prefer the subscription's
-  // when it is expanded — that is where checkout put it.
+/**
+ * Find our metadata on an invoice.
+ *
+ * Checkout writes it to `subscription_data.metadata`, so it is the
+ * *subscription's* metadata — an invoice's own `metadata` is a separate, and
+ * normally empty, bag. A webhook payload does not expand the subscription
+ * either, so the metadata has to be dug out of wherever this API version put a
+ * copy. Observed on a live `invoice.paid`:
+ *
+ *   invoice.metadata                             {}          <- empty
+ *   invoice.parent.subscription_details.metadata {nbr_...}   <- current shape
+ *   invoice.lines.data[0].metadata               {nbr_...}
+ *
+ * Each candidate is tested for our keys rather than merely for existence. The
+ * previous version used `invoice.metadata ?? lineMeta`, and since `{}` is not
+ * nullish it always won — so every renewal was silently discarded as "not
+ * ours", taking the ledger row and the real expiry with it.
+ */
+export function invoiceMetadata(invoice: Stripe.Invoice): Stripe.Metadata {
   const subscription = invoiceSubscription(invoice);
-  if (subscription && typeof subscription !== "string" && subscription.metadata) {
-    return subscription.metadata;
+
+  const candidates: (Stripe.Metadata | null | undefined)[] = [
+    subscription && typeof subscription !== "string" ? subscription.metadata : null,
+    (invoice as unknown as {
+      parent?: { subscription_details?: { metadata?: Stripe.Metadata } };
+    }).parent?.subscription_details?.metadata,
+    invoice.lines?.data?.[0]?.metadata,
+    invoice.metadata,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && candidate[META_TENANT]) return candidate;
   }
-  const lineMeta = invoice.lines?.data?.[0]?.metadata;
-  return invoice.metadata ?? lineMeta ?? {};
+  return {};
 }
 
 function invoiceSubscription(

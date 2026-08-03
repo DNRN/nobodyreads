@@ -45,6 +45,7 @@ export {
 export {
   createStripeProvider,
   mapStripeEventToEntitlementEvents,
+  invoiceMetadata,
   ENTITLEMENT_GRACE_SECONDS,
 } from "./adapters/stripe.js";
 

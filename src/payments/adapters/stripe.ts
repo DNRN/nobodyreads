@@ -164,19 +164,27 @@ export function mapStripeEventToEntitlementEvents(event: Stripe.Event): Entitlem
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // **Subscriptions are granted by `invoice.paid`, not here.**
+      //
+      // A webhook payload does not expand the subscription, so this event
+      // cannot see `current_period_end` — it would have to guess an expiry.
+      // That guess then *competes* with the real one: Stripe creates the
+      // invoice a second before the session completes, so the checkout event is
+      // the newer of the two, and `last_event_at` would let its short guess
+      // overwrite the authoritative period end that arrived moments earlier.
+      // The reader's access would silently shrink to a few days.
+      //
+      // `invoice.paid` fires for the first period as well as every renewal and
+      // always carries the real period, so letting it own subscription access
+      // removes the race rather than trying to win it.
+      if (session.mode === "subscription") return [];
+
       const context = readContext(session.metadata, session.client_reference_id);
       if (!context) return [];
 
-      // A subscription grants until its period end; a one-off payment grants a
-      // page forever. When the session does not carry the period (the
-      // subscription is not expanded in a webhook payload), fall back to a
-      // provisional grace-length window rather than `null`. `invoice.paid`
-      // arrives seconds later with the real period end and extends it — but if
-      // it never arrives, the reader gets a few days, not permanent access.
-      const expiresAt =
-        session.mode === "subscription"
-          ? withGrace(readSubscriptionPeriodEnd(session)) ?? occurredAt + ENTITLEMENT_GRACE_SECONDS
-          : null;
+      // A one-off page purchase never expires.
+      const expiresAt = null;
 
       return [
         {

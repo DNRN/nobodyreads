@@ -345,21 +345,37 @@ describe("invoice.paid metadata, as Stripe actually shapes it", () => {
   });
 });
 
-describe("a subscription checkout never grants forever", () => {
-  it("uses a provisional window when the period end is not in the payload", () => {
-    // The subscription is not expanded in a webhook, so the period is unknown.
-    // `invoice.paid` follows seconds later with the real one — but if it never
-    // arrives, this must not have handed out permanent access.
+describe("invoice.paid owns subscription access, not checkout", () => {
+  it("emits nothing for a subscription checkout", () => {
+    // A webhook does not expand the subscription, so this event cannot know the
+    // period end. Any guess it made would be the *newer* event (Stripe creates
+    // the invoice a second earlier) and would overwrite the real period end via
+    // the last_event_at guard — silently shrinking a month of access to days.
+    expect(
+      mapStripeEventToEntitlementEvents(
+        event("checkout.session.completed", {
+          mode: "subscription",
+          metadata: META,
+          subscription: "sub_1",
+          customer: "cus_1",
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("grants the real period from invoice.paid instead", () => {
     const [mapped] = mapStripeEventToEntitlementEvents(
-      event("checkout.session.completed", {
-        mode: "subscription",
-        metadata: META,
+      event("invoice.paid", {
         subscription: "sub_1",
+        metadata: {},
+        parent: { subscription_details: { metadata: META } },
+        lines: { data: [{ metadata: META, period: { end: 5000 } }] },
         customer: "cus_1",
+        amount_paid: 500,
+        currency: "eur",
       }),
     );
-    expect(mapped.expiresAt).toBe(1000 + ENTITLEMENT_GRACE_SECONDS);
-    expect(mapped.expiresAt).not.toBeNull();
+    expect(mapped.expiresAt).toBe(5000 + ENTITLEMENT_GRACE_SECONDS);
   });
 
   it("still grants a one-off page purchase forever", () => {

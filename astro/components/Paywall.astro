@@ -7,6 +7,14 @@
  * that the gate is server-side. A paywall that looks like a client-side overlay
  * invites readers to try to remove it — and invites the next developer to
  * assume it *is* one.
+ *
+ * **`data-astro-reload` is load-bearing — do not remove it.** `SiteLayout`
+ * mounts Astro's `<ClientRouter />`, which intercepts form submissions and
+ * performs them with `fetch`, then swaps the resulting DOM in. Checkout answers
+ * with a 303 to the payment provider's own origin, which the router cannot swap
+ * — the submission collapses into a plain GET of this action URL and the reader
+ * never reaches the payment page. This attribute forces a real browser
+ * navigation, which is the only thing that works for an off-site redirect.
  */
 import type { AccessDecision } from "../../src/payments/types.js";
 
@@ -71,7 +79,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
       </p>
       <div class="nb-paywall__actions">
         {tier && monthly && (
-          <form method="POST" action={checkoutAction}>
+          <form method="POST" action={checkoutAction} data-astro-reload>
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="month" />
@@ -81,7 +89,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
           </form>
         )}
         {tier && yearly && (
-          <form method="POST" action={checkoutAction}>
+          <form method="POST" action={checkoutAction} data-astro-reload>
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="year" />
@@ -91,7 +99,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
           </form>
         )}
         {single && (
-          <form method="POST" action={checkoutAction}>
+          <form method="POST" action={checkoutAction} data-astro-reload>
             <input type="hidden" name="scope_kind" value="page" />
             <input type="hidden" name="scope_ref" value={pageId} />
             <button type="submit" class="nb-paywall__btn">

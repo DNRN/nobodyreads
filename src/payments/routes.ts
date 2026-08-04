@@ -27,6 +27,13 @@ export interface PaymentsRouterOptions {
    */
   loginHref?: string;
   /**
+   * Where to send a browser that reaches `/payments/manage` and finds nothing
+   * to manage. Defaults to `urlPrefix`. Readers arrive here from a link, so a
+   * raw JSON error would be the whole page; JSON is still returned to anything
+   * that explicitly asks for it.
+   */
+  manageReturnHref?: string;
+  /**
    * Where the provider comes from. Defaulted at the use site, not in the type,
    * so `null` stays the documented off switch. Same shape as `RulesetSource`.
    */
@@ -45,6 +52,7 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
   const loginHref = options.loginHref ?? `${urlPrefix}/login`;
+  const manageReturnHref = options.manageReturnHref ?? (urlPrefix || "/");
   const paymentSource = options.paymentProvider ?? createSiteSettingsPaymentSource(db);
 
   const app = new Hono();
@@ -120,23 +128,32 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
   app.get("/payments/checkout", (c) => c.redirect(urlPrefix || "/"));
 
   app.get("/payments/manage", async (c) => {
+    // Readers follow this as a link, so failures go back to a page rather than
+    // replacing the site with a JSON blob. Anything that asks for JSON still
+    // gets it.
+    const wantsJson = (c.req.header("accept") || "").includes("application/json");
+    const fail = (reason: string, status: 404 | 503) =>
+      wantsJson
+        ? c.json({ error: reason }, status)
+        : c.redirect(`${manageReturnHref}?error=${encodeURIComponent(reason)}`);
+
     const member = await resolveMember(c);
     if (!member) return c.redirect(loginHref);
 
     const provider = await paymentSource(tenantId);
-    if (!provider) return c.json({ error: "Payments are not configured" }, 503);
+    if (!provider) return fail("payments_unavailable", 503);
 
     const customerRef = await getPaymentCustomerRef(db, tenantId, member, provider.id);
-    if (!customerRef) return c.json({ error: "Nothing to manage yet" }, 404);
+    if (!customerRef) return fail("nothing_to_manage", 404);
 
     const origin = new URL(c.req.url).origin;
     const url = await provider.getManageUrl({
       member,
       customerRef,
-      returnUrl: `${origin}${urlPrefix}`,
+      returnUrl: `${origin}${manageReturnHref}`,
     });
 
-    if (!url) return c.json({ error: "Nothing to manage yet" }, 404);
+    if (!url) return fail("nothing_to_manage", 404);
     return c.redirect(url, 303);
   });
 

@@ -27,6 +27,11 @@ const PROVIDER_ID = "stripe";
  * — and Stripe usually recovers the payment a day or two later, so the lockout
  * was never necessary. Three days costs almost nothing and removes a whole
  * class of support ticket.
+ *
+ * The `.me` terms deliberately do NOT mention this window: delivering more than
+ * we promise is the safe direction, and stating it would make a discretionary
+ * kindness contractual. Do not "reconcile" the two by shortening this to match
+ * the terms. Full reasoning: `nobodyreads.me/docs/payment/README.md`.
  */
 export const ENTITLEMENT_GRACE_SECONDS = Number(
   process.env.ENTITLEMENT_GRACE_SECONDS || 3 * 24 * 60 * 60

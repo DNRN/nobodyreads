@@ -28,7 +28,7 @@
   const postListConfig = (startsCustom ? { order: "newest" } : v.config) as PostListViewConfig;
 
   const defaultQuery = `SELECT slug, title, excerpt, date
-FROM page
+FROM page_public
 WHERE published = 1
   AND kind = 'post'
   AND tenant_id = :tenant_id
@@ -179,8 +179,11 @@ return rows.map(row => \`
           bind:value={query}
         ></textarea>
         <div class="hint">
-          Write a <code>SELECT</code> query. Use <code>:tenant_id</code> as a parameter for tenant scoping.
-          Only <code>SELECT</code> statements are allowed.
+          Write a single <code>SELECT</code> query and scope it with <code>:tenant_id</code>
+          (required). Results are rendered on a public page, so only these tables can be read:
+          <code>page_public</code>, <code>post_like</code>, <code>comment</code>,
+          <code>content_view</code>, <code>media</code>. <code>page_public</code> is the
+          <code>page</code> table without the markdown body. SQL comments are not allowed.
         </div>
       </div>
 
@@ -198,7 +201,9 @@ return rows.map(row => \`
         <div class="hint">
           Function signature: <code>(rows, urlPrefix, escapeHtml) =&gt; string</code><br />
           <code>rows</code> is an array of objects with columns from your query.
-          Return an HTML string.
+          Return an HTML string.<br />
+          Templates run as server-side JavaScript and are disabled unless the operator sets
+          <code>CUSTOM_VIEW_JS_TEMPLATES=1</code> (single-tenant self-hosting only).
         </div>
       </div>
     </div>

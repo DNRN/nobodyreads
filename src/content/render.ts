@@ -128,7 +128,33 @@ export async function resolveViews(
 // --- Custom view rendering ---
 
 /**
+ * Whether the author-written JavaScript template body may be executed.
+ *
+ * A custom view template is run through `new Function(...)` **server-side**, so
+ * it is arbitrary JS with full `process.env` access — `JWT_SECRET`,
+ * `SETTINGS_ENC_KEY`, payment provider keys. On a single-tenant self-host the
+ * view author *is* the operator, so that is a fair trade. On a multi-tenant
+ * deploy it is privilege escalation from "can write a blog post" to "owns the
+ * platform", so it is **off unless the operator opts in**.
+ *
+ * Read per call rather than cached at module load: tests and `standalone.ts`
+ * both set env after import.
+ */
+function customViewTemplatesEnabled(): boolean {
+  const flag = process.env.CUSTOM_VIEW_JS_TEMPLATES;
+  return flag === "1" || flag === "true";
+}
+
+const TEMPLATES_DISABLED_MESSAGE =
+  "Custom view templates are disabled on this deployment. " +
+  "They execute author-written JavaScript on the server; set CUSTOM_VIEW_JS_TEMPLATES=1 " +
+  "to enable them (single-tenant self-hosting only).";
+
+/**
  * Execute a custom view's SQL query and render the results through its template.
+ *
+ * The query is validated against a table allowlist (see `custom-view-sql.ts`)
+ * before it runs — these results are rendered into **public** pages.
  *
  * The template is a JavaScript function body that receives:
  *   - rows: Record<string, unknown>[] — the query result rows
@@ -148,6 +174,10 @@ async function renderCustomView(
 ): Promise<string> {
   if (!config.query || !config.template) {
     return `<div class="content-view content-view-custom content-view-error"><p>Custom view is missing query or template.</p></div>`;
+  }
+
+  if (!customViewTemplatesEnabled()) {
+    return `<div class="content-view content-view-custom content-view-error"><p>${escapeHtml(TEMPLATES_DISABLED_MESSAGE)}</p></div>`;
   }
 
   try {

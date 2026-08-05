@@ -1,13 +1,18 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listContentViews } from "nobodyreads";
+import { initDb, listContentViews, auditCustomViews } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 const viewsBase = `${ctx.adminBase}/views`;
 
 const db = await initDb();
 const views = await listContentViews(db, ctx.tenantId);
+
+// Custom view queries are checked against a table allowlist. Stored queries are
+// never rewritten for the author, so a view that no longer passes just stops
+// rendering — surface that here rather than letting it fail silently.
+const issues = await auditCustomViews(db, ctx.tenantId);
 ---
 <AdminLayout title="Views — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -17,6 +22,22 @@ const views = await listContentViews(db, ctx.tenantId);
         <a href={`${viewsBase}/new`} class="btn btn-primary">New view</a>
       </div>
       <p class="hint">Embed in markdown using <code>{"{{view:slug}}"}</code>. You can include multiple views per page.</p>
+      {issues.length > 0 && (
+        <div class="view-audit">
+          <strong>{issues.length === 1 ? "One view is not running" : `${issues.length} views are not running`}</strong>
+          <p>
+            Custom view queries may only read <code>page_public</code>, <code>post_like</code>,
+            <code>comment</code>, <code>content_view</code> and <code>media</code>, and must scope
+            results with <code>:tenant_id</code>. Edit the query — usually <code>FROM page</code>
+            becomes <code>FROM page_public</code>.
+          </p>
+          <ul>
+            {issues.map((issue) => (
+              <li><a href={`${viewsBase}/${issue.id}`}>{issue.title}</a> — {issue.error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {views.length === 0 ? (
         <div class="nr-empty">
           <div class="nr-empty-icon">
@@ -50,3 +71,20 @@ const views = await listContentViews(db, ctx.tenantId);
     </div>
   </main>
 </AdminLayout>
+
+<style>
+  .view-audit {
+    margin: 0 0 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--nr-warn-border, #e0b750);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--nr-warn-bg, #fdf6e3);
+    color: var(--nr-warn-fg, #5c4813);
+    font-size: 0.9rem;
+  }
+  .view-audit p { margin: 0.4rem 0 0; }
+  .view-audit ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+  .view-audit li { margin: 0.2rem 0; }
+  .view-audit code { font-size: 0.85em; }
+</style>

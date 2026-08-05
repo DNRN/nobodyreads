@@ -170,8 +170,12 @@ export {
   getContentViewById,
   deleteContentView,
   upsertContentView,
+  auditCustomViews,
+  validateCustomQuery,
+  CUSTOM_VIEW_ALLOWED_TABLES,
   listMedia,
 } from "./content/db.js";
+export type { CustomViewIssue } from "./content/db.js";
 export { listAllSubscribers, countSubscribers } from "./subscription/db.js";
 export type { SubscriberCounts } from "./subscription/db.js";
 export {

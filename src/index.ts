@@ -91,6 +91,7 @@ export { createAiRoutes } from "./admin/server/modules/ai.js";
 export { createModerationRoutes } from "./admin/server/modules/moderation.js";
 export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
+export { createPaymentsAdminRoutes } from "./admin/server/modules/payments.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
 export type { AdminModuleContext, AiProviderConfig, AiProvider } from "./admin/server/modules/types.js";
 export {
@@ -151,6 +152,10 @@ export {
   postLike,
   comment,
   moderationQueue,
+  paidTier,
+  entitlement,
+  paymentEvent,
+  paymentCustomer,
 } from "./db/schema/index.js";
 export {
   listPosts,
@@ -353,3 +358,64 @@ export {
 
 // Package paths
 export { getPublicDir, getSchemaPath, getRobotsTxtPath } from "./paths.js";
+
+// Payments — entitlements, the paywall gate, and paid tiers.
+export {
+  resolvePageAccess,
+  redactPage,
+  getReadableContent,
+  requiresPrivateCache,
+  buildTeaser,
+  nowSeconds,
+  listPaidTiers,
+  getActivePaidTier,
+  getPaidTierById,
+  upsertPaidTier,
+  deletePaidTier,
+  hasPageAccess,
+  listMemberEntitlements,
+  getEntitlement,
+  grantEntitlement,
+  revokeEntitlement,
+  upsertPaymentCustomer,
+  getPaymentCustomerRef,
+  toAccessTier,
+  ACCESS_TIERS,
+  DEFAULT_TEASER_WORDS,
+  createPaymentsRoutes,
+  createPaymentsWebhookRoutes,
+  applyEntitlementEvents,
+  createPaymentProvider,
+  createSiteSettingsPaymentSource,
+  getTenantPaymentsConfig,
+  resolvePaymentsConfig,
+  isPaymentsConfigured,
+  createStripeProvider,
+  mapStripeEventToEntitlementEvents,
+  invoiceMetadata,
+  ENTITLEMENT_GRACE_SECONDS,
+  SETTING_PAYMENTS_PROVIDER,
+  SETTING_PAYMENTS_PUBLISHABLE_KEY,
+  SETTING_PAYMENTS_SECRET_KEY_ENC,
+  SETTING_PAYMENTS_WEBHOOK_SECRET_ENC,
+} from "./payments/index.js";
+export type {
+  AccessTier,
+  AccessDecision,
+  PageAccessOptions,
+  PaidTier,
+  Entitlement,
+  EntitlementScope,
+  TeaserOptions,
+  GrantEntitlementInput,
+  RevokeEntitlementInput,
+  PaymentProvider,
+  PaymentProviderSource,
+  CheckoutRequest,
+  CheckoutSession,
+  EntitlementEvent,
+  PaymentsConfig,
+  PaymentsRouterOptions,
+  PaymentsWebhookOptions,
+  ApplyResult,
+} from "./payments/index.js";

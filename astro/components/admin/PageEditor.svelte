@@ -42,6 +42,8 @@
     nav: undefined,
     commentsEnabled: true,
     inFeed: true,
+    accessTier: "public",
+    priceAmount: null,
   } as Page);
 
   // --- Form state ---
@@ -56,6 +58,13 @@
   let navOrder = $state(p.nav?.order != null ? String(p.nav.order) : "");
   let commentsEnabled = $state(p.commentsEnabled ?? true);
   let inFeed = $state(p.inFeed ?? true);
+  let accessTier = $state<"public" | "members" | "paid">(
+    (p.accessTier as "public" | "members" | "paid") ?? "public",
+  );
+  // Held in major units as typed ("3.50"); the server converts to cents.
+  let priceAmount = $state(
+    p.priceAmount != null ? (p.priceAmount / 100).toFixed(2) : "",
+  );
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
   let content = $state(p.content ?? "");
@@ -99,7 +108,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard });
   }
   let baseline = snapshot();
 
@@ -121,6 +130,8 @@
     body.set("nav_order", navOrder);
     body.set("comments_enabled", commentsEnabled ? "on" : "off");
     body.set("in_feed", inFeed ? "on" : "off");
+    body.set("access_tier", accessTier);
+    body.set("price_amount", accessTier === "paid" ? priceAmount : "");
     body.set("seo_og_image", seoOgImage);
     body.set("seo_twitter_card", seoTwitterCard);
     body.set("content", content);
@@ -487,6 +498,43 @@
               : "This post is excluded from the feed."}
           </p>
         </div>
+        <div class="field">
+          <label for="access_tier">Who can read this</label>
+          <select id="access_tier" bind:value={accessTier}>
+            <option value="public">Everyone</option>
+            <option value="members">Members of your plot</option>
+            <option value="paid">Paying supporters</option>
+          </select>
+          <p class="hint">
+            {accessTier === "public"
+              ? "Anyone can read the whole post."
+              : accessTier === "members"
+                ? "Readers who have joined your plot see the full post. Everyone else sees a teaser."
+                : "Subscribers see the full post. Everyone else sees a teaser and a way to pay."}
+          </p>
+        </div>
+        {#if accessTier === "paid"}
+          <div class="field">
+            <label for="price_amount">Sell this post on its own <span class="hint">(optional)</span></label>
+            <input
+              id="price_amount"
+              type="text"
+              inputmode="decimal"
+              placeholder="e.g. 3.00"
+              bind:value={priceAmount}
+            />
+            <p class="hint">
+              A one-off price for this post alone, on top of the subscription option.
+              Leave empty to offer the subscription only.
+            </p>
+          </div>
+        {/if}
+        {#if accessTier !== "public" && !excerpt.trim()}
+          <p class="hint hint-warn">
+            No summary set, so the teaser will be built from the first ~75 words of the post.
+            Write a summary above to control exactly what non-paying readers see.
+          </p>
+        {/if}
       {/if}
 
       {#if kind === "post"}

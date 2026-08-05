@@ -20,6 +20,9 @@ const {
 // AI theming is only offered when the host has configured a provider. Read the
 // flag from the admin context so no per-page prop threading is required.
 const aiEnabled = getAdminContext(Astro.locals)?.aiEnabled ?? false;
+// Same pattern: the Payments panel only appears once a host can actually
+// take money. Hiding it is presentation, never a gate.
+const paymentsEnabled = getAdminContext(Astro.locals)?.paymentsEnabled ?? false;
 
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
@@ -43,6 +46,7 @@ const navIcons: Record<string, string> = {
   Views: `<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>`,
   Community: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M16 5.6a3 3 0 0 1 0 5.8"/><path d="M21 20c0-2.4-1.3-4-3.4-4.6"/>`,
   Moderation: `<path d="M12 3l7 3v5c0 4.4-2.8 8.4-7 10-4.2-1.6-7-5.6-7-10V6z"/><path d="m9 12 2 2 4-4"/>`,
+  Payments: `<rect x="2.5" y="5.5" width="19" height="13" rx="2.4"/><path d="M2.5 10h19"/><path d="M6 14.5h3.5"/>`,
   Settings: `<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>`,
 };
 
@@ -76,6 +80,7 @@ const navGroups = [
     items: [
       { href: `${adminBase}/community`, label: "Community" },
       { href: `${adminBase}/moderation`, label: "Moderation" },
+      ...(paymentsEnabled ? [{ href: `${adminBase}/payments`, label: "Payments" }] : []),
       { href: `${adminBase}/settings`, label: "Settings" },
     ],
   },

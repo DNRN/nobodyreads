@@ -88,6 +88,16 @@ export interface Page {
   nav?: PageNav; // If present, page appears in the top bar
   commentsEnabled: boolean; // Whether readers can comment on this post
   inFeed: boolean; // Whether this post appears in the RSS feed
+  /**
+   * How this page is gated: "public" | "members" | "paid".
+   *
+   * Typed as a plain string here, not the `AccessTier` union, so `content/`
+   * keeps zero imports from `payments/`. That one-way dependency is what
+   * guarantees a page query can never gate itself — see `payments/access.ts`.
+   */
+  accessTier: string;
+  /** One-off purchase price in minor units. NULL/undefined = not sold separately. */
+  priceAmount?: number | null;
 }
 
 /** An uploaded media file (image, video, audio, etc.). */
@@ -110,6 +120,8 @@ export interface PageSummary {
   excerpt: string;
   tags: string[];
   date: string;
+  /** Drives the lock badge on listings. Never carries the body. */
+  accessTier: string;
 }
 
 /** A resolved nav item for the top bar. */

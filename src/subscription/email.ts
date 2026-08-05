@@ -289,7 +289,15 @@ export async function sendVerificationEmail(
   });
 }
 
-/** Send a new-post notification to a list of subscribers. */
+/**
+ * Send a new-post notification to a list of subscribers.
+ *
+ * The `post` parameter is a narrow `{ title, slug, excerpt }` **on purpose**,
+ * not a `Page`. Free subscribers receive this email, so a widening to
+ * `post: Page` would mail the body of a paid post to everyone the day it is
+ * published. As typed, that is not expressible. `email.test.ts` pins the shape
+ * so the widening fails a test rather than a customer.
+ */
 export async function sendNewPostNotification(
   provider: EmailProvider,
   siteUrl: string,

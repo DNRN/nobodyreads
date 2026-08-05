@@ -1,11 +1,13 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import ShareBar from "../../components/ShareBar.astro";
+import Paywall from "../../components/Paywall.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
 import { renderContent } from "../../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import { isAuthenticatedRequest } from "../../../src/admin/server/auth.js";
 import { getDbClient } from "../../lib/db.js";
+import { gatePage } from "../../lib/gate.js";
 import { formatDate } from "../../lib/format.js";
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
@@ -15,14 +17,22 @@ const siteName = process.env.SITE_NAME || "nobodyreads.me";
 const db = await getDbClient();
 const slug = Astro.params.slug || "";
 
-const [page, navItems] = await Promise.all([
+const [rawPage, navItems] = await Promise.all([
   getPageBySlug(db, slug, "post", tenantId),
   getNavItems(db, tenantId),
 ]);
 
-if (page?.seo?.noAiTraining) {
+if (rawPage?.seo?.noAiTraining) {
   Astro.response.headers.set("X-Robots-Tag", "noai, noimageai");
 }
+
+// The gate returns a redacted page which shadows the raw one from here on, so
+// the body, `options.page` (and therefore og:image) and anything else
+// downstream are safe without each of them knowing about paywalls.
+const gate = rawPage
+  ? await gatePage(db, rawPage, tenantId, Astro.request, Astro.response)
+  : null;
+const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page) {
@@ -70,6 +80,15 @@ const options = page
         <time class="post-date" datetime={page.date}>{formatDate(page.date)}</time>
       </div>
       <div class="post-body" set:html={htmlBody} />
+      {gate?.gated && gate.decision.visibility === "teaser" && (
+        <Paywall
+          decision={gate.decision}
+          apiBase={`${urlPrefix}/api`}
+          pageId={page.id}
+          loginHref={`${urlPrefix}/login`}
+          signedIn={gate.signedIn}
+        />
+      )}
       <ShareBar
         url={`${process.env.SITE_URL || ""}${urlPrefix}/posts/${page.slug}`}
         title={page.title}

@@ -23,6 +23,12 @@ export const pageFormSchema = z.object({
   // for forms without the control (non-post kinds / older clients).
   comments_enabled: z.string().optional(),
   in_feed: z.string().optional(),
+  // The enum lives here rather than as a SQLite CHECK constraint: SQLite cannot
+  // ALTER a CHECK in, so a migrated database would lack it while a fresh one
+  // had it — a silent behavioural fork. Validate on the way in instead.
+  access_tier: z.enum(["public", "members", "paid"]).default("public"),
+  /** One-off price in major units as typed ("3.50"); converted to cents on save. */
+  price_amount: z.string().trim().optional(),
   seo_og_image: z.string().trim().max(500).optional(),
   seo_twitter_card: z.enum(["summary", "summary_large_image"]).optional(),
 });

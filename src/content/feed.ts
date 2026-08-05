@@ -24,6 +24,14 @@ function toRfc822(isoDate: string): string {
 
 /**
  * RSS 2.0 feed for a blog's published posts. Mount at /feed.xml (or under urlPrefix).
+ *
+ * The feed is safe from paid-content leaks **structurally**, not by a check:
+ * `listFeedPosts` projects `PageSummary`, which has no `content` field at all,
+ * so there is no body here to leak. Do not "fix" this by loading full pages.
+ *
+ * The one thing gating adds is honesty: a gated item says so, rather than
+ * looking like a full post whose text simply didn't come through. Phase 10's
+ * directory inherits that contract.
  */
 export function createFeedRoutes(options: FeedOptions): Hono {
   const { db } = options;
@@ -43,7 +51,12 @@ export function createFeedRoutes(options: FeedOptions): Hono {
     const items = posts
       .map((p) => {
         const link = `${SITE_URL}${urlPrefix}/posts/${p.slug}`;
-        const description = p.excerpt ? `<description>${escapeHtml(p.excerpt)}</description>` : "";
+        const teaserNote =
+          p.accessTier !== "public" ? `\n\nRead the full post → ${link}` : "";
+        const descriptionText = `${p.excerpt}${teaserNote}`.trim();
+        const description = descriptionText
+          ? `<description>${escapeHtml(descriptionText)}</description>`
+          : "";
         const tags = p.tags.map((t) => `<category>${escapeHtml(t)}</category>`).join("");
         return `    <item>
       <title>${escapeHtml(p.title)}</title>

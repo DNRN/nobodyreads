@@ -20,6 +20,22 @@ export interface NobodyreadsAdminContext {
   /** Whether AI theming is configured for this host (shows/hides the AI panel). */
   aiEnabled?: boolean;
   /**
+   * Whether payments are configured for this host (shows/hides the Payments
+   * panel). Presentation only — never a gate. Access is decided server-side by
+   * `resolvePageAccess` on every render.
+   */
+  paymentsEnabled?: boolean;
+  /**
+   * Where the host manages payouts and pricing, if it does so itself.
+   *
+   * A platform that is merchant of record has rules the package cannot know
+   * about — a price floor, a Connect account that must exist first — so when
+   * this is set the admin payments screen defers pricing to the host instead of
+   * offering a second form with weaker validation. A self-hoster leaves it
+   * unset and keeps the built-in form.
+   */
+  payoutSettingsHref?: string;
+  /**
    * Human-readable site/plot name for branding (page titles etc.). Optional so
    * single-tenant hosts can fall back to a build-time default; multi-tenant
    * hosts pass the tenant's display name.
@@ -74,6 +90,8 @@ export function makeAdminContext(
     siteBase: input.siteBase,
     loginHref: input.loginHref,
     aiEnabled: input.aiEnabled,
+    paymentsEnabled: input.paymentsEnabled,
+    payoutSettingsHref: input.payoutSettingsHref,
     siteName: input.siteName,
   };
 }

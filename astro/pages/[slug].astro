@@ -1,10 +1,12 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
+import Paywall from "../components/Paywall.astro";
 import { getPageBySlug, getNavItems } from "../../src/content/db.js";
 import { renderContent } from "../../src/content/render.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { isAuthenticatedRequest } from "../../src/admin/server/auth.js";
 import { getDbClient } from "../lib/db.js";
+import { gatePage } from "../lib/gate.js";
 import { pagePath } from "../lib/format.js";
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
@@ -14,14 +16,20 @@ const siteName = process.env.SITE_NAME || "nobodyreads.me";
 const db = await getDbClient();
 const slug = Astro.params.slug || "";
 
-const [page, navItems] = await Promise.all([
+const [rawPage, navItems] = await Promise.all([
   getPageBySlug(db, slug, "page", tenantId),
   getNavItems(db, tenantId),
 ]);
 
-if (page?.seo?.noAiTraining) {
+if (rawPage?.seo?.noAiTraining) {
   Astro.response.headers.set("X-Robots-Tag", "noai, noimageai");
 }
+
+// Redacted page shadows the raw one — see astro/lib/gate.ts.
+const gate = rawPage
+  ? await gatePage(db, rawPage, tenantId, Astro.request, Astro.response)
+  : null;
+const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page) {
@@ -67,6 +75,15 @@ const options = page
         <h1 class="post-title">{page.title}</h1>
       </div>
       <div class="page-body" set:html={htmlBody} />
+      {gate?.gated && gate.decision.visibility === "teaser" && (
+        <Paywall
+          decision={gate.decision}
+          apiBase={`${urlPrefix}/api`}
+          pageId={page.id}
+          loginHref={`${urlPrefix}/login`}
+          signedIn={gate.signedIn}
+        />
+      )}
       <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
     </>
   ) : (

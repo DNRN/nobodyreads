@@ -32,6 +32,12 @@ function major(minorUnits: number | null | undefined): string {
 
 const saved = Astro.url.searchParams.has("saved");
 const error = Astro.url.searchParams.get("error");
+
+// When the host manages payouts itself (a platform that is merchant of record),
+// it owns pricing too — it has a price floor and a Connect account to check that
+// this package knows nothing about. Offering a second, weaker tier form here is
+// how a price gets set that the host would have rejected.
+const payoutHref = ctx.payoutSettingsHref;
 ---
 <AdminLayout title="Payments — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -44,6 +50,30 @@ const error = Astro.url.searchParams.get("error");
         in the editor.
       </p>
 
+      {payoutHref ? (
+        <div class="editor-list-section">
+          <h3>Supporter tier</h3>
+          <p class="hint">
+            Your price, your Stripe connection and your earnings are managed by
+            your host.
+          </p>
+          <p>
+            <a class="btn btn-primary" href={payoutHref}>Payment settings</a>
+          </p>
+          {tier && (
+            <div class="env-status">
+              <div class="env-row">
+                <span class="env-label">Monthly</span>
+                <span class="env-value">{money(tier.amountMonthly, tier.currency)}</span>
+              </div>
+              <div class="env-row">
+                <span class="env-label">Yearly</span>
+                <span class="env-value">{money(tier.amountYearly, tier.currency)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
       <div class="editor-list-section">
         <h3>Supporter tier</h3>
         {saved ? (
@@ -95,6 +125,7 @@ const error = Astro.url.searchParams.get("error");
           </div>
         )}
       </div>
+      )}
 
       <div class="editor-list-section">
         <h3>What's behind the fold</h3>

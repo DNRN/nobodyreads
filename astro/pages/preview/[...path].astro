@@ -3,6 +3,7 @@ import SiteLayout from "../../layouts/SiteLayout.astro";
 import { getPageBySlug, getNavItems } from "../../../src/content/db.js";
 import type { Page } from "../../../src/content/types.js";
 import { renderContent } from "../../../src/content/render.js";
+import { gatePreviewPage } from "../../lib/gate.js";
 import { guardAuth } from "../../../src/admin/server/auth.js";
 import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
@@ -90,6 +91,11 @@ if (segments.length === 2 && segments[0] === "posts") {
 if (page?.seo?.noAiTraining) {
   Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
 }
+
+// Owner preview: full body by default, but `?preview=public` renders exactly
+// what a non-paying reader would see. Redacted page shadows the raw one.
+const gate = page ? await gatePreviewPage(db, page, tenantId, Astro.request) : null;
+if (gate) page = gate.page;
 
 let htmlBody = "";
 if (page) {

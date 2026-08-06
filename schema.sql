@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS page (
   nav_order  INTEGER,
   comments_enabled INTEGER NOT NULL DEFAULT 1,
   in_feed          INTEGER NOT NULL DEFAULT 1,
+  -- 'public' | 'members' | 'paid'. Deliberately no CHECK: SQLite cannot ALTER
+  -- one in, so a migrated DB would lack it while a fresh DB had it. Validated
+  -- in pageFormSchema and coerced in toPage() instead.
+  access_tier      TEXT NOT NULL DEFAULT 'public',
+  price_amount     INTEGER,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -189,6 +194,68 @@ CREATE TABLE IF NOT EXISTS subscriber (
   UNIQUE (email, tenant_id)
 );
 
+-- Paid tiers a plot offers. Amounts are minor units (cents), never floats.
+CREATE TABLE IF NOT EXISTS paid_tier (
+  tier_id        TEXT NOT NULL,
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  name           TEXT NOT NULL,
+  description    TEXT,
+  currency       TEXT NOT NULL DEFAULT 'eur',
+  amount_monthly INTEGER,
+  amount_yearly  INTEGER,
+  active         INTEGER NOT NULL DEFAULT 1,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tier_id, tenant_id)
+);
+
+-- What a member is allowed to read.
+--
+-- The composite natural primary key mirrors post_like: grants are idempotent
+-- upserts and a resubscribe reuses the row.
+--
+-- expires_at / last_event_at / revoked_at are INTEGER epoch seconds, NOT text.
+-- Mixing datetime('now') ('2026-07-29 10:00:00') with toISOString()
+-- ('2026-07-29T10:00:00.000Z') in one column mis-orders silently in SQL, which
+-- either locks out paying readers or grants expired ones.
+CREATE TABLE IF NOT EXISTS entitlement (
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  scope_kind     TEXT NOT NULL,
+  scope_ref      TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'active',
+  source         TEXT NOT NULL DEFAULT 'manual',
+  external_ref   TEXT,
+  expires_at     INTEGER,
+  revoked_at     INTEGER,
+  last_event_at  INTEGER NOT NULL DEFAULT 0,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, member_issuer, member_subject, scope_kind, scope_ref)
+);
+CREATE INDEX IF NOT EXISTS entitlement_scope_idx
+  ON entitlement (tenant_id, scope_kind, scope_ref);
+
+-- Provider events already processed, for idempotency under webhook replay.
+CREATE TABLE IF NOT EXISTS payment_event (
+  event_id    TEXT PRIMARY KEY,
+  provider    TEXT NOT NULL,
+  tenant_id   TEXT NOT NULL DEFAULT '_default',
+  kind        TEXT NOT NULL,
+  occurred_at INTEGER NOT NULL,
+  received_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Member identity → provider customer id, for the "manage subscription" link.
+CREATE TABLE IF NOT EXISTS payment_customer (
+  tenant_id      TEXT NOT NULL DEFAULT '_default',
+  member_issuer  TEXT NOT NULL,
+  member_subject TEXT NOT NULL,
+  provider       TEXT NOT NULL,
+  customer_ref   TEXT NOT NULL,
+  updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, member_issuer, member_subject, provider)
+);
+
 -- Public projection of `page`, for author-written custom view queries.
 --
 -- Custom views run raw author SQL and render it into public pages, so they may
@@ -202,5 +269,6 @@ CREATE TABLE IF NOT EXISTS subscriber (
 DROP VIEW IF EXISTS page_public;
 CREATE VIEW page_public AS
 SELECT page_id, tenant_id, slug, title, excerpt, tags, date, updated,
-       published, seo, kind, nav_label, nav_order, comments_enabled, in_feed
+       published, seo, kind, nav_label, nav_order, comments_enabled, in_feed,
+       access_tier, price_amount
 FROM page;

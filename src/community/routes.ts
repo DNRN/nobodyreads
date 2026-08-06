@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import type { Database } from "../db/index.js";
 import { getPageBySlug } from "../content/db.js";
+import { resolvePageAccess } from "../payments/access.js";
 import {
   memberLoginFormSchema,
   memberSignupFormSchema,
@@ -23,7 +24,8 @@ import {
   buildClearMemberSessionCookie,
   buildMemberSessionCookie,
 } from "./auth.js";
-import type { ResolveMember } from "./types.js";
+import type { Context } from "hono";
+import type { MemberIdentity, ResolveMember } from "./types.js";
 
 // --- Member auth routes (local accounts; self-hosted mode) ---
 
@@ -116,6 +118,11 @@ export interface CommunityRouterOptions {
   urlPrefix?: string;
   /** Maps the request to the current member; hosts plug in their own auth. */
   resolveMember: ResolveMember;
+  /**
+   * Returns true when the requester owns the plot, so the owner can interact
+   * with their own gated posts. Hosts decide ownership; the package never does.
+   */
+  isOwner?: (c: Context) => boolean | Promise<boolean>;
 }
 
 /**
@@ -132,8 +139,29 @@ export interface CommunityRouterOptions {
 export function createCommunityRoutes(options: CommunityRouterOptions): Hono {
   const { db, resolveMember } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
+  const isOwner = options.isOwner;
 
   const app = new Hono();
+
+  /**
+   * Whether this requester may read the post — and therefore interact with it.
+   *
+   * Liking a post you cannot read is incoherent, and on a paid post the
+   * membership check below is not enough on its own: a plot member who has not
+   * subscribed passes `isPlotMember` but still cannot see a word of the post.
+   * Short-circuits on public posts, so the common case costs nothing.
+   */
+  async function canReadPost(
+    c: Context,
+    post: NonNullable<Awaited<ReturnType<typeof getPageBySlug>>>,
+    viewer: MemberIdentity | null
+  ): Promise<boolean> {
+    if (post.accessTier === "public") return true;
+    const decision = await resolvePageAccess(db, post, tenantId, viewer, {
+      isOwner: isOwner ? await isOwner(c) : false,
+    });
+    return decision.visibility === "full";
+  }
 
   app.get("/membership", async (c) => {
     const identity = await resolveMember(c);
@@ -182,6 +210,10 @@ export function createCommunityRoutes(options: CommunityRouterOptions): Hono {
     if (!identity) return c.json({ error: "unauthorized" }, 401);
     if (!(await isPlotMember(db, tenantId, identity))) {
       return c.json({ error: "not_member" }, 403);
+    }
+    // Membership alone is not enough on a paid post.
+    if (!(await canReadPost(c, post, identity))) {
+      return c.json({ error: "access_required", accessTier: post.accessTier }, 403);
     }
     await likePost(db, tenantId, post.id, identity);
     return c.json({

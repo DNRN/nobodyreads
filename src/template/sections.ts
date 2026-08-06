@@ -47,7 +47,7 @@ function contentSectionHtml(): string {
 function footerSectionHtml(config: FooterSectionConfig): string {
   let inner = `&copy; {{year}}`;
   if (config.showWordmark) {
-    inner += ` <span class="wordmark wordmark--md">nobody_reads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span>`;
+    inner += ` <span class="wordmark wordmark--md">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span>`;
   }
 
   return `<footer class="site-footer">

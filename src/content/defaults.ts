@@ -54,5 +54,7 @@ export function defaultHomePage(options: DefaultHomePageOptions): Page {
     seo: { metaDescription: "A personal blog.", ogType: "website" },
     commentsEnabled: false,
     inFeed: false,
+    accessTier: "public",
+    priceAmount: null,
   };
 }

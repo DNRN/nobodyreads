@@ -95,7 +95,12 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
         : { kind: "page", pageId: scopeRef };
 
     const origin = new URL(c.req.url).origin;
-    const returnTo = `${origin}${urlPrefix}`;
+
+    // Back to the post they were reading, not the plot's front page. Falls back
+    // to the plot root when the field is absent or fails validation.
+    const returnPath = safeReturnPath(form.return_to, origin, urlPrefix) ?? urlPrefix ?? "/";
+    const successUrl = withParam(returnPath, origin, "checkout", "success");
+    const cancelUrl = withParam(returnPath, origin, "checkout", "cancelled");
 
     try {
       const session = await provider.createCheckout({
@@ -105,8 +110,8 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
         amount: priced.amount,
         currency: priced.currency,
         productName: priced.name,
-        successUrl: `${returnTo}?checkout=success`,
-        cancelUrl: `${returnTo}?checkout=cancelled`,
+        successUrl,
+        cancelUrl,
         customerRef: await getPaymentCustomerRef(db, tenantId, member, provider.id),
       });
       return c.redirect(session.url, 303);
@@ -201,6 +206,54 @@ async function priceTier(
   if (amount == null || amount <= 0) return null;
 
   return { amount, currency: tier.currency, name: `${tier.name} (${interval}ly)` };
+}
+
+/**
+ * Validate a reader-supplied return path.
+ *
+ * `return_to` arrives on the checkout form, so it is attacker-controlled: a
+ * crafted link could otherwise send someone from a trusted plot to a lookalike
+ * payment page after checkout, which is the classic open-redirect phishing
+ * setup. Everything here is a rejection rule, and the fallback is the plot root.
+ *
+ * Rejected: absolute URLs, protocol-relative `//evil.example`, backslash forms
+ * that browsers normalise to slashes, anything that resolves off-origin, and —
+ * when the host mounts under a prefix — anything outside this plot. The prefix
+ * test requires an exact match or a `/` boundary, so `/alice` does not admit
+ * `/alicent-evil`.
+ *
+ * Returns a path, never an absolute URL, so callers cannot accidentally
+ * re-introduce a foreign origin.
+ */
+export function safeReturnPath(
+  raw: unknown,
+  origin: string,
+  urlPrefix: string
+): string | null {
+  if (typeof raw !== "string") return null;
+
+  const value = raw.trim();
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return null;
+
+  let url: URL;
+  try {
+    url = new URL(value, origin);
+  } catch {
+    return null;
+  }
+  if (url.origin !== origin) return null;
+
+  const path = url.pathname + url.search;
+  if (urlPrefix && path !== urlPrefix && !path.startsWith(`${urlPrefix}/`)) return null;
+
+  return path;
+}
+
+/** Add a query parameter to a path, preserving any it already carries. */
+function withParam(path: string, origin: string, key: string, value: string): string {
+  const url = new URL(path, origin);
+  url.searchParams.set(key, value);
+  return url.toString();
 }
 
 async function pricePage(

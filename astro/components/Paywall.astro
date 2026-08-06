@@ -47,6 +47,13 @@ const single =
   decision.priceAmount != null ? formatAmount(decision.priceAmount, decision.currency) : null;
 
 const checkoutAction = `${apiBase}/payments/checkout`;
+
+// Where the provider should send the reader back to. Without it every purchase
+// lands on the plot's home page and the reader has to find the post they were
+// halfway through buying. Sent as a form field rather than read from `Referer`,
+// which proxies and privacy settings strip. The server re-validates it — this
+// value is reader-controlled and must never become an open redirect.
+const returnTo = Astro.url.pathname + Astro.url.search;
 ---
 
 <aside class="nb-paywall" aria-labelledby="nb-paywall-title">
@@ -80,6 +87,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
       <div class="nb-paywall__actions">
         {tier && monthly && (
           <form method="POST" action={checkoutAction} data-astro-reload>
+            <input type="hidden" name="return_to" value={returnTo} />
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="month" />
@@ -90,6 +98,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
         )}
         {tier && yearly && (
           <form method="POST" action={checkoutAction} data-astro-reload>
+            <input type="hidden" name="return_to" value={returnTo} />
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="year" />
@@ -100,6 +109,7 @@ const checkoutAction = `${apiBase}/payments/checkout`;
         )}
         {single && (
           <form method="POST" action={checkoutAction} data-astro-reload>
+            <input type="hidden" name="return_to" value={returnTo} />
             <input type="hidden" name="scope_kind" value="page" />
             <input type="hidden" name="scope_ref" value={pageId} />
             <button type="submit" class="nb-paywall__btn">

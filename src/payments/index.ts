@@ -63,6 +63,8 @@ export type { GrantEntitlementInput, RevokeEntitlementInput } from "./db.js";
 export type {
   PaymentProvider,
   PaymentProviderSource,
+  ChargeContext,
+  ChargeContextResolver,
   CheckoutRequest,
   CheckoutSession,
   EntitlementEvent,

@@ -27,6 +27,39 @@ export interface CheckoutRequest {
   email?: string | null;
 }
 
+/**
+ * Who a charge-level event belongs to.
+ *
+ * The same triple every entitlement change needs, resolved from a charge id
+ * rather than from an event's own metadata.
+ */
+export interface ChargeContext {
+  tenantId: string;
+  member: MemberIdentity;
+  scope: EntitlementScope;
+}
+
+/**
+ * Recover who a charge belongs to, when the event itself cannot say.
+ *
+ * **Why this exists.** A charge created by a subscription invoice does *not*
+ * inherit the subscription's metadata — `charge.metadata` and the payment
+ * intent's are both `{}`. So `charge.refunded` and `charge.dispute.created`
+ * arrive anonymous for every subscription, and without this hook a refunded
+ * reader keeps their access until the period ends: they have their money back
+ * *and* the content. One-off purchases are unaffected; they carry metadata.
+ *
+ * The host supplies the lookup because the host owns the records — which keeps
+ * the "adapters get no `Database`" rule intact. Return `null` when the charge is
+ * not yours; a provider account may carry unrelated traffic.
+ *
+ * Optional. Omit it and behaviour is exactly as before: anonymous charge events
+ * map to no entitlement change.
+ */
+export type ChargeContextResolver = (
+  chargeId: string
+) => ChargeContext | null | Promise<ChargeContext | null>;
+
 export interface CheckoutSession {
   /** Where to send the reader. */
   url: string;

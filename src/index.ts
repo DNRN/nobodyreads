@@ -411,6 +411,8 @@ export type {
   RevokeEntitlementInput,
   PaymentProvider,
   PaymentProviderSource,
+  ChargeContext,
+  ChargeContextResolver,
   CheckoutRequest,
   CheckoutSession,
   EntitlementEvent,

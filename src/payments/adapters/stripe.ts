@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 import type { MemberIdentity } from "../../community/types.js";
 import type {
+  ChargeContext,
+  ChargeContextResolver,
   CheckoutRequest,
   CheckoutSession,
   EntitlementEvent,
@@ -81,6 +83,11 @@ export interface StripeProviderOptions {
   webhookSecret?: string;
   /** Stripe Tax. Omitted or disabled leaves checkout exactly as it was. */
   tax?: StripeTaxOptions;
+  /**
+   * Recover who a charge belongs to when the event carries no metadata — which
+   * is every subscription refund and dispute. See `ChargeContextResolver`.
+   */
+  resolveChargeContext?: ChargeContextResolver;
   /** Injectable for tests. */
   client?: Stripe;
 }
@@ -173,7 +180,9 @@ export function createStripeProvider(options: StripeProviderOptions): PaymentPro
       const payload = await req.text();
 
       const event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
-      return mapStripeEventToEntitlementEvents(event);
+      return mapStripeEventToEntitlementEvents(event, {
+        resolveChargeContext: options.resolveChargeContext,
+      });
     },
 
     async getManageUrl(input): Promise<string | null> {
@@ -219,7 +228,15 @@ function buildMetadata(
  *
  * Anything not listed here maps to `[]`, which the route turns into a 200.
  */
-export function mapStripeEventToEntitlementEvents(event: Stripe.Event): EntitlementEvent[] {
+export interface EventMapperOptions {
+  /** See `ChargeContextResolver`. Without it, anonymous charge events map to []. */
+  resolveChargeContext?: ChargeContextResolver;
+}
+
+export async function mapStripeEventToEntitlementEvents(
+  event: Stripe.Event,
+  options: EventMapperOptions = {}
+): Promise<EntitlementEvent[]> {
   const occurredAt = event.created;
 
   switch (event.type) {
@@ -315,11 +332,26 @@ export function mapStripeEventToEntitlementEvents(event: Stripe.Event): Entitlem
 
     case "charge.refunded":
     case "charge.dispute.created": {
-      const metadata =
-        event.type === "charge.refunded"
-          ? (event.data.object as Stripe.Charge).metadata
-          : ((event.data.object as Stripe.Dispute).metadata ?? {});
-      const context = readContext(metadata, null);
+      const isRefund = event.type === "charge.refunded";
+      const metadata = isRefund
+        ? (event.data.object as Stripe.Charge).metadata
+        : ((event.data.object as Stripe.Dispute).metadata ?? {});
+
+      // A charge created by a **subscription invoice carries none of our
+      // metadata** — neither the charge nor its payment intent. So metadata
+      // alone identifies one-off purchases only, and every subscription refund
+      // would silently map to nothing: money back, access retained. The host's
+      // resolver answers from its own records; without one, behaviour is
+      // unchanged.
+      const chargeId = isRefund
+        ? (event.data.object as Stripe.Charge).id
+        : refOf((event.data.object as Stripe.Dispute).charge);
+
+      const context: ChargeContext | null =
+        readContext(metadata, null) ??
+        (chargeId && options.resolveChargeContext
+          ? await options.resolveChargeContext(chargeId)
+          : null);
       if (!context) return [];
 
       return [
@@ -345,11 +377,8 @@ export function mapStripeEventToEntitlementEvents(event: Stripe.Event): Entitlem
   }
 }
 
-interface EventContext {
-  tenantId: string;
-  member: MemberIdentity;
-  scope: EntitlementScope;
-}
+/** Local alias — the resolver returns this exact shape. */
+type EventContext = ChargeContext;
 
 /**
  * Recover who and what an event is about, from metadata, falling back to

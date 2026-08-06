@@ -160,16 +160,16 @@ describe("handleWebhook", () => {
 // ---------- event mapping ----------
 
 describe("mapStripeEventToEntitlementEvents", () => {
-  it("ignores an unrecognised event kind", () => {
-    expect(mapStripeEventToEntitlementEvents(event("customer.created", {}))).toEqual([]);
+  it("ignores an unrecognised event kind", async () => {
+    expect(await mapStripeEventToEntitlementEvents(event("customer.created", {}))).toEqual([]);
   });
 
-  it("ignores an event with no nbr_ metadata — not ours", () => {
+  it("ignores an event with no nbr_ metadata — not ours", async () => {
     const e = event("checkout.session.completed", { mode: "payment", metadata: {} });
-    expect(mapStripeEventToEntitlementEvents(e)).toEqual([]);
+    expect(await mapStripeEventToEntitlementEvents(e)).toEqual([]);
   });
 
-  it("grants a page forever on a one-off checkout", () => {
+  it("grants a page forever on a one-off checkout", async () => {
     const e = event("checkout.session.completed", {
       mode: "payment",
       metadata: { ...META, nbr_scope_kind: "page", nbr_scope_ref: "p1" },
@@ -179,7 +179,7 @@ describe("mapStripeEventToEntitlementEvents", () => {
       currency: "eur",
     });
 
-    const [mapped] = mapStripeEventToEntitlementEvents(e);
+    const [mapped] = await mapStripeEventToEntitlementEvents(e);
     expect(mapped).toMatchObject({
       action: "grant",
       scope: { kind: "page", pageId: "p1" },
@@ -190,7 +190,7 @@ describe("mapStripeEventToEntitlementEvents", () => {
     });
   });
 
-  it("grants a tier to period end plus grace on invoice.paid", () => {
+  it("grants a tier to period end plus grace on invoice.paid", async () => {
     const e = event("invoice.paid", {
       subscription: { id: "sub_1", metadata: META },
       lines: { data: [{ period: { end: 5000 } }] },
@@ -199,7 +199,7 @@ describe("mapStripeEventToEntitlementEvents", () => {
       currency: "eur",
     });
 
-    const [mapped] = mapStripeEventToEntitlementEvents(e);
+    const [mapped] = await mapStripeEventToEntitlementEvents(e);
     expect(mapped).toMatchObject({
       action: "grant",
       scope: { kind: "tier", tierId: "tier1" },
@@ -207,7 +207,7 @@ describe("mapStripeEventToEntitlementEvents", () => {
     });
   });
 
-  it("revokes on customer.subscription.deleted", () => {
+  it("revokes on customer.subscription.deleted", async () => {
     const e = event("customer.subscription.deleted", {
       id: "sub_1",
       status: "canceled",
@@ -215,10 +215,10 @@ describe("mapStripeEventToEntitlementEvents", () => {
       customer: "cus_1",
     });
 
-    expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({ action: "revoke" });
+    expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({ action: "revoke" });
   });
 
-  it("revokes on a subscription update to a dead status", () => {
+  it("revokes on a subscription update to a dead status", async () => {
     for (const status of ["canceled", "unpaid", "incomplete_expired"]) {
       const e = event("customer.subscription.updated", {
         id: "sub_1",
@@ -226,11 +226,11 @@ describe("mapStripeEventToEntitlementEvents", () => {
         metadata: META,
         items: { data: [{ current_period_end: 5000 }] },
       });
-      expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({ action: "revoke" });
+      expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({ action: "revoke" });
     }
   });
 
-  it("extends on a subscription update to a live status", () => {
+  it("extends on a subscription update to a live status", async () => {
     const e = event("customer.subscription.updated", {
       id: "sub_1",
       status: "active",
@@ -238,13 +238,13 @@ describe("mapStripeEventToEntitlementEvents", () => {
       items: { data: [{ current_period_end: 5000 }] },
     });
 
-    expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({
+    expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({
       action: "grant",
       expiresAt: 5000 + ENTITLEMENT_GRACE_SECONDS,
     });
   });
 
-  it("reads current_period_end from the subscription itself when it is flat", () => {
+  it("reads current_period_end from the subscription itself when it is flat", async () => {
     const e = event("customer.subscription.updated", {
       id: "sub_1",
       status: "active",
@@ -252,46 +252,118 @@ describe("mapStripeEventToEntitlementEvents", () => {
       current_period_end: 7000,
     });
 
-    expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({
+    expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({
       expiresAt: 7000 + ENTITLEMENT_GRACE_SECONDS,
     });
   });
 
-  it("revokes on a refund and on a dispute", () => {
+  it("revokes on a refund and on a dispute", async () => {
     for (const type of ["charge.refunded", "charge.dispute.created"]) {
       const e = event(type, { id: "ch_1", metadata: META });
-      expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({ action: "revoke" });
+      expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({ action: "revoke" });
     }
   });
 
-  it("emits NOTHING for invoice.payment_failed", () => {
+  it("emits NOTHING for invoice.payment_failed", async () => {
     // Dunning is still in flight and Stripe usually recovers the payment; the
     // grace window covers the gap. Revoking here locks a reader out over a card
     // that works again two days later.
     const e = event("invoice.payment_failed", { subscription: { id: "sub_1", metadata: META } });
-    expect(mapStripeEventToEntitlementEvents(e)).toEqual([]);
+    expect(await mapStripeEventToEntitlementEvents(e)).toEqual([]);
   });
 
-  it("falls back to client_reference_id when the tenant metadata is absent", () => {
+  it("falls back to client_reference_id when the tenant metadata is absent", async () => {
     const e = event("checkout.session.completed", {
       mode: "payment",
       metadata: { nbr_scope_kind: "page", nbr_scope_ref: "p1" },
       client_reference_id: `${TENANT}:platform:bob`,
     });
 
-    expect(mapStripeEventToEntitlementEvents(e)[0]).toMatchObject({
+    expect((await mapStripeEventToEntitlementEvents(e))[0]).toMatchObject({
       tenantId: TENANT,
       member: { issuer: "platform", subject: "bob" },
     });
   });
 
-  it("carries the provider event id through as the idempotency key", () => {
+  // A charge created by a subscription invoice inherits NONE of our metadata,
+  // so these two events arrive anonymous for every subscription. Without the
+  // resolver the reader gets their money back and keeps the content.
+  describe("anonymous charge events (subscription refunds and disputes)", () => {
+    const anon = (type: string) =>
+      type === "charge.refunded"
+        ? event(type, { id: "ch_anon", metadata: {} })
+        : event(type, { id: "dp_1", charge: "ch_anon", metadata: {} });
+
+    it("emits nothing without a resolver — the documented default", async () => {
+      for (const type of ["charge.refunded", "charge.dispute.created"]) {
+        expect(await mapStripeEventToEntitlementEvents(anon(type))).toEqual([]);
+      }
+    });
+
+    it("revokes via the resolver when metadata is missing", async () => {
+      for (const type of ["charge.refunded", "charge.dispute.created"]) {
+        const seen: string[] = [];
+        const [mapped] = await mapStripeEventToEntitlementEvents(anon(type), {
+          resolveChargeContext: (chargeId) => {
+            seen.push(chargeId);
+            return {
+              tenantId: TENANT,
+              member: { issuer: "platform", subject: "bob" },
+              scope: { kind: "tier", tierId: "tier1" },
+            };
+          },
+        });
+        expect(seen).toEqual(["ch_anon"]);
+        expect(mapped).toMatchObject({
+          action: "revoke",
+          tenantId: TENANT,
+          member: { issuer: "platform", subject: "bob" },
+        });
+      }
+    });
+
+    it("accepts an async resolver", async () => {
+      const [mapped] = await mapStripeEventToEntitlementEvents(anon("charge.refunded"), {
+        resolveChargeContext: async () => ({
+          tenantId: TENANT,
+          member: { issuer: "platform", subject: "bob" },
+          scope: { kind: "tier", tierId: "tier1" },
+        }),
+      });
+      expect(mapped).toMatchObject({ action: "revoke" });
+    });
+
+    it("emits nothing when the resolver says the charge is not ours", async () => {
+      expect(
+        await mapStripeEventToEntitlementEvents(anon("charge.refunded"), {
+          resolveChargeContext: () => null,
+        }),
+      ).toEqual([]);
+    });
+
+    it("prefers metadata over the resolver, and never calls it", async () => {
+      let called = false;
+      const [mapped] = await mapStripeEventToEntitlementEvents(
+        event("charge.refunded", { id: "ch_1", metadata: META }),
+        {
+          resolveChargeContext: () => {
+            called = true;
+            return null;
+          },
+        },
+      );
+      expect(called).toBe(false);
+      expect(mapped).toMatchObject({ action: "revoke", scope: { kind: "tier", tierId: "tier1" } });
+    });
+  });
+
+  it("carries the provider event id through as the idempotency key", async () => {
     const e = event(
       "charge.refunded",
       { id: "ch_1", metadata: META },
       { id: "evt_specific" } as Partial<Stripe.Event>,
     );
-    expect(mapStripeEventToEntitlementEvents(e)[0].eventId).toBe("evt_specific");
+    expect((await mapStripeEventToEntitlementEvents(e))[0].eventId).toBe("evt_specific");
   });
 });
 
@@ -317,8 +389,8 @@ describe("invoice.paid metadata, as Stripe actually shapes it", () => {
     };
   }
 
-  it("finds the metadata even though invoice.metadata is an empty object", () => {
-    const [mapped] = mapStripeEventToEntitlementEvents(event("invoice.paid", realInvoice()));
+  it("finds the metadata even though invoice.metadata is an empty object", async () => {
+    const [mapped] = await mapStripeEventToEntitlementEvents(event("invoice.paid", realInvoice()));
     expect(mapped).toBeDefined();
     expect(mapped).toMatchObject({
       action: "grant",
@@ -327,14 +399,14 @@ describe("invoice.paid metadata, as Stripe actually shapes it", () => {
     });
   });
 
-  it("falls back to the line item when parent is absent", () => {
+  it("falls back to the line item when parent is absent", async () => {
     const invoice = realInvoice();
     delete (invoice as Record<string, unknown>).parent;
-    expect(mapStripeEventToEntitlementEvents(event("invoice.paid", invoice))).toHaveLength(1);
+    expect(await mapStripeEventToEntitlementEvents(event("invoice.paid", invoice))).toHaveLength(1);
   });
 
-  it("still ignores an invoice that is genuinely not ours", () => {
-    const [none] = mapStripeEventToEntitlementEvents(
+  it("still ignores an invoice that is genuinely not ours", async () => {
+    const [none] = await mapStripeEventToEntitlementEvents(
       event("invoice.paid", {
         subscription: "sub_x",
         metadata: {},
@@ -346,13 +418,13 @@ describe("invoice.paid metadata, as Stripe actually shapes it", () => {
 });
 
 describe("invoice.paid owns subscription access, not checkout", () => {
-  it("emits nothing for a subscription checkout", () => {
+  it("emits nothing for a subscription checkout", async () => {
     // A webhook does not expand the subscription, so this event cannot know the
     // period end. Any guess it made would be the *newer* event (Stripe creates
     // the invoice a second earlier) and would overwrite the real period end via
     // the last_event_at guard — silently shrinking a month of access to days.
     expect(
-      mapStripeEventToEntitlementEvents(
+      await mapStripeEventToEntitlementEvents(
         event("checkout.session.completed", {
           mode: "subscription",
           metadata: META,
@@ -363,8 +435,8 @@ describe("invoice.paid owns subscription access, not checkout", () => {
     ).toEqual([]);
   });
 
-  it("grants the real period from invoice.paid instead", () => {
-    const [mapped] = mapStripeEventToEntitlementEvents(
+  it("grants the real period from invoice.paid instead", async () => {
+    const [mapped] = await mapStripeEventToEntitlementEvents(
       event("invoice.paid", {
         subscription: "sub_1",
         metadata: {},
@@ -378,8 +450,8 @@ describe("invoice.paid owns subscription access, not checkout", () => {
     expect(mapped.expiresAt).toBe(5000 + ENTITLEMENT_GRACE_SECONDS);
   });
 
-  it("still grants a one-off page purchase forever", () => {
-    const [mapped] = mapStripeEventToEntitlementEvents(
+  it("still grants a one-off page purchase forever", async () => {
+    const [mapped] = await mapStripeEventToEntitlementEvents(
       event("checkout.session.completed", {
         mode: "payment",
         metadata: { ...META, nbr_scope_kind: "page", nbr_scope_ref: "p1" },

@@ -17,3 +17,4 @@ export { member, plotMembership, postLike } from "../../community/schema.js";
 export { comment } from "../../comments/schema.js";
 export { subscriber } from "../../subscription/schema.js";
 export { moderationQueue } from "../../moderation/schema.js";
+export { paidTier, entitlement, paymentEvent, paymentCustomer } from "../../payments/schema.js";

@@ -31,4 +31,12 @@ export interface CommentNode {
 
 export interface CommentThread {
   comments: CommentNode[];
+  /**
+   * True when the post is gated and this reader cannot see it. The thread is
+   * empty in that case — the server never sends comments the reader is not
+   * entitled to, so the widget renders a prompt rather than "0 comments".
+   */
+  gated?: boolean;
+  /** "members" | "paid" when `gated`, so the prompt can say which. */
+  accessTier?: string;
 }

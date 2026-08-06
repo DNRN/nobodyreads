@@ -37,7 +37,7 @@ const emailEnabled = isEmailEnabled();
           </p>
           <form id="ai-provider-form" data-admin-base={ctx.adminBase} class="ai-provider-form">
             <label class="env-label" for="ai-provider">Provider</label>
-            <select id="ai-provider" name="provider">
+            <select id="ai-provider" name="provider" class="editor-input">
               <option value="openai-compatible">OpenAI-compatible (OpenAI, OpenRouter, Together, Groq, vLLM…)</option>
               <option value="anthropic">Anthropic (Claude)</option>
               <option value="gemini">Google (Gemini)</option>
@@ -45,13 +45,13 @@ const emailEnabled = isEmailEnabled();
             </select>
 
             <label class="env-label" for="ai-model">Model</label>
-            <input id="ai-model" name="model" type="text" placeholder="e.g. gpt-4o-mini, claude-haiku-4-5, qwen2.5" autocomplete="off" />
+            <input id="ai-model" name="model" type="text" class="editor-input" placeholder="e.g. gpt-4o-mini, claude-haiku-4-5, qwen2.5" autocomplete="off" />
 
             <label class="env-label" for="ai-base-url">Base URL <span class="hint">(optional)</span></label>
-            <input id="ai-base-url" name="baseURL" type="text" placeholder="Override endpoint (required for local / custom gateways)" autocomplete="off" />
+            <input id="ai-base-url" name="baseURL" type="text" class="editor-input" placeholder="Override endpoint (required for local / custom gateways)" autocomplete="off" />
 
             <label class="env-label" for="ai-api-key">API key</label>
-            <input id="ai-api-key" name="apiKey" type="password" placeholder="Leave blank to keep the current key" autocomplete="off" />
+            <input id="ai-api-key" name="apiKey" type="password" class="editor-input" placeholder="Leave blank to keep the current key" autocomplete="off" />
             <p id="ai-key-status" class="hint" style="margin-top:2px"></p>
 
             <div style="display:flex; gap:8px; margin-top:10px">

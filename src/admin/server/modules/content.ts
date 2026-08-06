@@ -8,6 +8,20 @@ import type { Page, PageKind } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
 import type { AdminModuleContext } from "./types.js";
 
+/**
+ * Parse a price the author typed ("3", "3.50", "3,50") into minor units.
+ *
+ * Money is stored as integer cents, never a float — 0.1 + 0.2 is not 0.3, and a
+ * price that drifts by a cent is a support ticket. Returns null for anything
+ * unparseable or non-positive, which means "not sold separately".
+ */
+function parseMinorUnits(input: string | undefined): number | null {
+  if (!input) return null;
+  const value = Number.parseFloat(input.replace(",", "."));
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100);
+}
+
 export function createContentRoutes(ctx: AdminModuleContext): Hono {
   const { db, tenantId, urlPrefix, editorBase } = ctx;
   const app = new Hono();
@@ -126,6 +140,11 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
           data.in_feed === undefined
             ? existingInFeed ?? true
             : data.in_feed === "on",
+        accessTier: data.access_tier,
+        // Only meaningful on a paid page. Clearing the tier clears the price so
+        // a stale amount cannot resurface if the page is paywalled again later.
+        priceAmount:
+          data.access_tier === "paid" ? parseMinorUnits(data.price_amount) : null,
         seo,
       };
 

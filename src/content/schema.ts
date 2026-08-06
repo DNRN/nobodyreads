@@ -27,6 +27,16 @@ export const page = sqliteTable(
     inFeed: integer("in_feed", { mode: "boolean" })
       .notNull()
       .default(true),
+    /**
+     * "public" | "members" | "paid". No CHECK constraint: SQLite cannot ALTER
+     * one in, so a migrated database would lack it while a fresh one had it —
+     * a silent behavioural fork. The enum is validated in `pageFormSchema` and
+     * coerced to "public" in `toPage()` instead, which fails closed.
+     * `comments_enabled` and `in_feed` set this precedent.
+     */
+    accessTier: text("access_tier").notNull().default("public"),
+    /** One-off purchase price in minor units. NULL = not sold separately. */
+    priceAmount: integer("price_amount"),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),

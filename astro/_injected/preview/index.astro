@@ -6,6 +6,7 @@ import {
   getPageByKind,
   getNavItems,
   renderContent,
+  getReadableContent,
   getLatestSiteTemplateRevision,
   getLatestSiteTemplateRevisionId,
 } from "nobodyreads";
@@ -22,7 +23,7 @@ const previewUrlPrefix = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 const siteName = ctx.siteName || "nobodyreads.me";
 
 const db = await initDb();
-const [siteTemplate, latestRevisionId, page, navItems] = await Promise.all([
+const [siteTemplate, latestRevisionId, rawPage, navItems] = await Promise.all([
   getLatestSiteTemplateRevision(db, tenantId),
   getLatestSiteTemplateRevisionId(db, tenantId),
   getPageByKind(db, "home", tenantId),
@@ -69,6 +70,18 @@ const autoReloadScript = `(() => {
 
   schedule();
 })();`;
+
+// Owner-only route: full body by default, `?preview=public` shows what a
+// non-paying reader sees. Rendering always goes through the redacted page.
+const previewParam = new URL(Astro.request.url).searchParams.get("preview");
+const previewAs =
+  previewParam === "public" || previewParam === "member" || previewParam === "owner"
+    ? previewParam
+    : null;
+const gate = rawPage
+  ? await getReadableContent(db, rawPage, tenantId, null, { isOwner: true, previewAs })
+  : null;
+const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page?.content?.trim()) {

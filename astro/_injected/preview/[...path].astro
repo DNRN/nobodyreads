@@ -6,6 +6,7 @@ import {
   getPageBySlug,
   getNavItems,
   renderContent,
+  getReadableContent,
   getLatestSiteTemplateRevision,
   getLatestSiteTemplateRevisionId,
 } from "nobodyreads";
@@ -108,6 +109,18 @@ if (page?.seo?.noAiTraining) {
   Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
 }
 
+// Owner-only route, so the gate runs with isOwner: true and normally returns
+// the full body. `?preview=public` makes it render exactly what a non-paying
+// reader sees. Rendering from the redacted page keeps the rule uniform: no page
+// is ever rendered straight from a raw query result.
+if (page) {
+  const gate = await getReadableContent(db, page, tenantId, null, {
+    isOwner: true,
+    previewAs: readPreviewAs(Astro.request),
+  });
+  page = gate.page;
+}
+
 let htmlBody = "";
 if (page) {
   htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
@@ -117,6 +130,11 @@ if (page) {
   });
 } else {
   Astro.response.status = 404;
+}
+
+function readPreviewAs(request: Request): "owner" | "member" | "public" | null {
+  const value = new URL(request.url).searchParams.get("preview");
+  return value === "public" || value === "member" || value === "owner" ? value : null;
 }
 
 const options = page

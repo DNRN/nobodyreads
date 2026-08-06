@@ -5,6 +5,7 @@ import { zValidator } from "@hono/zod-validator";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import type { Database } from "../db/index.js";
 import { getPageBySlug } from "../content/db.js";
+import { resolvePageAccess } from "../payments/access.js";
 import type { MemberIdentity, ResolveMember } from "../community/types.js";
 import type { AiProviderConfig } from "../admin/server/modules/types.js";
 import { reviewComment } from "../moderation/pipeline.js";
@@ -50,6 +51,17 @@ export interface CommentRouterOptions {
   rateLimitPerMinute?: number;
   /** Returns true when the requester may remove any comment (post owner/admin). */
   canModerate?: (c: Context) => boolean | Promise<boolean>;
+  /**
+   * Returns true when the requester owns the plot, for the paywall gate on
+   * gated posts. Hosts decide ownership; the package never does — the same
+   * contract as `canModerate` and as `PageAccessOptions.isOwner`.
+   *
+   * Defaults to `canModerate`, which is what it means on every host today: the
+   * person who can remove any comment is the owner. Separate options because
+   * "may moderate" and "may read paid content" are different questions, and a
+   * host that ever grows a moderator role will need them apart.
+   */
+  isOwner?: (c: Context) => boolean | Promise<boolean>;
   /** AI-assisted pre-publish moderation (Phase 4). Off when omitted. */
   moderation?: CommentModerationOptions;
 }
@@ -96,21 +108,66 @@ function visibleToViewer(comment: Comment, viewer: MemberIdentity | null): boole
  * Comment routes. Mount at /api.
  *
  * Routes:
- *   GET  /posts/:slug/comments  — list thread (public)
+ *   GET  /posts/:slug/comments  — list thread (readers who can read the post)
  *   POST /posts/:slug/comments  — create or reply (members only)
  *   POST /comments/:id/delete   — delete own (or any, when canModerate passes)
+ *
+ * ## Comments inherit the post's access tier
+ *
+ * A discussion belongs to its post. If you cannot read a members-only or paid
+ * post, you can neither read nor write its thread — otherwise a paywall leaks
+ * through the side door twice over: a non-payer can quote the paid body into a
+ * public comment, and the "paid community" a creator is selling is free to
+ * anyone who scrolls past the teaser.
+ *
+ * `commentsEnabled` and the access tier are independent: the first is the
+ * author saying "no discussion here", the second is "not for you (yet)".
  */
 export function createCommentRoutes(options: CommentRouterOptions): Hono {
   const { db, resolveMember } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const rateLimit = options.rateLimitPerMinute ?? 5;
+  const isOwner = options.isOwner ?? options.canModerate;
 
   const app = new Hono();
+
+  /**
+   * Whether this requester may see the post's body — and therefore its thread.
+   *
+   * Short-circuits on `access_tier = 'public'` inside `resolvePageAccess`, so
+   * the overwhelmingly common case costs no extra query.
+   */
+  async function canReadPost(
+    c: Context,
+    post: Awaited<ReturnType<typeof getPageBySlug>>,
+    viewer: MemberIdentity | null
+  ): Promise<boolean> {
+    if (!post) return false;
+    if (post.accessTier === "public") return true;
+
+    const decision = await resolvePageAccess(db, post, tenantId, viewer, {
+      isOwner: isOwner ? await isOwner(c) : false,
+    });
+    return decision.visibility === "full";
+  }
 
   app.get("/posts/:slug/comments", async (c) => {
     const post = await getPageBySlug(db, c.req.param("slug"), "post", tenantId);
     if (!post) return c.json({ error: "not_found" }, 404);
     const viewer = await resolveMember(c);
+
+    // Not a 403: the *post* is discoverable (its teaser is public), so the
+    // honest answer is "there is a thread here and it is not open to you",
+    // which is what the widget renders a join/subscribe prompt from.
+    if (!(await canReadPost(c, post, viewer))) {
+      return c.json({
+        commentsEnabled: post.commentsEnabled,
+        comments: [],
+        gated: true,
+        accessTier: post.accessTier,
+      });
+    }
+
     const comments = await listComments(db, tenantId, post.id);
     return c.json({
       commentsEnabled: post.commentsEnabled,
@@ -136,6 +193,13 @@ export function createCommentRoutes(options: CommentRouterOptions): Hono {
 
       const identity = await resolveMember(c);
       if (!identity) return c.json({ error: "unauthorized" }, 401);
+
+      // Posting follows the same rule as reading. Checked *after* identity so a
+      // signed-out reader still gets a 401 (log in) rather than a 403 (pay) —
+      // they may well already be entitled.
+      if (!(await canReadPost(c, post, identity))) {
+        return c.json({ error: "access_required", accessTier: post.accessTier }, 403);
+      }
 
       const recent = await countRecentCommentsByMember(db, tenantId, identity, 60);
       if (recent >= rateLimit) {

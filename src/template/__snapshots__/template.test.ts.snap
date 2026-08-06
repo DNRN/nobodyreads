@@ -3,19 +3,19 @@
 exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = `
 ":root {
   color-scheme: light dark;
-  --bg: #f1efe2;
-  --text: #23271d;
-  --muted: #7e8068;
-  --border: #dcdcc8;
-  --accent: #4b5142;
-  --link: #456a3a;
-  --link-hover: #23271d;
-  --brand-ink: #23271d;
-  --brand-accent: #456a3a;
-  --brand-bg: #f1efe2;
-  --brand-font: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --logo-weight: 500;
-  --logo-tracking: 0;
+  --bg: #eef1ec;
+  --text: #23302a;
+  --muted: #7c8a82;
+  --border: #e4eae3;
+  --accent: #415147;
+  --link: #40765b;
+  --link-hover: #23302a;
+  --brand-ink: #23302a;
+  --brand-accent: #4e8a6b;
+  --brand-bg: #eef1ec;
+  --brand-font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --logo-weight: 800;
+  --logo-tracking: -0.02em;
   --font: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
   --font-size: 18px;
@@ -25,16 +25,16 @@ exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = 
 }
 
 :root[data-theme="dark"] {
-  --bg: #1a1e16;
-  --text: #ecead6;
-  --muted: #7e856c;
-  --border: #2a3022;
-  --accent: #aeb39c;
-  --link: #9bbd76;
-  --link-hover: #ecead6;
-  --brand-ink: #ecead6;
-  --brand-accent: #9bbd76;
-  --brand-bg: #1a1e16;
+  --bg: #141a17;
+  --text: #e8efe9;
+  --muted: #8fa096;
+  --border: #2a342e;
+  --accent: #b9cabf;
+  --link: #6fb894;
+  --link-hover: #e8efe9;
+  --brand-ink: #e8efe9;
+  --brand-accent: #6fb894;
+  --brand-bg: #141a17;
 }
 
 *, *::before, *::after {

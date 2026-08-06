@@ -168,6 +168,12 @@ If you are unsure whether a change warrants a doc update, update
   `nobodyreads.me` in one go — separate histories, separate visibility. Land
   the change here first when it spans both.
 - Commit or push only when asked. If work is on `main`, branch first.
+- **`main` has a GitHub ruleset that rejects direct pushes** — "Changes must
+  be made through a pull request." A `git push` to `main` will fail with
+  `GH013: Repository rule violations`, even for the repo owner, even when
+  `main` is only ahead of `origin/main` (never behind). If work has piled up
+  on local `main`, push it to a branch and open a PR into `main` instead of
+  retrying the push — see Pull requests below.
 
 ## Pull requests
 

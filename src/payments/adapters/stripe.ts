@@ -45,9 +45,42 @@ const META_DISPLAY = "nbr_display";
 const META_SCOPE_KIND = "nbr_scope_kind";
 const META_SCOPE_REF = "nbr_scope_ref";
 
+/**
+ * Stripe Tax, for a host that is registered to collect it.
+ *
+ * Off by default, and every field below is applied inside one `enabled` branch,
+ * so a self-hoster who has not set up Stripe Tax gets exactly the session this
+ * adapter has always built. A host that *is* VAT-registered wants all of it —
+ * which is why this lives here rather than in a platform's own fork.
+ *
+ * Enabling it on a Checkout session also enables it on the Subscription that
+ * session creates, so renewals are taxed without any further work. That is the
+ * property the whole recurring path leans on; it is not obvious from the API.
+ */
+export interface StripeTaxOptions {
+  /** Master switch. Requires tax registrations on the Stripe account. */
+  enabled: boolean;
+  /**
+   * Whether the configured price already includes tax. Defaults to inclusive:
+   * a tier priced at €5 charges the reader €5 and carves the VAT out of it,
+   * which is the only version where the reader pays what the plot advertises.
+   */
+  behavior?: "inclusive" | "exclusive";
+  /** Stripe product tax code, e.g. `txcd_10000000` for digital services. */
+  code?: string;
+  /**
+   * Collect customer VAT IDs. A valid cross-border EU business number makes the
+   * sale a reverse charge, which comes back as zero tax on an unchanged gross —
+   * a case the fee maths already handles, since it only ever subtracts.
+   */
+  collectTaxIds?: boolean;
+}
+
 export interface StripeProviderOptions {
   secretKey: string;
   webhookSecret?: string;
+  /** Stripe Tax. Omitted or disabled leaves checkout exactly as it was. */
+  tax?: StripeTaxOptions;
   /** Injectable for tests. */
   client?: Stripe;
 }
@@ -55,6 +88,7 @@ export interface StripeProviderOptions {
 export function createStripeProvider(options: StripeProviderOptions): PaymentProvider {
   const stripe = options.client ?? new Stripe(options.secretKey);
   const webhookSecret = options.webhookSecret;
+  const tax = options.tax?.enabled ? options.tax : null;
 
   return {
     id: PROVIDER_ID,
@@ -67,6 +101,13 @@ export function createStripeProvider(options: StripeProviderOptions): PaymentPro
         unit_amount: req.amount,
         product_data: { name: req.productName },
       };
+
+      if (tax) {
+        // Required, not optional. `tax_behavior` defaults to "unspecified",
+        // which Stripe rejects outright once automatic tax is on.
+        priceData.tax_behavior = tax.behavior ?? "inclusive";
+        if (tax.code) priceData.product_data!.tax_code = tax.code;
+      }
 
       const isSubscription = req.scope.kind === "tier";
       if (isSubscription) {
@@ -89,6 +130,21 @@ export function createStripeProvider(options: StripeProviderOptions): PaymentPro
 
       if (req.customerRef) params.customer = req.customerRef;
       else if (req.email) params.customer_email = req.email;
+
+      if (tax) {
+        params.automatic_tax = { enabled: true };
+        // Where the reader is, is what decides the rate. For a digital service
+        // this is the location evidence, so it is collected rather than guessed.
+        params.billing_address_collection = "required";
+        if (tax.collectTaxIds) params.tax_id_collection = { enabled: true };
+
+        // Only legal alongside `customer`, and mandatory there: with a saved
+        // customer and automatic tax, Stripe refuses to create the session
+        // unless it is allowed to write the checkout address back. That fails on
+        // a reader's SECOND purchase, not their first, so it survives exactly
+        // the kind of manual test pass that only ever buys once.
+        if (params.customer) params.customer_update = { address: "auto", name: "auto" };
+      }
 
       // The classic footgun: metadata set only on the Session is *not* carried
       // by `customer.subscription.updated` / `.deleted`, which carry the

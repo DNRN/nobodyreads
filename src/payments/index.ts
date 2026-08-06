@@ -48,6 +48,7 @@ export {
   invoiceMetadata,
   ENTITLEMENT_GRACE_SECONDS,
 } from "./adapters/stripe.js";
+export type { StripeProviderOptions, StripeTaxOptions } from "./adapters/stripe.js";
 
 export type {
   AccessTier,

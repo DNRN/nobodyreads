@@ -418,4 +418,6 @@ export type {
   PaymentsRouterOptions,
   PaymentsWebhookOptions,
   ApplyResult,
+  StripeProviderOptions,
+  StripeTaxOptions,
 } from "./payments/index.js";

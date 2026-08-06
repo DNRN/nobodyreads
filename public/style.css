@@ -4,24 +4,24 @@
    ============================================================ */
 
 /* ---- Design tokens ---- */
-/* Forest & Oat palette — kept in sync with the platform tokens
-   (nobodyreads.me/astro/styles/tokens.css) and DEFAULT_TEMPLATE so a
+/* Studio palette — kept in sync with the admin editor's own chrome
+   (public/editor.css :root, the --nr-* tokens) and DEFAULT_TEMPLATE so a
    freshly created site is colored, not blank, from the start. */
 :root {
   color-scheme: light;
-  --bg:            #f1efe2;  /* oatmeal */
-  --text:          #23271d;
-  --muted:         #7e8068;
-  --border:        #dcdcc8;
-  --surface:       #e2e4d0;  /* tinted oat — code blocks, cards */
-  --accent:        #456a3a;  /* deep moss */
-  --accent-text:   #f1efe2;
-  --link:          #456a3a;
-  --link-hover:    #23271d;
-  --danger:        #9b3a2f;
-  --success:       #3d6b32;
+  --bg:            #eef1ec;  /* --nr-bg */
+  --text:          #23302a;  /* --nr-text */
+  --muted:         #7c8a82;  /* --nr-muted */
+  --border:        #e4eae3;  /* --nr-border */
+  --surface:       #f7f9f6;  /* --nr-surface — code blocks, cards */
+  --accent:        #4e8a6b;  /* --nr-accent */
+  --accent-text:   #ffffff;
+  --link:          #40765b;  /* --nr-accent deepened to clear 4.5:1 in running text */
+  --link-hover:    #23302a;
+  --danger:        #b4443a;
+  --success:       #4e8a6b;
   --radius:        6px;
-  --brand-font:    'Georgia', serif;
+  --brand-font:    'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono:     'Menlo', 'Consolas', ui-monospace, monospace;
   --logo-weight:   700;
   --logo-tracking: 0.02em;
@@ -30,20 +30,20 @@
   --max-w-wide:    860px;
 }
 
-/* Forest after dark — activated by site.js (sets data-theme on <html>). */
+/* Studio after dark — activated by site.js (sets data-theme on <html>). */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg:          #1a1e16;
-  --text:        #ecead6;
-  --muted:       #7e856c;
-  --border:      #2a3022;
-  --surface:     #222719;
-  --accent:      #9bbd76;  /* sage */
-  --accent-text: #171b12;
-  --link:        #9bbd76;
-  --link-hover:  #ecead6;
-  --danger:      #d98c82;
-  --success:     #9bb074;
+  --bg:          #141a17;
+  --text:        #e8efe9;
+  --muted:       #8fa096;
+  --border:      #2a342e;
+  --surface:     #1a211d;
+  --accent:      #6fb894;
+  --accent-text: #0f1512;
+  --link:        #6fb894;
+  --link-hover:  #e8efe9;
+  --danger:      #e0796f;
+  --success:     #6fb894;
 }
 
 /* ---- Reset ---- */

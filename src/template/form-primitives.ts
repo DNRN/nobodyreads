@@ -14,17 +14,22 @@ export const siteInputCss = `  display: block;
 export const siteInputFocusCss = `  outline: none;
   border-color: var(--accent);`;
 
+/**
+ * Fills with `accent` rather than `text`, so a theme's accent actually reaches
+ * its buttons — and so a plot's primary action reads like the platform's.
+ */
 export const siteButtonCss = `  padding: 0.55rem 1rem;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   border-radius: 4px;
-  font-family: var(--font-mono);
+  font-family: var(--brand-font);
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;`;
+  transition: filter 0.15s;`;
 
-export const siteButtonHoverCss = `  opacity: 0.85;`;
+export const siteButtonHoverCss = `  filter: brightness(0.93);`;
 
 export function siteInputRules(selector: string): string {
   return `${selector} {

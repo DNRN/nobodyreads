@@ -5,15 +5,15 @@ const BASE_CSS = `.wordmark {
   font-weight: var(--logo-weight);
   letter-spacing: var(--logo-tracking);
   line-height: 1;
-  color: var(--brand-ink);
+  color: var(--brand-ink, var(--text));
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;
 }
 
-.wordmark .me { color: var(--brand-accent); }
+.wordmark .me { color: var(--brand-accent, var(--accent)); }
 .wordmark--xl { font-size: clamp(28px, 6vw, 64px); }
-.wordmark--md { font-size: clamp(18px, 3vw, 28px); }
+.wordmark--md { font-size: 22px; }
 .wordmark .dot { margin-right: -0.02em; }`;
 
 export const wordmarkComponent = defineComponent({

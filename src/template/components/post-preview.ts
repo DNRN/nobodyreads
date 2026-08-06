@@ -38,7 +38,7 @@ const BASE_CSS = `.post-preview {
 
 .post-excerpt {
   margin-top: 0.5rem;
-  color: var(--post-preview-excerpt-color, var(--accent));
+  color: var(--post-preview-excerpt-color, var(--body-text));
   font-size: var(--post-preview-excerpt-size, 0.9rem);
 }
 
@@ -116,7 +116,7 @@ export const postPreviewComponent = defineComponent({
       cssVar: "--post-preview-excerpt-color",
       label: "Excerpt color",
       type: "color",
-      defaultValue: "var(--accent)",
+      defaultValue: "var(--body-text)",
     },
   ],
   variants: {

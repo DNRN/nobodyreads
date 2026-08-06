@@ -5,14 +5,13 @@ exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = 
   color-scheme: light dark;
   --bg: #eef1ec;
   --text: #23302a;
+  --body-text: #415147;
   --muted: #7c8a82;
   --border: #e4eae3;
-  --accent: #415147;
+  --accent: #4e8a6b;
+  --accent-text: #ffffff;
   --link: #40765b;
   --link-hover: #23302a;
-  --brand-ink: #23302a;
-  --brand-accent: #4e8a6b;
-  --brand-bg: #eef1ec;
   --brand-font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --logo-weight: 800;
   --logo-tracking: -0.02em;
@@ -27,14 +26,13 @@ exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = 
 :root[data-theme="dark"] {
   --bg: #141a17;
   --text: #e8efe9;
+  --body-text: #b9cabf;
   --muted: #8fa096;
   --border: #2a342e;
-  --accent: #b9cabf;
+  --accent: #6fb894;
+  --accent-text: #0f1512;
   --link: #6fb894;
   --link-hover: #e8efe9;
-  --brand-ink: #e8efe9;
-  --brand-accent: #6fb894;
-  --brand-bg: #141a17;
 }
 
 *, *::before, *::after {
@@ -105,18 +103,19 @@ main {
 
 .site-button {
   padding: 0.55rem 1rem;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   border-radius: 4px;
-  font-family: var(--font-mono);
+  font-family: var(--brand-font);
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: filter 0.15s;
 }
 
 .site-button:hover {
-  opacity: 0.85;
+  filter: brightness(0.93);
 }
 
 .wordmark {
@@ -124,15 +123,15 @@ main {
   font-weight: var(--logo-weight);
   letter-spacing: var(--logo-tracking);
   line-height: 1;
-  color: var(--brand-ink);
+  color: var(--brand-ink, var(--text));
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;
 }
 
-.wordmark .me { color: var(--brand-accent); }
+.wordmark .me { color: var(--brand-accent, var(--accent)); }
 .wordmark--xl { font-size: clamp(28px, 6vw, 64px); }
-.wordmark--md { font-size: clamp(18px, 3vw, 28px); }
+.wordmark--md { font-size: 22px; }
 .wordmark .dot { margin-right: -0.02em; }
 
 .site-header {
@@ -398,7 +397,7 @@ body.nav-open .site-menu {
 
 .post-excerpt {
   margin-top: 0.5rem;
-  color: var(--post-preview-excerpt-color, var(--accent));
+  color: var(--post-preview-excerpt-color, var(--body-text));
   font-size: var(--post-preview-excerpt-size, 0.9rem);
 }
 
@@ -617,7 +616,7 @@ body.nav-open .site-menu {
 }
 
 .platform-hero p {
-  color: var(--accent);
+  color: var(--body-text);
   font-size: 1rem;
   max-width: 32rem;
   margin: 0 0 1.1rem;
@@ -722,7 +721,7 @@ body.nav-open .site-menu {
   gap: 0.4rem 0.6rem;
   align-items: center;
   font-size: 0.85rem;
-  color: var(--accent);
+  color: var(--body-text);
   margin-bottom: 0.6rem;
 }
 
@@ -807,7 +806,7 @@ body.nav-open .site-menu {
   position: relative;
   background: rgba(0, 0, 0, 0.02);
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--body-text);
 }
 
 :root[data-theme="dark"] .platform-steps li {
@@ -877,7 +876,7 @@ body.nav-open .site-menu {
 .auth-form label {
   font-size: 0.8rem;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--body-text);
   margin-bottom: 0.25rem;
   margin-top: 1rem;
 }
@@ -916,18 +915,19 @@ body.nav-open .site-menu {
 
 .auth-form button {
   padding: 0.55rem 1rem;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   border-radius: 4px;
-  font-family: var(--font-mono);
+  font-family: var(--brand-font);
   font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: filter 0.15s;
 }
 
 .auth-form button:hover {
-  opacity: 0.85;
+  filter: brightness(0.93);
 }
 
 .auth-alt {

@@ -11,11 +11,12 @@
   color-scheme: light;
   --bg:            #eef1ec;  /* --nr-bg */
   --text:          #23302a;  /* --nr-text */
+  --body-text:     #415147;  /* --nr-code — secondary running copy */
   --muted:         #7c8a82;  /* --nr-muted */
   --border:        #e4eae3;  /* --nr-border */
   --surface:       #f7f9f6;  /* --nr-surface — code blocks, cards */
   --accent:        #4e8a6b;  /* --nr-accent */
-  --accent-text:   #ffffff;
+  --accent-text:   #ffffff;  /* --nr-accent-text */
   --link:          #40765b;  /* --nr-accent deepened to clear 4.5:1 in running text */
   --link-hover:    #23302a;
   --danger:        #b4443a;
@@ -35,6 +36,7 @@
   color-scheme: dark;
   --bg:          #141a17;
   --text:        #e8efe9;
+  --body-text:   #b9cabf;
   --muted:       #8fa096;
   --border:      #2a342e;
   --surface:     #1a211d;

@@ -19,10 +19,14 @@ import { normalizeComponents } from "./theme-io.js";
  * boundary.
  */
 
-/** Every TokenSet key, but each value nullable (null = unchanged). */
+/**
+ * Every TokenSet key, but each value nullable (null = unchanged). The `-?`
+ * strips optionality: the model may set the optional wordmark overrides too,
+ * it just has to say so explicitly rather than omitting the key.
+ */
 const tokenDiffShape = Object.fromEntries(
   Object.keys(tokenSetSchema.shape).map((key) => [key, z.string().nullable()]),
-) as { [K in keyof TokenSet]: z.ZodNullable<z.ZodString> };
+) as { [K in keyof TokenSet]-?: z.ZodNullable<z.ZodString> };
 
 const tokenDiffSchema = z.object(tokenDiffShape);
 

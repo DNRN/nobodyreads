@@ -9,17 +9,17 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     light: {
       bg: "#eef1ec", // --nr-bg
       text: "#23302a", // --nr-text
+      bodyText: "#415147", // --nr-code — secondary running copy
       muted: "#7c8a82", // --nr-muted
       border: "#e4eae3", // --nr-border
-      // Secondary body tone (post excerpts, supporting copy) — --nr-code.
-      accent: "#415147",
-      // The editor accent (#4e8a6b) deepened to clear 4.5:1 on --bg, because
-      // unlike the editor's chrome these links sit inside running body text.
+      accent: "#4e8a6b", // --nr-accent — button fills, focus rings, wordmark dot
+      accentText: "#ffffff", // --nr-accent-text
+      // The editor accent deepened to clear 4.5:1 on --bg, because unlike a
+      // button fill these links sit inside running body text.
       link: "#40765b",
       linkHover: "#23302a",
-      brandInk: "#23302a",
-      brandAccent: "#4e8a6b", // --nr-accent, exactly as the editor's wordmark dot
-      brandBg: "#eef1ec",
+      // brandInk / brandAccent deliberately unset — the wordmark follows
+      // `text` and `accent` so the brand can't drift from the palette.
       // The editor's wordmark: Hanken Grotesk 800, tightly tracked.
       brandFont:
         "'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -36,14 +36,13 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
       // Studio after dark (public/editor.css :root[data-theme="dark"]).
       bg: "#141a17",
       text: "#e8efe9",
+      bodyText: "#b9cabf",
       muted: "#8fa096",
       border: "#2a342e",
-      accent: "#b9cabf",
+      accent: "#6fb894",
+      accentText: "#0f1512",
       link: "#6fb894",
       linkHover: "#e8efe9",
-      brandInk: "#e8efe9",
-      brandAccent: "#6fb894",
-      brandBg: "#141a17",
     },
   },
   sections: [

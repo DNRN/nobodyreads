@@ -22,7 +22,7 @@ const BASE_CSS = `.platform-hero {
 }
 
 .platform-hero p {
-  color: var(--accent);
+  color: var(--body-text);
   font-size: 1rem;
   max-width: 32rem;
   margin: 0 0 1.1rem;
@@ -127,7 +127,7 @@ const BASE_CSS = `.platform-hero {
   gap: 0.4rem 0.6rem;
   align-items: center;
   font-size: 0.85rem;
-  color: var(--accent);
+  color: var(--body-text);
   margin-bottom: 0.6rem;
 }
 
@@ -212,7 +212,7 @@ const BASE_CSS = `.platform-hero {
   position: relative;
   background: rgba(0, 0, 0, 0.02);
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--body-text);
 }
 
 :root[data-theme="dark"] .platform-steps li {
@@ -282,7 +282,7 @@ const BASE_CSS = `.platform-hero {
 .auth-form label {
   font-size: 0.8rem;
   font-family: var(--font-mono);
-  color: var(--accent);
+  color: var(--body-text);
   margin-bottom: 0.25rem;
   margin-top: 1rem;
 }

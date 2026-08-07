@@ -122,6 +122,12 @@ export interface PageSummary {
   date: string;
   /** Drives the lock badge on listings. Never carries the body. */
   accessTier: string;
+  /**
+   * Thumbnail for the card listing — the post's social image, as a stored
+   * media key or an absolute URL. A post is free not to have one; the card
+   * simply drops its cover region.
+   */
+  coverImage?: string;
 }
 
 /** A resolved nav item for the top bar. */
@@ -177,6 +183,18 @@ export interface LayoutOptions {
   siteTagline?: string;
   /** Site-wide default social image, used when a page has no `seo.ogImage`. */
   defaultOgImage?: string;
+
+  // Hero
+  /** Small line above the site name in the hero — typically the site's URL. */
+  heroEyebrow?: string;
+  /**
+   * Meta line under the name, e.g. "24 posts · since 2024". Supplying one
+   * switches the hero to its compact form, where the archive below leads and
+   * the tagline steps aside.
+   */
+  heroMeta?: string;
+  /** Show the avatar/monogram beside the name. */
+  heroMonogram?: boolean;
 
   // Topbar account dropdown
   /** Items rendered in the topbar account dropdown. When non-empty, the menu trigger shows. */

@@ -161,6 +161,7 @@ export {
   listPosts,
   listPostsForView,
   listFeedPosts,
+  getPostStats,
   getPageBySlug,
   getPageByKind,
   findPageByKind,
@@ -239,7 +240,8 @@ export { defaultHomePage, buildDefaultHomeContent } from "./content/defaults.js"
 export type { DefaultHomePageOptions } from "./content/defaults.js";
 
 // Templates & rendering
-export { renderPostListView } from "./content/templates.js";
+export { renderPostListView, heroMetaLine } from "./content/templates.js";
+export type { PostListVariant, PostListRenderOptions } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
 export type { RenderMarkdownOptions, RenderContentOptions } from "./content/render.js";
 

@@ -4,9 +4,9 @@ export const siteInputCss = `  display: block;
   width: 100%;
   padding: 0.5rem 0.65rem;
   font-size: 0.9rem;
-  font-family: var(--font);
+  font-family: var(--font-ui);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
   transition: border-color 0.15s;`;
@@ -18,18 +18,36 @@ export const siteInputFocusCss = `  outline: none;
  * Fills with `accent` rather than `text`, so a theme's accent actually reaches
  * its buttons — and so a plot's primary action reads like the platform's.
  */
-export const siteButtonCss = `  padding: 0.55rem 1rem;
+export const siteButtonCss = `  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  padding: 0.7rem 1.25rem;
   background: var(--accent);
   color: var(--accent-text);
-  border: none;
-  border-radius: 4px;
-  font-family: var(--brand-font);
-  font-size: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
   transition: filter 0.15s;`;
 
-export const siteButtonHoverCss = `  filter: brightness(0.93);`;
+/**
+ * The quieter half of a two-button row — "Read the manifesto" next to "Write
+ * your first post". Outlined rather than a second fill, so the pair reads as
+ * one primary action and one alternative.
+ */
+export const siteButtonGhostCss = `  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);`;
+
+export const siteButtonGhostHoverCss = `  filter: none;
+  border-color: var(--text);`;
+
+export const siteButtonHoverCss = `  filter: brightness(0.93);
+  text-decoration: none;`;
 
 export function siteInputRules(selector: string): string {
   return `${selector} {
@@ -48,5 +66,13 @@ ${siteButtonCss}
 
 ${selector}:hover {
 ${siteButtonHoverCss}
+}
+
+${selector}--ghost {
+${siteButtonGhostCss}
+}
+
+${selector}--ghost:hover {
+${siteButtonGhostHoverCss}
 }`;
 }

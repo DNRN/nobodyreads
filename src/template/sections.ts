@@ -29,19 +29,16 @@ function headerSectionHtml(config: HeaderSectionConfig): string {
       <div class="nav-actions">{{navToggle}}{{authLinksBlock}}</div>
     </div>`;
 
+  html += `\n  </div>\n</header>`;
+
+  // Outside the <header>, so the header's rule sits under the nav rather than
+  // under the hero. Filled in by the layout, which is the only thing that knows
+  // whether this request is for the site's front page — the hero identifies the
+  // site and has nothing to add above an article with its own title.
   if (config.showHero) {
-    const wmXl = wordmarkHtml("xl", config.logoText, config.logoDotText);
-    // Not an <h1>: the hero repeats the site wordmark on every page, so the
-    // document's single <h1> belongs to the page's own title instead.
-    html += `\n    <div class="site-hero">
-      <p class="hero-title">${wmXl}</p>`;
-    if (config.showTagline) {
-      html += `\n      <p class="hero-tagline">{{siteTagline}}</p>`;
-    }
-    html += `\n    </div>`;
+    html += `\n{{hero}}`;
   }
 
-  html += `\n  </div>\n</header>`;
   return html;
 }
 

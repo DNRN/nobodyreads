@@ -58,25 +58,19 @@ describe("template system", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("generateCss emits different CSS for postPreview variants", () => {
-    const base = generateCss(DEFAULT_TEMPLATE);
-    const compact = generateCss({
-      ...DEFAULT_TEMPLATE,
-      components: {
-        postPreview: { variant: "compact" },
-        nav: { variant: "inline" },
-      },
-    });
-    const card = generateCss({
-      ...DEFAULT_TEMPLATE,
-      components: {
-        postPreview: { variant: "card" },
-        nav: { variant: "inline" },
-      },
-    });
-    expect(compact).not.toBe(base);
-    expect(card).not.toBe(base);
-    expect(compact).not.toBe(card);
+  // The postPreview variant selects markup, not CSS: only the renderer knows
+  // how many posts there are, so `auto` cannot be resolved at this point. Every
+  // layout therefore ships in one stylesheet, keyed off a class on the list.
+  it("generateCss emits every post-list layout regardless of the chosen variant", () => {
+    for (const variant of ["auto", "default", "compact", "card"]) {
+      const css = generateCss({
+        ...DEFAULT_TEMPLATE,
+        components: { postPreview: { variant }, nav: { variant: "inline" } },
+      });
+      expect(css).toContain(".post-list--default");
+      expect(css).toContain(".post-list--compact");
+      expect(css).toContain(".post-list--card");
+    }
   });
 
   it("generateCss emits component token overrides", () => {

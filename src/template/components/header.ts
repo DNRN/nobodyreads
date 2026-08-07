@@ -1,14 +1,14 @@
 import { defineComponent } from "../component-definition.js";
 
 const BASE_CSS = `.site-header {
-  padding: var(--header-padding-block, 1.75rem) 0 var(--header-padding-bottom, 2.25rem);
+  padding: var(--header-padding-block, 1rem) 0 var(--header-padding-bottom, 1rem);
   border-bottom: 1px solid var(--header-border-color, var(--border));
 }
 
 .nav-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 1.5rem;
   position: relative;
 }
 
@@ -28,14 +28,14 @@ export const headerComponent = defineComponent({
       cssVar: "--header-padding-block",
       label: "Top padding",
       type: "size",
-      defaultValue: "1.75rem",
+      defaultValue: "1rem",
     },
     {
       key: "paddingBottom",
       cssVar: "--header-padding-bottom",
       label: "Bottom padding",
       type: "size",
-      defaultValue: "2.25rem",
+      defaultValue: "1rem",
     },
     {
       key: "borderColor",

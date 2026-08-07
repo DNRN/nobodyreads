@@ -1,14 +1,21 @@
 import { defineComponent } from "../component-definition.js";
 
 const BASE_CSS = `.site-footer {
-  padding: var(--footer-padding-block, 2rem) 0;
+  padding: var(--footer-padding-block, 1.25rem) 0;
   border-top: 1px solid var(--border);
 }
 
 .site-footer p {
-  font-size: var(--footer-text-size, 0.75rem);
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: var(--footer-text-size, 0.69rem);
   font-family: var(--font-mono);
   color: var(--footer-text-color, var(--muted));
+}
+
+.site-footer .wordmark {
+  font-size: 0.8rem;
 }`;
 
 export const footerComponent = defineComponent({
@@ -21,14 +28,14 @@ export const footerComponent = defineComponent({
       cssVar: "--footer-padding-block",
       label: "Vertical padding",
       type: "size",
-      defaultValue: "2rem",
+      defaultValue: "1.25rem",
     },
     {
       key: "textSize",
       cssVar: "--footer-text-size",
       label: "Text size",
       type: "size",
-      defaultValue: "0.75rem",
+      defaultValue: "0.69rem",
     },
     {
       key: "textColor",

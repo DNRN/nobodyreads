@@ -2,9 +2,11 @@ import type { Database } from "../db/index.js";
 import { Marked, type MarkedExtension } from "marked";
 import { normalizeHeadings } from "../shared/markdown-headings.js";
 import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustomViewQuery } from "./db.js";
-import { renderPostListView } from "./templates.js";
+import { renderPostListView, type PostListRenderOptions, type PostListVariant } from "./templates.js";
 import { escapeHtml } from "../shared/http.js";
 import { renderImage } from "../shared/image-markdown.js";
+import { getSiteTemplate } from "../shared/site-bundle.js";
+import { createMediaStorage } from "../media/storage.js";
 import type { LinkTarget, CustomViewConfig } from "./types.js";
 
 /**
@@ -72,6 +74,12 @@ export async function resolveLinks(
 export interface ResolveViewsOptions {
   includeDrafts?: boolean;
   showMissingPlaceholders?: boolean;
+  /**
+   * Everything a post listing needs beyond the posts themselves — who is
+   * looking, what the space is called, where an empty one points a reader.
+   * The layout variant is read from the site's theme and does not belong here.
+   */
+  postList?: Omit<PostListRenderOptions, "urlPrefix" | "variant" | "mediaUrl">;
 }
 
 /**
@@ -85,11 +93,38 @@ export async function resolveViews(
   urlPrefix: string = "",
   options: ResolveViewsOptions = {}
 ): Promise<string> {
+  const viewHtml = await resolveViewSlugs(db, markdown, tenantId, urlPrefix, options);
+  if (viewHtml.size === 0) return markdown;
+  return markdown.replace(VIEW_PATTERN, (_match, slug: string) => viewHtml.get(slug) ?? "");
+}
+
+/**
+ * The layout a post listing should use, as configured on the site's theme.
+ *
+ * Read here rather than passed in by every caller: the listing is generated
+ * deep inside markdown rendering, and threading a theme value through every
+ * page that renders content just to reach it is how the two drift apart.
+ */
+async function postListVariant(db: Database, tenantId: string): Promise<PostListVariant> {
+  const template = await getSiteTemplate(db, tenantId);
+  const variant = template?.components?.postPreview?.variant;
+  return variant === "default" || variant === "compact" || variant === "card" ? variant : "auto";
+}
+
+/** Render each distinct {{view:slug}} in `markdown` to its HTML. */
+async function resolveViewSlugs(
+  db: Database,
+  markdown: string,
+  tenantId: string,
+  urlPrefix: string,
+  options: ResolveViewsOptions
+): Promise<Map<string, string>> {
   const matches = [...markdown.matchAll(VIEW_PATTERN)];
-  if (matches.length === 0) return markdown;
+  const viewHtml = new Map<string, string>();
+  if (matches.length === 0) return viewHtml;
 
   const slugs = [...new Set(matches.map((m) => m[1]))];
-  const lookup = new Map<string, string>();
+  let listDefaults: PostListRenderOptions | null = null;
 
   for (const slug of slugs) {
     const view = await getContentViewBySlug(db, slug, tenantId, {
@@ -97,32 +132,43 @@ export async function resolveViews(
     });
 
     if (!view) {
-      const fallback = options.showMissingPlaceholders
-        ? `<div class="content-view content-view-missing"><p>Missing view: ${slug}</p></div>`
-        : "";
-      lookup.set(slug, fallback);
+      viewHtml.set(
+        slug,
+        options.showMissingPlaceholders
+          ? `<div class="content-view content-view-missing"><p>Missing view: ${escapeHtml(slug)}</p></div>`
+          : ""
+      );
       continue;
     }
 
     if (view.kind === "post_list") {
+      if (!listDefaults) {
+        const storage = createMediaStorage();
+        listDefaults = {
+          urlPrefix,
+          variant: await postListVariant(db, tenantId),
+          mediaUrl: (key) => storage.url(key),
+          ...options.postList,
+        };
+      }
       const config = view.config as { limit?: number };
-      const posts = await listPostsForView(db, tenantId, {
-        limit: config.limit,
-      });
-      lookup.set(slug, renderPostListView(posts, urlPrefix));
+      const posts = await listPostsForView(db, tenantId, { limit: config.limit });
+      viewHtml.set(slug, renderPostListView(posts, listDefaults));
       continue;
     }
 
     if (view.kind === "custom") {
-      const html = await renderCustomView(db, view.config as CustomViewConfig, tenantId, urlPrefix);
-      lookup.set(slug, html);
+      viewHtml.set(
+        slug,
+        await renderCustomView(db, view.config as CustomViewConfig, tenantId, urlPrefix)
+      );
       continue;
     }
 
-    lookup.set(slug, "");
+    viewHtml.set(slug, "");
   }
 
-  return markdown.replace(VIEW_PATTERN, (_match, slug: string) => lookup.get(slug) ?? "");
+  return viewHtml;
 }
 
 // --- Custom view rendering ---
@@ -284,42 +330,8 @@ async function resolveViewPlaceholders(
   urlPrefix: string,
   options: ResolveViewsOptions
 ): Promise<{ text: string; viewHtml: Map<string, string> }> {
-  const matches = [...markdown.matchAll(VIEW_PATTERN)];
-  if (matches.length === 0) {
-    return { text: markdown, viewHtml: new Map() };
-  }
-
-  const slugs = [...new Set(matches.map((m) => m[1]))];
-  const viewHtml = new Map<string, string>();
-
-  for (const slug of slugs) {
-    const view = await getContentViewBySlug(db, slug, tenantId, {
-      publishedOnly: !options.includeDrafts,
-    });
-
-    if (!view) {
-      const fallback = options.showMissingPlaceholders
-        ? `<div class="content-view content-view-missing"><p>Missing view: ${slug}</p></div>`
-        : "";
-      viewHtml.set(slug, fallback);
-      continue;
-    }
-
-    if (view.kind === "post_list") {
-      const config = view.config as { limit?: number };
-      const posts = await listPostsForView(db, tenantId, { limit: config.limit });
-      viewHtml.set(slug, renderPostListView(posts, urlPrefix));
-      continue;
-    }
-
-    if (view.kind === "custom") {
-      const html = await renderCustomView(db, view.config as CustomViewConfig, tenantId, urlPrefix);
-      viewHtml.set(slug, html);
-      continue;
-    }
-
-    viewHtml.set(slug, "");
-  }
+  const viewHtml = await resolveViewSlugs(db, markdown, tenantId, urlPrefix, options);
+  if (viewHtml.size === 0) return { text: markdown, viewHtml };
 
   const text = markdown.replace(
     VIEW_PATTERN,

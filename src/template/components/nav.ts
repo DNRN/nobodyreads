@@ -5,6 +5,7 @@ const BASE_CSS = `.nav-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-left: auto;
 }
 
 .nav-auth {
@@ -17,7 +18,8 @@ const BASE_CSS = `.nav-actions {
 .auth-link {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   font-family: var(--font-mono);
   transition: color 0.15s;
 }
@@ -124,7 +126,8 @@ body.nav-open .site-menu {
 .site-nav a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   font-family: var(--font-mono);
   transition: color 0.15s;
 }
@@ -180,7 +183,8 @@ const INLINE_CSS = `.site-nav-inline {
 .site-nav-inline a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   font-family: var(--font-mono);
   transition: color 0.15s;
 }
@@ -217,7 +221,8 @@ body.nav-open .site-nav-inline {
 .site-nav-inline a {
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   font-family: var(--font-mono);
   transition: color 0.15s;
 }

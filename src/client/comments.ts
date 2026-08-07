@@ -131,7 +131,7 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
       if (res.status === 403) {
         // The post became gated, or entitlement lapsed, while the page was open.
         error.textContent =
-          "This discussion is for supporters of this plot. Refresh to see how to join.";
+          "This discussion is for supporters. Refresh to see how to join.";
         error.style.display = "block";
         return;
       }
@@ -241,7 +241,7 @@ function createWidget(root: HTMLElement): { init: () => Promise<void> } {
           "nb-comments-closed",
           gatedTier === "paid"
             ? "The discussion on this post is for supporters."
-            : "The discussion on this post is for members of this plot.",
+            : "The discussion on this post is for members.",
         ),
       );
       return;

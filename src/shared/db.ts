@@ -1,28 +1,17 @@
 import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import { readFileSync, mkdirSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import * as schema from "../db/schema/index.js";
 import type { Database } from "../db/index.js";
 import { validateCustomQuery } from "../content/custom-view-sql.js";
+import { SCHEMA_SQL } from "./schema-sql.generated.js";
 
 // --- Database connection ---
 
 let database: Database | undefined;
 let rawClient: Client | undefined;
 let dbPromise: Promise<Database> | null = null;
-
-function resolveSchemaPath(): string {
-  const candidates = [
-    join(process.cwd(), "schema.sql"),
-    join(import.meta.dirname, "..", "..", "schema.sql"),
-    join(import.meta.dirname, "..", "..", "..", "..", "schema.sql"),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return candidates[0];
-}
 
 export async function initDb(): Promise<Database> {
   if (dbPromise) return dbPromise;
@@ -45,8 +34,7 @@ export async function initDb(): Promise<Database> {
       await client.execute("PRAGMA busy_timeout = 5000");
     }
 
-    const schemaSql = readFileSync(resolveSchemaPath(), "utf-8");
-    await client.executeMultiple(schemaSql);
+    await client.executeMultiple(SCHEMA_SQL);
 
     await migrateColumns(client);
     await warnOnDeniedCustomViews(client);

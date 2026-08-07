@@ -68,10 +68,15 @@
     "robots.txt"
   ],
   "scripts": {
+    "predev": "npm run generate:schema",
     "dev": "tsx watch src/standalone.ts",
+    "predev:astro": "npm run generate:schema",
     "dev:astro": "astro dev",
     "dev:client": "tsx scripts/build-client.ts --watch",
+    "prestart": "npm run generate:schema",
     "start": "NODE_ENV=production tsx src/standalone.ts",
+    "generate:schema": "tsx scripts/generate-schema-module.ts",
+    "prebuild": "npm run generate:schema",
     "build": "npm run build:palette && npm run build:client && astro build && tsc",
     "build:client": "tsx scripts/build-client.ts",
     "build:palette": "tsx scripts/build-palette-css.ts",
@@ -79,7 +84,9 @@
     "site:bootstrap": "tsx scripts/bootstrap-site.ts",
     "site:remove-site-script": "tsx scripts/remove-site-script.ts",
     "theme:smoke": "tsx scripts/theme-generation-smoke.ts",
+    "pretest": "npm run generate:schema",
     "test": "vitest run",
+    "pretypecheck": "npm run generate:schema",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
     "post": "tsx scripts/publish.ts"
   },

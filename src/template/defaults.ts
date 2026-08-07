@@ -1,48 +1,47 @@
 import type { SiteTemplateDefinition } from "./types.js";
+import { FONTS, PALETTE } from "./palette.js";
 
+/**
+ * The theme a site gets before anyone has saved one.
+ *
+ * Every colour here comes from `palette.ts` — this file must not introduce a
+ * literal of its own. That duplication is exactly how a freshly created site
+ * came to look nothing like the editor that made it.
+ */
 export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
   tokens: {
-    // Aligned with the "Studio" palette the admin editor ships
-    // (public/editor.css :root, the --nr-* tokens): calm sage-green surfaces,
-    // a sage accent, Newsreader serif for reading + IBM Plex Mono for UI
-    // chrome, so a freshly created site feels like the editor that made it.
     light: {
-      bg: "#eef1ec", // --nr-bg
-      text: "#23302a", // --nr-text
-      bodyText: "#415147", // --nr-code — secondary running copy
-      muted: "#7c8a82", // --nr-muted
-      border: "#e4eae3", // --nr-border
-      accent: "#4e8a6b", // --nr-accent — button fills, focus rings, wordmark dot
-      accentText: "#ffffff", // --nr-accent-text
-      // The editor accent deepened to clear 4.5:1 on --bg, because unlike a
-      // button fill these links sit inside running body text.
-      link: "#40765b",
-      linkHover: "#23302a",
+      bg: PALETTE.light.bg,
+      text: PALETTE.light.text,
+      bodyText: PALETTE.light.bodyText,
+      muted: PALETTE.light.muted,
+      border: PALETTE.light.border,
+      accent: PALETTE.light.accent,
+      accentText: PALETTE.light.accentText,
+      link: PALETTE.light.link,
+      linkHover: PALETTE.light.linkHover,
       // brandInk / brandAccent deliberately unset — the wordmark follows
       // `text` and `accent` so the brand can't drift from the palette.
-      // The editor's wordmark: Hanken Grotesk 800, tightly tracked.
-      brandFont:
-        "'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      brandFont: FONTS.sans,
       logoWeight: "800",
       logoTracking: "-0.02em",
-      font: "'Newsreader', Georgia, 'Times New Roman', serif",
-      fontMono: "'IBM Plex Mono', 'Menlo', 'Consolas', monospace",
+      font: FONTS.serif,
+      fontMono: FONTS.mono,
       fontSize: "18px",
       lineHeight: "1.7",
       maxWidth: "680px",
       containerPadding: "1.5rem",
     },
     dark: {
-      // Studio after dark (public/editor.css :root[data-theme="dark"]).
-      bg: "#141a17",
-      text: "#e8efe9",
-      bodyText: "#b9cabf",
-      muted: "#8fa096",
-      border: "#2a342e",
-      accent: "#6fb894",
-      accentText: "#0f1512",
-      link: "#6fb894",
-      linkHover: "#e8efe9",
+      bg: PALETTE.dark.bg,
+      text: PALETTE.dark.text,
+      bodyText: PALETTE.dark.bodyText,
+      muted: PALETTE.dark.muted,
+      border: PALETTE.dark.border,
+      accent: PALETTE.dark.accent,
+      accentText: PALETTE.dark.accentText,
+      link: PALETTE.dark.link,
+      linkHover: PALETTE.dark.linkHover,
     },
   },
   sections: [

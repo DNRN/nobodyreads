@@ -64,15 +64,17 @@ const BASE_CSS = `.platform-hero {
   content: "";
   position: absolute;
   inset: 0;
+  /* Was a hardcoded blue, left over from a palette two redesigns ago — it
+     tinted the hero a colour that appeared nowhere else on the site. */
   background:
-    radial-gradient(800px 300px at 20% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(800px 300px at 20% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
     radial-gradient(700px 260px at 90% 20%, rgba(0, 0, 0, 0.06), transparent 60%);
   pointer-events: none;
 }
 
 :root[data-theme="dark"] .hero-technical::before {
   background:
-    radial-gradient(800px 300px at 20% 0%, rgba(37, 99, 235, 0.18), transparent 60%),
+    radial-gradient(800px 300px at 20% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
     radial-gradient(700px 260px at 90% 20%, rgba(255, 255, 255, 0.06), transparent 60%);
 }
 
@@ -317,8 +319,8 @@ ${siteButtonRules(".auth-form button")}
 }
 
 .form-errors {
-  background: rgba(180, 68, 68, 0.08);
-  border: 1px solid rgba(180, 68, 68, 0.35);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: 4px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -327,7 +329,7 @@ ${siteButtonRules(".auth-form button")}
 
 .form-errors li {
   font-size: 0.8rem;
-  color: #b44;
+  color: var(--danger);
   line-height: 1.5;
 }`;
 

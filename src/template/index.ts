@@ -14,6 +14,15 @@ export type {
 } from "./types.js";
 
 export { generateTokenCss } from "./tokens.js";
+export { PALETTE, FONTS, alpha } from "./palette.js";
+export type { Palette } from "./palette.js";
+export {
+  renderDeclarations,
+  replaceGeneratedRegion,
+  GENERATED_BEGIN,
+  GENERATED_END,
+} from "./palette-css.js";
+export type { ThemeName } from "./palette-css.js";
 export { generateCss, generateHtml } from "./generate.js";
 export { DEFAULT_TEMPLATE } from "./defaults.js";
 export {

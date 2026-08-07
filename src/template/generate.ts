@@ -51,6 +51,6 @@ export function generateHtml(def: SiteTemplateDefinition): string {
   }
   return def.sections
     .filter((s) => s.enabled)
-    .map((section) => generateSectionHtml(section))
+    .map((section) => generateSectionHtml(section, def.sections))
     .join("\n\n");
 }

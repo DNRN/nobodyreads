@@ -293,8 +293,19 @@ export {
   themeDiffSchema,
   themeDiffJsonSchema,
   applyThemeDiff,
+  // The canonical palette, plus the machinery to render it into a host's own
+  // token vocabulary. A host generates its chrome from this rather than
+  // keeping a copy of the hexes in step by hand.
+  PALETTE,
+  FONTS,
+  alpha,
+  renderDeclarations,
+  replaceGeneratedRegion,
+  GENERATED_BEGIN,
+  GENERATED_END,
 } from "./template/index.js";
 export type { ThemeDiff } from "./template/index.js";
+export type { Palette, ThemeName } from "./template/index.js";
 export type {
   SiteTemplateDefinition,
   TokenSet,

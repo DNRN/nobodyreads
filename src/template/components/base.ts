@@ -44,7 +44,7 @@ main {
 }
 
 .error {
-  color: #b44;
+  color: var(--danger);
   font-style: italic;
   font-size: 0.9rem;
 }

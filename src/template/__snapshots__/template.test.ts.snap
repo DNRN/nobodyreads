@@ -12,11 +12,11 @@ exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = 
   --accent-text: #ffffff;
   --link: #40765b;
   --link-hover: #23302a;
-  --brand-font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --brand-font: 'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --logo-weight: 800;
   --logo-tracking: -0.02em;
   --font: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
+  --font-mono: 'IBM Plex Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
   --font-size: 18px;
   --line-height: 1.7;
   --max-width: 680px;
@@ -33,6 +33,17 @@ exports[`template system > generateCss(DEFAULT_TEMPLATE) matches snapshot 1`] = 
   --accent-text: #0f1512;
   --link: #6fb894;
   --link-hover: #e8efe9;
+}
+
+/* Engine-owned colours — not theme-editable. */
+:root {
+  --danger: #b4443a;
+  --like: #e0245e;
+}
+
+:root[data-theme="dark"] {
+  --danger: #e0796f;
+  --like: #e0245e;
 }
 
 *, *::before, *::after {
@@ -78,7 +89,7 @@ main {
 }
 
 .error {
-  color: #b44;
+  color: var(--danger);
   font-style: italic;
   font-size: 0.9rem;
 }
@@ -320,7 +331,7 @@ body.nav-open .site-menu {
 }
 
 .nav-menu-item--danger {
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .site-nav-inline {
@@ -658,15 +669,17 @@ body.nav-open .site-menu {
   content: "";
   position: absolute;
   inset: 0;
+  /* Was a hardcoded blue, left over from a palette two redesigns ago — it
+     tinted the hero a colour that appeared nowhere else on the site. */
   background:
-    radial-gradient(800px 300px at 20% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(800px 300px at 20% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
     radial-gradient(700px 260px at 90% 20%, rgba(0, 0, 0, 0.06), transparent 60%);
   pointer-events: none;
 }
 
 :root[data-theme="dark"] .hero-technical::before {
   background:
-    radial-gradient(800px 300px at 20% 0%, rgba(37, 99, 235, 0.18), transparent 60%),
+    radial-gradient(800px 300px at 20% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
     radial-gradient(700px 260px at 90% 20%, rgba(255, 255, 255, 0.06), transparent 60%);
 }
 
@@ -942,8 +955,8 @@ body.nav-open .site-menu {
 }
 
 .form-errors {
-  background: rgba(180, 68, 68, 0.08);
-  border: 1px solid rgba(180, 68, 68, 0.35);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
   border-radius: 4px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -952,7 +965,7 @@ body.nav-open .site-menu {
 
 .form-errors li {
   font-size: 0.8rem;
-  color: #b44;
+  color: var(--danger);
   line-height: 1.5;
 }
 

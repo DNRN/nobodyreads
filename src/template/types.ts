@@ -47,6 +47,14 @@ export interface FooterSectionConfig {
   type: "footer";
   enabled: boolean;
   showWordmark: boolean;
+  /**
+   * Wordmark text. Omit and the footer follows the header's `logoText` /
+   * `logoDotText`, which is what a site almost always wants — the footer used
+   * to hardcode "nobodyreads.me", so every self-hosted blog advertised a
+   * platform it had nothing to do with.
+   */
+  logoText?: string;
+  logoDotText?: string;
 }
 
 export type SectionConfig =

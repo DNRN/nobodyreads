@@ -4,68 +4,72 @@
    ======================================== */
 
 /* ----- Theme tokens (global, needed for html/body) -----
-   "Studio" direction: a calm sage-green palette. Handoff names map onto the
-   established --nr-* tokens; new semantic tokens (--nr-card, --nr-faint,
-   --nr-accent-tint, --nr-code*) are added for the redesigned screens. */
+   "Studio" direction: a calm sage-green palette, single-sourced from
+   src/template/palette.ts. The overlays and shadows below are tints of a
+   palette colour, computed rather than pasted, so nothing here is a second
+   copy of a value that lives elsewhere. */
+
+/* >>> generated from the nobodyreads palette — do not edit by hand */
 :root {
-	--nr-bg: #eef1ec; /* app background + sidebar (handoff --bg) */
-	--nr-surface: #f7f9f6; /* header bar (handoff --surface) */
-	--nr-card: #ffffff; /* cards, panels, inputs-on-surface (handoff --card) */
-	--nr-text: #23302a; /* primary text (handoff --ink) */
-	--nr-muted: #7c8a82; /* secondary text (handoff --muted) */
-	--nr-faint: #9aa79f; /* group labels, tertiary text (handoff --faint) */
-	--nr-border: #e4eae3; /* all hairline borders */
-	--nr-hover: rgba(35, 48, 42, 0.04);
-	--nr-accent: #4e8a6b;
-	--nr-accent-text: #ffffff; /* text/icon on accent fills (handoff --accent-ink) */
-	--nr-accent-soft: #ddece3; /* active nav pill bg, soft chips */
-	--nr-accent-tint: #eef6f1; /* hover washes, info panels */
-	--nr-link: #23302a;
-	--nr-link-hover: #4e8a6b;
-	--nr-radius: 16px;
-	--nr-shadow: 0 8px 24px -18px rgba(30, 50, 40, 0.26);
-	--nr-shadow-lg: 0 30px 60px -34px rgba(30, 50, 40, 0.26);
-	/* Mirrors nobodyreads.me --f-sans / --f-mono so the admin matches the platform. */
-	--nr-font:
-		"Hanken Grotesk", system-ui, -apple-system, BlinkMacSystemFont,
-		"Segoe UI", Roboto, sans-serif;
-	--nr-font-mono:
-		"IBM Plex Mono", "Menlo", "Consolas", ui-monospace, monospace;
-	--nr-success: #4e8a6b; /* "published" status (handoff --pos) */
-	--nr-success-soft: #e7f0ea; /* "published" badge bg (handoff --pos-soft) */
-	--nr-danger: #b4443a;
-	--nr-danger-soft: rgba(180, 68, 58, 0.1);
-	--nr-warning: #b07a2e;
-	--nr-warning-soft: rgba(176, 122, 46, 0.12);
-	--nr-code: #415147; /* code text */
-	--nr-codebg: #f2f5f1; /* code panel bg */
+	--nr-bg:            #eef1ec;
+	--nr-surface:       #f7f9f6;
+	--nr-card:          #ffffff;
+	--nr-text:          #23302a;
+	--nr-muted:         #7c8a82;
+	--nr-faint:         #9aa79f;
+	--nr-border:        #e4eae3;
+	--nr-hover:         rgba(35, 48, 42, 0.04);
+	--nr-accent:        #4e8a6b;
+	--nr-accent-text:   #ffffff;
+	--nr-accent-soft:   #ddece3;
+	--nr-accent-tint:   #eef6f1;
+	--nr-link:          #23302a;
+	--nr-link-hover:    #4e8a6b;
+	--nr-success:       #4e8a6b;
+	--nr-success-soft:  #e7f0ea;
+	--nr-danger:        #b4443a;
+	--nr-danger-soft:   rgba(180, 68, 58, 0.1);
+	--nr-warning:       #b07a2e;
+	--nr-warning-soft:  rgba(176, 122, 46, 0.12);
+	--nr-code:          #415147;
+	--nr-codebg:        #f2f5f1;
+	--nr-shadow:        0 8px 24px -18px rgba(30, 50, 40, 0.26);
+	--nr-shadow-lg:     0 30px 60px -34px rgba(30, 50, 40, 0.26);
+	--nr-font:          'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--nr-font-mono:     'IBM Plex Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
 }
 
 :root[data-theme="dark"] {
-	--nr-bg: #141a17;
-	--nr-surface: #1a211d;
-	--nr-card: #1f2823;
-	--nr-text: #e8efe9;
-	--nr-muted: #8fa096;
-	--nr-faint: #6c7d72;
-	--nr-border: #2a342e;
-	--nr-hover: rgba(232, 239, 233, 0.05);
-	--nr-accent: #6fb894;
-	--nr-accent-text: #0f1512;
-	--nr-accent-soft: #25382d;
-	--nr-accent-tint: #1c2822;
-	--nr-link: #e8efe9;
-	--nr-link-hover: #6fb894;
-	--nr-shadow: 0 8px 24px -18px rgba(0, 0, 0, 0.5);
-	--nr-shadow-lg: 0 30px 60px -34px rgba(0, 0, 0, 0.5);
-	--nr-success: #6fb894;
-	--nr-success-soft: #1e3329;
-	--nr-danger: #e0796f;
-	--nr-danger-soft: rgba(224, 121, 111, 0.14);
-	--nr-warning: #d8a558;
-	--nr-warning-soft: rgba(216, 165, 88, 0.14);
-	--nr-code: #b9cabf;
-	--nr-codebg: #161c19;
+	--nr-bg:            #141a17;
+	--nr-surface:       #1a211d;
+	--nr-card:          #1f2823;
+	--nr-text:          #e8efe9;
+	--nr-muted:         #8fa096;
+	--nr-faint:         #6c7d72;
+	--nr-border:        #2a342e;
+	--nr-hover:         rgba(232, 239, 233, 0.05);
+	--nr-accent:        #6fb894;
+	--nr-accent-text:   #0f1512;
+	--nr-accent-soft:   #25382d;
+	--nr-accent-tint:   #1c2822;
+	--nr-link:          #e8efe9;
+	--nr-link-hover:    #6fb894;
+	--nr-success:       #6fb894;
+	--nr-success-soft:  #1e3329;
+	--nr-danger:        #e0796f;
+	--nr-danger-soft:   rgba(224, 121, 111, 0.14);
+	--nr-warning:       #d8a558;
+	--nr-warning-soft:  rgba(216, 165, 88, 0.14);
+	--nr-code:          #b9cabf;
+	--nr-codebg:        #161c19;
+	--nr-shadow:        0 8px 24px -18px rgba(0, 0, 0, 0.5);
+	--nr-shadow-lg:     0 30px 60px -34px rgba(0, 0, 0, 0.5);
+}
+/* <<< end generated */
+
+/* ----- Shape (not palette — edit freely) ----- */
+:root {
+	--nr-radius: 16px;
 }
 
 /* ----- Scoped reset ----- */

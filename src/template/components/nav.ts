@@ -168,7 +168,7 @@ body.nav-open .site-menu {
 }
 
 .nav-menu-item--danger {
-  color: #c0392b;
+  color: var(--danger);
 }`;
 
 const INLINE_CSS = `.site-nav-inline {

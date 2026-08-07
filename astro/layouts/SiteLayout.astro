@@ -59,6 +59,55 @@ const brandingHtml = logoUrl
   ? `<img class="site-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(siteName)}">`
   : escapeHtml(siteName);
 
+// The hero introduces the *site*, so it belongs on the front page and nowhere
+// else — above an article it would just push the title the reader came for
+// below the fold. Compared against `homeHref` rather than a page kind so a
+// host that renders its own front page still gets the same answer.
+const trimSlash = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
+const isHomePage = trimSlash(Astro.url.pathname) === trimSlash(homeHref || "/");
+
+const showTagline =
+  templateDef.sections.find((s) => s.type === "header")?.showTagline ?? true;
+
+function heroHtml(): string {
+  if (!isHomePage) return "";
+
+  // A meta line means there is an archive worth leading with, so the hero steps
+  // back to one row and drops the tagline rather than stacking both.
+  const compact = Boolean(options.heroMeta);
+  const letter = siteName.trim().charAt(0).toUpperCase();
+
+  const monogram = !options.heroMonogram
+    ? ""
+    : logoUrl
+      ? `<span class="site-monogram"><img class="site-monogram__disc" src="${escapeHtml(logoUrl)}" alt=""></span>`
+      : `<span class="site-monogram" aria-hidden="true"><span class="site-monogram__disc">${escapeHtml(letter)}</span></span>`;
+  const eyebrow = options.heroEyebrow
+    ? `<p class="site-hero__eyebrow">${escapeHtml(options.heroEyebrow)}</p>`
+    : "";
+  const meta = options.heroMeta
+    ? `<p class="site-hero__meta">${escapeHtml(options.heroMeta)}</p>`
+    : "";
+  const tagline =
+    showTagline && !compact && siteTagline
+      ? `<p class="hero-tagline">${escapeHtml(siteTagline)}</p>`
+      : "";
+
+  // Not an <h1>: the site name is chrome that repeats, so the document's single
+  // <h1> belongs to the page's own title.
+  return `<div class="container">
+  <div class="site-hero${compact ? " site-hero--compact" : ""}">
+    ${monogram}
+    <div class="site-hero__text">
+      ${eyebrow}
+      <p class="hero-title">${escapeHtml(siteName)}</p>
+      ${tagline}
+      ${meta}
+    </div>
+  </div>
+</div>`;
+}
+
 const scriptTags = (options.scripts ?? [])
   .map((s) => `  <script type="module" src="${escapeHtml(s)}"></script>`)
   .join("\n");
@@ -123,6 +172,7 @@ let bodyHtml = templateHtml
   .replaceAll("{{navToggle}}", navToggle)
   .replaceAll("{{siteName}}", escapeHtml(siteName))
   .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
+  .replaceAll("{{hero}}", heroHtml())
   .replaceAll("{{siteBranding}}", brandingHtml)
   .replaceAll("{{siteLogo}}", logoUrl ? escapeHtml(logoUrl) : "")
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))

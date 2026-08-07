@@ -62,7 +62,7 @@ function normalizeAccessTier(value: string | null | undefined): string {
 }
 
 function toPageSummary(
-  row: Pick<PageRow, "pageId" | "slug" | "title" | "excerpt" | "tags" | "date" | "accessTier">
+  row: Pick<PageRow, "pageId" | "slug" | "title" | "excerpt" | "tags" | "date" | "accessTier" | "seo">
 ): PageSummary {
   return {
     id: row.pageId,
@@ -72,6 +72,10 @@ function toPageSummary(
     tags: row.tags,
     date: row.date,
     accessTier: normalizeAccessTier(row.accessTier),
+    // The social image doubles as the listing cover. A separate field would be
+    // a second picture of the same post to keep in step, and authors already
+    // set this one.
+    coverImage: row.seo?.ogImage ?? undefined,
   };
 }
 
@@ -155,6 +159,7 @@ const pageSummaryCols = {
   tags: page.tags,
   date: page.date,
   accessTier: page.accessTier,
+  seo: page.seo,
 } as const;
 
 /** List published posts, newest first (for the home page listing). */
@@ -202,6 +207,28 @@ export async function listPostsForView(
 
   const rows = safeLimit != null ? await q.limit(safeLimit) : await q;
   return rows.map(toPageSummary);
+}
+
+/**
+ * How much a site has published, for the hero's meta line and the density
+ * rules that go with it. Counted rather than derived from a listing: a listing
+ * is capped by its view's `limit` and would under-report an archive.
+ */
+export async function getPostStats(
+  db: Database,
+  tenantId: string
+): Promise<{ total: number; firstYear: number | null }> {
+  const rows = await db
+    .select({ date: page.date })
+    .from(page)
+    .where(and(eq(page.published, true), eq(page.kind, "post"), eq(page.tenantId, tenantId)))
+    .orderBy(asc(page.date));
+
+  const first = rows[0]?.date ? new Date(rows[0].date).getFullYear() : null;
+  return {
+    total: rows.length,
+    firstYear: first != null && Number.isFinite(first) ? first : null,
+  };
 }
 
 /** Fetch a single published page by slug and kind. */

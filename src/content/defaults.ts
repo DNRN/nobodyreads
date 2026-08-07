@@ -45,7 +45,7 @@ export function defaultHomePage(options: DefaultHomePageOptions): Page {
     slug: "home",
     title: options.title,
     content: buildDefaultHomeContent(options.adminHref),
-    excerpt: "Your plot. Your words.",
+    excerpt: "Your site. Your words.",
     tags: [],
     date: options.date,
     published: true,

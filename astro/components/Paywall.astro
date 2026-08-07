@@ -28,9 +28,24 @@ interface Props {
   loginHref?: string;
   /** Whether a reader is signed in. Checkout needs an account. */
   signedIn?: boolean;
+  /** Who is asking. Used in the copy; falls back to an impersonal phrasing. */
+  siteName?: string;
+  /**
+   * What this space is called in reader-facing copy. The engine is a blog
+   * engine; a host that brands its spaces differently passes its own noun.
+   */
+  spaceNoun?: string;
 }
 
-const { decision, apiBase, pageId, loginHref, signedIn = true } = Astro.props;
+const {
+  decision,
+  apiBase,
+  pageId,
+  loginHref,
+  signedIn = true,
+  siteName,
+  spaceNoun = "blog",
+} = Astro.props;
 
 function formatAmount(minorUnits: number, currency: string): string {
   return new Intl.NumberFormat("en-IE", {
@@ -48,8 +63,16 @@ const single =
 
 const checkoutAction = `${apiBase}/payments/checkout`;
 
+const author = siteName?.trim() || `This ${spaceNoun}`;
+const eyebrow = isMembersOnly ? "Members only" : "Supporters only";
+const lede = isMembersOnly
+  ? `Join this ${spaceNoun} to read the whole thing. It's free.`
+  : `${author} writes some posts for supporters. Back this ${spaceNoun} to read the whole thing — and everything else behind the same tier.`;
+
+const hasOffer = Boolean(tier || single);
+
 // Where the provider should send the reader back to. Without it every purchase
-// lands on the plot's home page and the reader has to find the post they were
+// lands on the site's home page and the reader has to find the post they were
 // halfway through buying. Sent as a form field rather than read from `Referer`,
 // which proxies and privacy settings strip. The server re-validates it — this
 // value is reader-controlled and must never become an open redirect.
@@ -57,43 +80,24 @@ const returnTo = Astro.url.pathname + Astro.url.search;
 ---
 
 <aside class="nb-paywall" aria-labelledby="nb-paywall-title">
-  <h2 class="nb-paywall__title" id="nb-paywall-title">
-    {isMembersOnly ? "The rest is for members" : "The rest is for supporters"}
-  </h2>
+  <p class="nb-paywall__eyebrow">{eyebrow}</p>
+  <h2 class="nb-paywall__title" id="nb-paywall-title">Read the rest of this post.</h2>
+  <p class="nb-paywall__lede">{lede}</p>
 
-  {isMembersOnly ? (
-    <>
-      <p class="nb-paywall__lede">
-        Join this plot to read the whole thing. It's free.
-      </p>
-      <div class="nb-paywall__actions">
-        <a class="nb-paywall__btn nb-paywall__btn--primary" href={loginHref ?? "#"}>Join</a>
-      </div>
-    </>
-  ) : !signedIn ? (
-    <>
-      <p class="nb-paywall__lede">
-        Sign in to support this plot and read the whole thing.
-      </p>
-      <div class="nb-paywall__actions">
-        <a class="nb-paywall__btn nb-paywall__btn--primary" href={loginHref ?? "#"}>Sign in</a>
-      </div>
-    </>
-  ) : (
-    <>
-      <p class="nb-paywall__lede">
-        Support this plot to read the whole thing — and everything else behind the fold.
-      </p>
-      <div class="nb-paywall__actions">
+  <div class="nb-paywall__actions">
+    {isMembersOnly ? (
+      <a class="site-button" href={loginHref ?? "#"}>Join</a>
+    ) : !signedIn ? (
+      <a class="site-button" href={loginHref ?? "#"}>Sign in to support</a>
+    ) : (
+      <>
         {tier && monthly && (
           <form method="POST" action={checkoutAction} data-astro-reload>
             <input type="hidden" name="return_to" value={returnTo} />
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="month" />
-            <button type="submit" class="nb-paywall__btn nb-paywall__btn--primary">
-              {monthly} / month
-            </button>
+            <button type="submit" class="site-button">{monthly} / month</button>
           </form>
         )}
         {tier && yearly && (
@@ -102,9 +106,7 @@ const returnTo = Astro.url.pathname + Astro.url.search;
             <input type="hidden" name="scope_kind" value="tier" />
             <input type="hidden" name="scope_ref" value={tier.id} />
             <input type="hidden" name="interval" value="year" />
-            <button type="submit" class="nb-paywall__btn">
-              {yearly} / year
-            </button>
+            <button type="submit" class="site-button site-button--ghost">{yearly} / year</button>
           </form>
         )}
         {single && (
@@ -112,72 +114,80 @@ const returnTo = Astro.url.pathname + Astro.url.search;
             <input type="hidden" name="return_to" value={returnTo} />
             <input type="hidden" name="scope_kind" value="page" />
             <input type="hidden" name="scope_ref" value={pageId} />
-            <button type="submit" class="nb-paywall__btn">
+            <button type="submit" class="site-button site-button--ghost">
               Buy just this post — {single}
             </button>
           </form>
         )}
-      </div>
-      {!tier && !single && (
-        <p class="nb-paywall__lede">
-          This plot hasn't set up payments yet. Check back soon.
-        </p>
-      )}
-    </>
+      </>
+    )}
+  </div>
+
+  {!isMembersOnly && signedIn && !hasOffer && (
+    <p class="nb-paywall__lede">This {spaceNoun} hasn't set up payments yet. Check back soon.</p>
+  )}
+
+  {!isMembersOnly && (
+    <p class="nb-paywall__terms">
+      Monthly or one-time &middot; cancel anytime &middot; no ads, no tracking &middot; you keep your data.
+    </p>
   )}
 </aside>
 
 <style>
   .nb-paywall {
     margin: 2.5rem 0 1rem;
-    padding: 1.5rem;
-    border: 1px solid var(--nb-border, #d8d4cc);
-    border-radius: 10px;
-    background: var(--nb-surface, #faf8f4);
+    padding: 1.875rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+  }
+
+  .nb-paywall__eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--link);
   }
 
   .nb-paywall__title {
-    margin: 0 0 0.4rem;
-    font-size: 1.15rem;
+    margin: 0.9rem 0 0;
+    font-family: var(--font);
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--text);
   }
 
   .nb-paywall__lede {
-    margin: 0 0 1rem;
-    color: var(--nb-muted, #6b665c);
-    font-size: 0.95rem;
-    line-height: 1.5;
+    margin: 0.75rem 0 0;
+    color: var(--body-text);
+    font-size: 0.94rem;
+    line-height: 1.6;
   }
 
   .nb-paywall__actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .nb-paywall__actions:empty {
+    display: none;
   }
 
   .nb-paywall__actions form {
     margin: 0;
   }
 
-  .nb-paywall__btn {
-    display: inline-block;
-    padding: 0.55rem 1.1rem;
-    border: 1px solid var(--nb-border, #d8d4cc);
-    border-radius: 6px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    font-size: 0.92rem;
-    cursor: pointer;
-    text-decoration: none;
-  }
-
-  .nb-paywall__btn:hover {
-    border-color: var(--nb-accent, #2f6f4f);
-  }
-
-  .nb-paywall__btn--primary {
-    background: var(--nb-accent, #2f6f4f);
-    border-color: var(--nb-accent, #2f6f4f);
-    color: #fff;
+  .nb-paywall__terms {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.69rem;
+    line-height: 1.5;
+    color: var(--muted);
   }
 </style>

@@ -27,10 +27,12 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
       logoTracking: "-0.02em",
       font: FONTS.serif,
       fontMono: FONTS.mono,
-      fontSize: "18px",
+      fontSize: "16px",
       lineHeight: "1.7",
-      maxWidth: "680px",
-      containerPadding: "1.5rem",
+      // Wider than the reading column on purpose: prose is capped separately so
+      // a card grid and a filter row have room the paragraphs do not want.
+      maxWidth: "900px",
+      containerPadding: "2.5rem",
     },
     dark: {
       bg: PALETTE.dark.bg,
@@ -48,7 +50,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     {
       type: "header",
       enabled: true,
-      showHero: false,
+      showHero: true,
       showTagline: true,
       logoText: "nobodyreads",
       logoDotText: "me",
@@ -64,7 +66,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     },
   ],
   components: {
-    postPreview: { variant: "default" },
+    postPreview: { variant: "auto" },
     nav: { variant: "inline" },
   },
 };

@@ -12,8 +12,8 @@ const BASE_CSS = `.wordmark {
 }
 
 .wordmark .me { color: var(--brand-accent, var(--accent)); }
-.wordmark--xl { font-size: clamp(28px, 6vw, 64px); }
-.wordmark--md { font-size: 22px; }
+.wordmark--xl { font-size: clamp(1.75rem, 6vw, 4rem); }
+.wordmark--md { font-size: 1.0625rem; }
 .wordmark .dot { margin-right: -0.02em; }`;
 
 export const wordmarkComponent = defineComponent({

@@ -1,8 +1,9 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import Paywall from "../components/Paywall.astro";
-import { getPageByKind, getNavItems } from "../../src/content/db.js";
+import { getPageByKind, getNavItems, getPostStats } from "../../src/content/db.js";
 import { renderContent } from "../../src/content/render.js";
+import { heroMetaLine } from "../../src/content/templates.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { isAuthenticatedRequest } from "../../src/admin/server/auth.js";
 import { getDbClient } from "../lib/db.js";
@@ -13,9 +14,13 @@ const urlPrefix = process.env.URL_PREFIX || "";
 const siteName = process.env.SITE_NAME || "nobodyreads.me";
 
 const db = await getDbClient();
-const [rawPage, navItems] = await Promise.all([
+const loggedIn = isAuthenticatedRequest(Astro.request);
+const adminHref = `${urlPrefix}/admin`;
+
+const [rawPage, navItems, postStats] = await Promise.all([
   getPageByKind(db, "home", tenantId),
   getNavItems(db, tenantId),
+  getPostStats(db, tenantId),
 ]);
 
 // Gating a home page is unusual but nothing stops an author doing it, and the
@@ -27,7 +32,14 @@ const page = gate?.page ?? null;
 
 let htmlBody = "";
 if (page?.content?.trim()) {
-  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix);
+  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix, {
+    postList: {
+      isOwner: loggedIn,
+      siteName,
+      composeHref: `${adminHref}/editor/new`,
+      feedHref: `${urlPrefix}/feed.xml`,
+    },
+  });
 }
 
 if (page?.seo?.noAiTraining) {
@@ -38,8 +50,6 @@ if (!page) {
   Astro.response.status = 404;
 }
 
-const adminHref = `${urlPrefix}/admin`;
-const loggedIn = isAuthenticatedRequest(Astro.request);
 const menuItems = [
   loggedIn ? { label: "Admin", href: adminHref } : { label: "Log in", href: adminHref },
 ];
@@ -56,6 +66,8 @@ const options = page
       urlPrefix,
       siteName,
       menuItems,
+      heroMonogram: postStats.total > 0,
+      heroMeta: heroMetaLine(postStats),
     }
   : {
       title: `404 — ${siteName}`,
@@ -77,6 +89,7 @@ const options = page
           pageId={page.id}
           loginHref={`${urlPrefix}/login`}
           signedIn={gate.signedIn}
+          siteName={siteName}
         />
       )}
     </>

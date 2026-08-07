@@ -109,6 +109,70 @@ document.addEventListener("keydown", (event) => {
 // Reset the menu state when a client-side navigation completes.
 document.addEventListener("astro:after-swap", closeNavMenu);
 
+// Post listing: tag filter + load more.
+//
+// Every post the view queried is already in the DOM — the server hides the
+// overflow with the `hidden` attribute and this reveals it a page at a time.
+// A fetch-per-page would need an endpoint, a loading state and a way to keep
+// the filter in step with posts it has never seen, all to page a list the
+// query already capped.
+const POST_PAGE_SIZE = 12;
+
+function postListState(list: HTMLElement): { tag: string; shown: number } {
+  return {
+    tag: list.dataset.filterTag ?? "",
+    shown: Number(list.dataset.shown ?? POST_PAGE_SIZE),
+  };
+}
+
+function applyPostList(list: HTMLElement): void {
+  const { tag, shown } = postListState(list);
+  const items = [...list.querySelectorAll<HTMLElement>("[data-post-item]")];
+
+  let matched = 0;
+  for (const item of items) {
+    const tags = item.dataset.tags ?? "";
+    const inFilter = tag === "" || tags.includes(`|${tag}|`);
+    if (inFilter) matched += 1;
+    item.hidden = !inFilter || matched > shown;
+  }
+
+  const more = list.querySelector<HTMLElement>("[data-post-more]");
+  if (more) {
+    const visible = Math.min(matched, shown);
+    more.hidden = matched <= shown;
+    const shownEl = more.querySelector("[data-post-shown]");
+    const totalEl = more.querySelector("[data-post-total]");
+    if (shownEl) shownEl.textContent = String(visible);
+    if (totalEl) totalEl.textContent = String(matched);
+  }
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const chip = target.closest<HTMLElement>("[data-filter-tag]");
+  const more = target.closest<HTMLElement>("[data-post-more-button]");
+  if (!chip && !more) return;
+
+  const list = (chip ?? more)?.closest<HTMLElement>("[data-post-list]");
+  if (!list) return;
+
+  if (chip) {
+    list.dataset.filterTag = chip.dataset.filterTag ?? "";
+    // A new filter starts a new list, not page four of the old one.
+    list.dataset.shown = String(POST_PAGE_SIZE);
+    for (const other of list.querySelectorAll("[data-filter-tag]")) {
+      other.classList.toggle("post-chip--active", other === chip);
+    }
+  } else {
+    list.dataset.shown = String(postListState(list).shown + POST_PAGE_SIZE);
+  }
+
+  applyPostList(list);
+});
+
 // Marks this file as a module so the `declare global` augmentation above is
 // valid. The bundle is still emitted as a side-effecting IIFE.
 export {};

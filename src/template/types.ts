@@ -1,14 +1,23 @@
 export interface TokenSet {
   bg: string;
   text: string;
+  /** Secondary running copy — post excerpts, supporting paragraphs. */
+  bodyText: string;
   muted: string;
   border: string;
+  /** Interactive brand colour: button fills, focus rings, the wordmark dot. */
   accent: string;
+  /** Foreground on an `accent` fill. */
+  accentText: string;
   link: string;
   linkHover: string;
-  brandInk: string;
-  brandAccent: string;
-  brandBg: string;
+  /**
+   * Wordmark overrides. Omit them and the wordmark follows `text` / `accent`,
+   * which is what the default template does — duplicating the palette here is
+   * how the brand colours drifted out of step in the first place.
+   */
+  brandInk?: string;
+  brandAccent?: string;
   brandFont: string;
   logoWeight: string;
   logoTracking: string;

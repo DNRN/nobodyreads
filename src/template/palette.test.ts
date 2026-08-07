@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
+import { DEFAULT_TEMPLATE } from "./defaults.js";
+import { generateHtml } from "./generate.js";
 import { alpha, PALETTE } from "./palette.js";
 import {
   renderEditorCss,
@@ -105,5 +107,65 @@ describe("palette is the single source of colour", () => {
     expect(alpha(PALETTE.light.text, 0.04)).toBe("rgba(35, 48, 42, 0.04)");
     expect(alpha("#fff", 0.5)).toBe("rgba(255, 255, 255, 0.5)");
     expect(() => alpha("not-a-colour", 0.5)).toThrow();
+  });
+});
+
+describe("wordmark", () => {
+  it("the footer follows the header rather than hardcoding a brand", () => {
+    const html = generateHtml({
+      ...DEFAULT_TEMPLATE,
+      sections: DEFAULT_TEMPLATE.sections.map((section) =>
+        section.type === "header"
+          ? { ...section, logoText: "field", logoDotText: "notes" }
+          : section,
+      ),
+    });
+
+    const footer = html.slice(html.indexOf("<footer"));
+    expect(footer).toContain("field");
+    expect(footer).toContain("notes");
+    expect(footer).not.toContain("nobodyreads");
+  });
+
+  it("a footer may override the header's wordmark", () => {
+    const html = generateHtml({
+      ...DEFAULT_TEMPLATE,
+      sections: DEFAULT_TEMPLATE.sections.map((section) =>
+        section.type === "footer"
+          ? { ...section, logoText: "sub", logoDotText: "stack" }
+          : section,
+      ),
+    });
+
+    expect(html.slice(html.indexOf("<footer"))).toContain("sub");
+  });
+
+  it("falls back to the site's own name when there is no header", () => {
+    const html = generateHtml({
+      ...DEFAULT_TEMPLATE,
+      sections: [{ type: "footer", enabled: true, showWordmark: true }],
+    });
+
+    expect(html).toContain("{{siteName}}");
+    expect(html).not.toContain("nobodyreads");
+  });
+
+  it("omits the dot when there is no suffix to follow it", () => {
+    const html = generateHtml({
+      ...DEFAULT_TEMPLATE,
+      sections: [
+        {
+          type: "header",
+          enabled: true,
+          showHero: false,
+          showTagline: false,
+          logoText: "field notes",
+          logoDotText: "",
+        },
+      ],
+    });
+
+    expect(html).toContain("field notes");
+    expect(html).not.toContain('class="dot"');
   });
 });

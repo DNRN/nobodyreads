@@ -43,6 +43,8 @@ const footerSectionSchema = z.object({
   type: z.literal("footer"),
   enabled: z.boolean(),
   showWordmark: z.boolean(),
+  logoText: z.string().optional(),
+  logoDotText: z.string().optional(),
 });
 
 const sectionConfigSchema = z.discriminatedUnion("type", [

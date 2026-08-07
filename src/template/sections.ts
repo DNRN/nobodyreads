@@ -9,7 +9,12 @@ function wordmarkHtml(
   logoText: string,
   dotText: string,
 ): string {
-  return `<span class="wordmark wordmark--${size}">${logoText}<span class="dot" aria-hidden="true">.</span><span class="me">${dotText}</span></span>`;
+  // A blog called "Field Notes" has no second half — without a dot suffix the
+  // dot itself is punctuation with nothing after it, so drop both.
+  const suffix = dotText
+    ? `<span class="dot" aria-hidden="true">.</span><span class="me">${dotText}</span>`
+    : "";
+  return `<span class="wordmark wordmark--${size}">${logoText}${suffix}</span>`;
 }
 
 function headerSectionHtml(config: HeaderSectionConfig): string {
@@ -44,10 +49,17 @@ function contentSectionHtml(): string {
   return `<main class="container">\n  {{content}}\n</main>`;
 }
 
-function footerSectionHtml(config: FooterSectionConfig): string {
+function footerSectionHtml(
+  config: FooterSectionConfig,
+  brand: WordmarkText,
+): string {
   let inner = `&copy; {{year}}`;
   if (config.showWordmark) {
-    inner += ` <span class="wordmark wordmark--md">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span>`;
+    inner += ` ${wordmarkHtml(
+      "md",
+      config.logoText ?? brand.logoText,
+      config.logoDotText ?? brand.logoDotText,
+    )}`;
   }
 
   return `<footer class="site-footer">
@@ -57,13 +69,43 @@ function footerSectionHtml(config: FooterSectionConfig): string {
 </footer>`;
 }
 
-export function generateSectionHtml(section: SectionConfig): string {
+interface WordmarkText {
+  logoText: string;
+  logoDotText: string;
+}
+
+/**
+ * What the footer falls back to when there is no header section to copy.
+ * The site's own name — never this package's.
+ */
+const FALLBACK_WORDMARK: WordmarkText = {
+  logoText: "{{siteName}}",
+  logoDotText: "",
+};
+
+export function generateSectionHtml(
+  section: SectionConfig,
+  sections: SectionConfig[] = [],
+): string {
   switch (section.type) {
     case "header":
       return headerSectionHtml(section);
     case "content":
       return contentSectionHtml();
     case "footer":
-      return footerSectionHtml(section);
+      return footerSectionHtml(section, headerWordmark(sections));
   }
+}
+
+/**
+ * The site's wordmark, as configured on its header section.
+ *
+ * The footer takes its wordmark from the header rather than carrying a second
+ * copy, so renaming a site in one place renames it everywhere.
+ */
+function headerWordmark(sections: SectionConfig[]): WordmarkText {
+  const header = sections.find((s): s is HeaderSectionConfig => s.type === "header");
+  return header
+    ? { logoText: header.logoText, logoDotText: header.logoDotText }
+    : FALLBACK_WORDMARK;
 }

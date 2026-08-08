@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #cbd0c6; }
+  .fr a { text-decoration: none; }
+</style>
+</helmet>
+
+<div style="font-family:'Hanken Grotesk',system-ui,sans-serif; background:#cbd0c6; padding:64px 56px 96px; color:#23302a;">
+
+  <!-- ===== COVER / TITLE ===== -->
+  <div style="max-width:1400px; margin:0 auto 20px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:#40765b; margin-bottom:18px;">nobodyreads.me &middot; plot density &middot; forest &amp; oat</div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:52px; line-height:1.05; letter-spacing:-0.02em; color:#23302a; max-width:820px; text-wrap:balance;">Plots that work at any size.</h1>
+    <p style="font-size:18px; line-height:1.6; color:#3a463d; max-width:640px; margin-top:20px;">Four density states for the shared plot template &mdash; from a page with nothing on it to an archive that needs wayfinding. Same palette, same type, light and dark side by side. Structural pieces only (hero, post-list variant, tag chips, load&#8209;more); the owner still writes the page as markdown.</p>
+    <div style="display:flex; gap:22px; flex-wrap:wrap; margin-top:22px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em; color:#5b6a61;">
+      <span><span style="display:inline-block; width:11px; height:11px; border-radius:2px; background:#eef1ec; border:1px solid #b7c0b6; vertical-align:-1px; margin-right:6px;"></span>light</span>
+      <span><span style="display:inline-block; width:11px; height:11px; border-radius:2px; background:#141a17; border:1px solid #3a463d; vertical-align:-1px; margin-right:6px;"></span>dark</span>
+      <span>hairline borders &middot; no shadows beyond token set</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 01 — EMPTY
+       ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">01</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Empty &mdash; a brand-new plot</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:420px; text-align:right;">0 posts. Hero carries identity; an owner-only nudge replaces the bare list &mdash; calm, not a checklist.</span>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#5b6a61; margin-bottom:14px;">Owner view &mdash; before publishing</div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT -->
+      <div class="fr" style="width:664px; --bg:#eef1ec; --tint:#e4eae3; --card:#f7f9f6; --ink:#23302a; --body:#415147; --muted:#7c8a82; --accent:#40765b; --bright:#4e8a6b; --border:#e4eae3; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --shsm:0 1px 2px rgba(30,50,40,.06); --shmd:0 4px 12px rgba(30,50,40,.08); background:var(--bg); border:1px solid var(--strong); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- header -->
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <!-- hero -->
+        <div style="padding:44px 40px 30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:14px;">nobodyreads.me/alice</div>
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:40px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+          <p style="font-size:16px; line-height:1.55; color:var(--muted); margin-top:14px; max-width:440px;">A quiet plot. Nothing published yet.</p>
+        </div>
+        <!-- empty state -->
+        <div style="padding:8px 40px 44px;">
+          <div style="border-top:1px solid var(--border); padding-top:44px; display:flex; flex-direction:column; align-items:flex-start;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:16px;">Nothing published yet</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; color:var(--ink); max-width:420px;">A blank page, <span style="font-style:italic; color:var(--accent);">entirely yours.</span></h3>
+            <p style="font-size:15.5px; line-height:1.65; color:var(--body); margin-top:16px; max-width:430px;">Write something and it becomes a real page in seconds. No feed to feed, no algorithm to please &mdash; just your work, in your order.</p>
+            <div style="display:flex; gap:12px; margin-top:26px;">
+              <span style="background:var(--accent); color:var(--onacc); font-size:14px; font-weight:600; padding:11px 20px; border-radius:4px;">Write your first post</span>
+              <span style="border:1px solid var(--strong); color:var(--ink); font-size:14px; font-weight:600; padding:11px 20px; border-radius:4px;">Read the manifesto</span>
+            </div>
+          </div>
+          <!-- owner-only note -->
+          <div style="margin-top:32px; border:1px dashed var(--strong); border-radius:6px; padding:12px 16px; display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); background:var(--chipbg); padding:3px 7px; border-radius:3px; white-space:nowrap;">Only you</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.5; color:var(--muted);">Visitors see a short, tidy welcome until you publish &mdash; never a &ldquo;coming soon&rdquo; or an empty error.</span>
+          </div>
+        </div>
+        <!-- footer -->
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+      <!-- DARK -->
+      <div class="fr" style="width:664px; --bg:#141a17; --tint:#1a211d; --card:#1f2823; --ink:#e8efe9; --body:#b9cabf; --muted:#8fa096; --accent:#6fb894; --bright:#86c8a6; --border:#2a342e; --strong:#415047; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --shsm:0 1px 2px rgba(0,0,0,.4); --shmd:0 4px 12px rgba(0,0,0,.5); background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:44px 40px 30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:14px;">nobodyreads.me/alice</div>
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:40px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+          <p style="font-size:16px; line-height:1.55; color:var(--muted); margin-top:14px; max-width:440px;">A quiet plot. Nothing published yet.</p>
+        </div>
+        <div style="padding:8px 40px 44px;">
+          <div style="border-top:1px solid var(--border); padding-top:44px; display:flex; flex-direction:column; align-items:flex-start;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:16px;">Nothing published yet</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; color:var(--ink); max-width:420px;">A blank page, <span style="font-style:italic; color:var(--accent);">entirely yours.</span></h3>
+            <p style="font-size:15.5px; line-height:1.65; color:var(--body); margin-top:16px; max-width:430px;">Write something and it becomes a real page in seconds. No feed to feed, no algorithm to please &mdash; just your work, in your order.</p>
+            <div style="display:flex; gap:12px; margin-top:26px;">
+              <span style="background:var(--accent); color:var(--onacc); font-size:14px; font-weight:600; padding:11px 20px; border-radius:4px;">Write your first post</span>
+              <span style="border:1px solid var(--strong); color:var(--ink); font-size:14px; font-weight:600; padding:11px 20px; border-radius:4px;">Read the manifesto</span>
+            </div>
+          </div>
+          <div style="margin-top:32px; border:1px dashed var(--strong); border-radius:6px; padding:12px 16px; display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); background:var(--chipbg); padding:3px 7px; border-radius:3px; white-space:nowrap;">Only you</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.5; color:var(--muted);">Visitors see a short, tidy welcome until you publish &mdash; never a &ldquo;coming soon&rdquo; or an empty error.</span>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 01 — VISITOR VIEW ===== -->
+  <div style="max-width:1400px; margin:34px auto 0;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#5b6a61; margin-bottom:14px;">Visitor view &mdash; same plot, seen by someone else</div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT -->
+      <div class="fr" style="width:664px; --bg:#eef1ec; --tint:#e4eae3; --card:#f7f9f6; --ink:#23302a; --body:#415147; --muted:#7c8a82; --accent:#40765b; --bright:#4e8a6b; --border:#e4eae3; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --shsm:0 1px 2px rgba(30,50,40,.06); --shmd:0 4px 12px rgba(30,50,40,.08); background:var(--bg); border:1px solid var(--strong); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:44px 40px 30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:14px;">nobodyreads.me/alice</div>
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:40px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+          <p style="font-size:16px; line-height:1.55; color:var(--muted); margin-top:14px; max-width:440px;">A quiet plot.</p>
+        </div>
+        <div style="padding:8px 40px 56px;">
+          <div style="border-top:1px solid var(--border); padding-top:44px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:16px;">A quiet plot</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; color:var(--ink);">Nothing here <span style="font-style:italic; color:var(--accent);">yet.</span></h3>
+            <p style="font-size:15.5px; line-height:1.65; color:var(--body); margin-top:16px; max-width:440px;">Alice hasn&rsquo;t published anything. When they do, it shows up here &mdash; in their order, with no feed and no algorithm deciding what you see.</p>
+            <div style="display:flex; gap:18px; align-items:center; margin-top:26px;">
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent);">Follow via RSS &rarr;</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);">or check back later</span>
+            </div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+      <!-- DARK -->
+      <div class="fr" style="width:664px; --bg:#141a17; --tint:#1a211d; --card:#1f2823; --ink:#e8efe9; --body:#b9cabf; --muted:#8fa096; --accent:#6fb894; --bright:#86c8a6; --border:#2a342e; --strong:#415047; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --shsm:0 1px 2px rgba(0,0,0,.4); --shmd:0 4px 12px rgba(0,0,0,.5); background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:44px 40px 30px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:14px;">nobodyreads.me/alice</div>
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:40px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+          <p style="font-size:16px; line-height:1.55; color:var(--muted); margin-top:14px; max-width:440px;">A quiet plot.</p>
+        </div>
+        <div style="padding:8px 40px 56px;">
+          <div style="border-top:1px solid var(--border); padding-top:44px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:16px;">A quiet plot</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:27px; line-height:1.15; color:var(--ink);">Nothing here <span style="font-style:italic; color:var(--accent);">yet.</span></h3>
+            <p style="font-size:15.5px; line-height:1.65; color:var(--body); margin-top:16px; max-width:440px;">Alice hasn&rsquo;t published anything. When they do, it shows up here &mdash; in their order, with no feed and no algorithm deciding what you see.</p>
+            <div style="display:flex; gap:18px; align-items:center; margin-top:26px;">
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent);">Follow via RSS &rarr;</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);">or check back later</span>
+            </div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 02 — SPARSE
+       ============================================================ -->
+  <div style="max-width:1400px; margin:64px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">02</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Sparse &mdash; 1&ndash;3 posts</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:440px; text-align:right;">Hero (monogram + tagline) gives the page weight; posts read as an intentional short list, not an empty one.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT -->
+      <div class="fr" style="width:664px; --bg:#eef1ec; --tint:#e4eae3; --card:#f7f9f6; --ink:#23302a; --body:#415147; --muted:#7c8a82; --accent:#40765b; --bright:#4e8a6b; --border:#e4eae3; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --shsm:0 1px 2px rgba(30,50,40,.06); --shmd:0 4px 12px rgba(30,50,40,.08); background:var(--bg); border:1px solid var(--strong); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <!-- hero with monogram -->
+        <div style="padding:42px 40px 30px; display:flex; gap:20px; align-items:flex-start;">
+          <div style="position:relative; width:60px; height:60px; flex-shrink:0;"><div style="width:60px; height:60px; border-radius:999px; background:var(--accent); color:var(--onacc); display:flex; align-items:center; justify-content:center; font-family:'Newsreader',serif; font-style:italic; font-size:31px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16), 0 0 0 3px var(--chipbg);">A</div><div style="position:absolute; right:1px; bottom:3px; width:11px; height:11px; border-radius:999px; background:var(--bright); box-shadow:0 0 0 2px var(--bg);"></div></div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:10px;">nobodyreads.me/alice</div>
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:38px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+            <p style="font-size:16px; line-height:1.55; color:var(--body); margin-top:12px; max-width:430px;">Notes on fishing, code, and quiet mornings. Written slowly, on purpose.</p>
+          </div>
+        </div>
+        <!-- posts -->
+        <div style="padding:6px 40px 30px;">
+          <div style="border-top:1px solid var(--border); padding:26px 0;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted); margin-bottom:8px;">2 Aug 2026</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:23px; line-height:1.2; color:var(--ink);">Reeling In the Right Gear: A Beginner&rsquo;s Guide to Fishing Equipment</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:10px; max-width:520px;">So you&rsquo;ve decided to take up fishing. Before you become the legend of your local pond, you need to talk about gear &mdash; and not just any gear.</p>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent); margin-top:14px;">read more &rarr;</div>
+          </div>
+          <div style="border-top:1px solid var(--border); padding:26px 0 4px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted); margin-bottom:8px;">29 Jun 2026</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:23px; line-height:1.2; color:var(--ink);">My first post</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:10px; max-width:520px;">A sample first post &mdash; the one everyone writes to see their words become a real page.</p>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent); margin-top:14px;">read more &rarr;</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+      <!-- DARK -->
+      <div class="fr" style="width:664px; --bg:#141a17; --tint:#1a211d; --card:#1f2823; --ink:#e8efe9; --body:#b9cabf; --muted:#8fa096; --accent:#6fb894; --bright:#86c8a6; --border:#2a342e; --strong:#415047; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --shsm:0 1px 2px rgba(0,0,0,.4); --shmd:0 4px 12px rgba(0,0,0,.5); background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:42px 40px 30px; display:flex; gap:20px; align-items:flex-start;">
+          <div style="position:relative; width:60px; height:60px; flex-shrink:0;"><div style="width:60px; height:60px; border-radius:999px; background:var(--accent); color:var(--onacc); display:flex; align-items:center; justify-content:center; font-family:'Newsreader',serif; font-style:italic; font-size:31px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16), 0 0 0 3px var(--chipbg);">A</div><div style="position:absolute; right:1px; bottom:3px; width:11px; height:11px; border-radius:999px; background:var(--bright); box-shadow:0 0 0 2px var(--bg);"></div></div>
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--accent); margin-bottom:10px;">nobodyreads.me/alice</div>
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:38px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+            <p style="font-size:16px; line-height:1.55; color:var(--body); margin-top:12px; max-width:430px;">Notes on fishing, code, and quiet mornings. Written slowly, on purpose.</p>
+          </div>
+        </div>
+        <div style="padding:6px 40px 30px;">
+          <div style="border-top:1px solid var(--border); padding:26px 0;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted); margin-bottom:8px;">2 Aug 2026</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:23px; line-height:1.2; color:var(--ink);">Reeling In the Right Gear: A Beginner&rsquo;s Guide to Fishing Equipment</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:10px; max-width:520px;">So you&rsquo;ve decided to take up fishing. Before you become the legend of your local pond, you need to talk about gear &mdash; and not just any gear.</p>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent); margin-top:14px;">read more &rarr;</div>
+          </div>
+          <div style="border-top:1px solid var(--border); padding:26px 0 4px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted); margin-bottom:8px;">29 Jun 2026</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:23px; line-height:1.2; color:var(--ink);">My first post</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:10px; max-width:520px;">A sample first post &mdash; the one everyone writes to see their words become a real page.</p>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--accent); margin-top:14px;">read more &rarr;</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 03 — ESTABLISHED
+       ============================================================ -->
+  <div style="max-width:1400px; margin:64px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">03</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Established &mdash; ~10&ndash;30 posts</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">Card variant: cover thumbnail where a post has one, text-only fallback where it doesn&rsquo;t. Tag filter + load&#8209;more appear once there&rsquo;s enough to browse.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT -->
+      <div class="fr" style="width:664px; --bg:#eef1ec; --tint:#e4eae3; --card:#f7f9f6; --ink:#23302a; --body:#415147; --muted:#7c8a82; --accent:#40765b; --bright:#4e8a6b; --border:#e4eae3; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --shsm:0 1px 2px rgba(30,50,40,.06); --shmd:0 4px 12px rgba(30,50,40,.08); background:var(--bg); border:1px solid var(--strong); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <!-- compact hero -->
+        <div style="padding:34px 40px 22px; display:flex; gap:16px; align-items:center;">
+          <div style="position:relative; width:48px; height:48px; flex-shrink:0;"><div style="width:48px; height:48px; border-radius:999px; background:var(--accent); color:var(--onacc); display:flex; align-items:center; justify-content:center; font-family:'Newsreader',serif; font-style:italic; font-size:24px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16), 0 0 0 3px var(--chipbg);">A</div><div style="position:absolute; right:0; bottom:2px; width:9px; height:9px; border-radius:999px; background:var(--bright); box-shadow:0 0 0 2px var(--bg);"></div></div>
+          <div>
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; color:var(--muted); margin-top:8px;">24 posts &middot; since 2024</div>
+          </div>
+        </div>
+        <!-- tag filter -->
+        <div style="padding:2px 40px 20px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--border);">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-right:4px;">Filter</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--accent); color:var(--onacc); padding:4px 11px; border-radius:999px;">All</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">fishing</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">code</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">notes</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">life</span>
+        </div>
+        <!-- card grid -->
+        <div style="padding:26px 40px 8px; display:grid; grid-template-columns:1fr 1fr; gap:22px;">
+          <!-- card w/ cover -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="aspect-ratio:16/9; background:var(--tint); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border);"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">cover</span></div>
+            <div style="padding:16px 16px 18px;">
+              <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">fishing</span><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">gear</span></div>
+              <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Reeling In the Right Gear</h3>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">2 Aug 2026</div>
+              <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">A beginner&rsquo;s guide to picking a rod without losing the plot.</p>
+            </div>
+          </div>
+          <!-- card text-only -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:16px 16px 18px; display:flex; flex-direction:column;">
+            <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">code</span></div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">On keeping a quiet plot</h3>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">14 Jul 2026</div>
+            <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">Why I stopped chasing a feed and started writing for the shelf instead. Text-only posts keep their clean type &mdash; no empty image frame.</p>
+          </div>
+          <!-- card text-only -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:16px 16px 18px; display:flex; flex-direction:column;">
+            <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">notes</span></div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Some thoughts</h3>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">29 Jun 2026</div>
+            <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">Another sample post, kept short on purpose.</p>
+          </div>
+          <!-- card w/ cover -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="aspect-ratio:16/9; background:var(--tint); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border);"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">cover</span></div>
+            <div style="padding:16px 16px 18px;">
+              <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">life</span></div>
+              <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Quiet mornings, slow coffee</h3>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">3 Jun 2026</div>
+              <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">A short field note on doing less, earlier in the day.</p>
+            </div>
+          </div>
+        </div>
+        <!-- load more -->
+        <div style="padding:22px 40px 34px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <span style="border:1px solid var(--strong); color:var(--ink); font-size:13.5px; font-weight:600; padding:10px 22px; border-radius:4px;">Load more</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);">Showing 12 of 24</span>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+      <!-- DARK -->
+      <div class="fr" style="width:664px; --bg:#141a17; --tint:#1a211d; --card:#1f2823; --ink:#e8efe9; --body:#b9cabf; --muted:#8fa096; --accent:#6fb894; --bright:#86c8a6; --border:#2a342e; --strong:#415047; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --shsm:0 1px 2px rgba(0,0,0,.4); --shmd:0 4px 12px rgba(0,0,0,.5); background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:34px 40px 22px; display:flex; gap:16px; align-items:center;">
+          <div style="position:relative; width:48px; height:48px; flex-shrink:0;"><div style="width:48px; height:48px; border-radius:999px; background:var(--accent); color:var(--onacc); display:flex; align-items:center; justify-content:center; font-family:'Newsreader',serif; font-style:italic; font-size:24px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.16), 0 0 0 3px var(--chipbg);">A</div><div style="position:absolute; right:0; bottom:2px; width:9px; height:9px; border-radius:999px; background:var(--bright); box-shadow:0 0 0 2px var(--bg);"></div></div>
+          <div>
+            <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1; letter-spacing:-0.02em; color:var(--ink);">Alice</h2>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; color:var(--muted); margin-top:8px;">24 posts &middot; since 2024</div>
+          </div>
+        </div>
+        <div style="padding:2px 40px 20px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--border);">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-right:4px;">Filter</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--accent); color:var(--onacc); padding:4px 11px; border-radius:999px;">All</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">fishing</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">code</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">notes</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--chipbg); color:var(--chipfg); padding:4px 11px; border-radius:999px;">life</span>
+        </div>
+        <div style="padding:26px 40px 8px; display:grid; grid-template-columns:1fr 1fr; gap:22px;">
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="aspect-ratio:16/9; background:var(--tint); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border);"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">cover</span></div>
+            <div style="padding:16px 16px 18px;">
+              <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">fishing</span><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">gear</span></div>
+              <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Reeling In the Right Gear</h3>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">2 Aug 2026</div>
+              <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">A beginner&rsquo;s guide to picking a rod without losing the plot.</p>
+            </div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:16px 16px 18px; display:flex; flex-direction:column;">
+            <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">code</span></div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">On keeping a quiet plot</h3>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">14 Jul 2026</div>
+            <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">Why I stopped chasing a feed and started writing for the shelf instead. Text-only posts keep their clean type &mdash; no empty image frame.</p>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:16px 16px 18px; display:flex; flex-direction:column;">
+            <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">notes</span></div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Some thoughts</h3>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">29 Jun 2026</div>
+            <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">Another sample post, kept short on purpose.</p>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="aspect-ratio:16/9; background:var(--tint); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border);"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">cover</span></div>
+            <div style="padding:16px 16px 18px;">
+              <div style="display:flex; gap:6px; margin-bottom:10px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">life</span></div>
+              <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:19px; line-height:1.2; color:var(--ink);">Quiet mornings, slow coffee</h3>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;">3 Jun 2026</div>
+              <p style="font-size:13.5px; line-height:1.55; color:var(--body); margin-top:10px;">A short field note on doing less, earlier in the day.</p>
+            </div>
+          </div>
+        </div>
+        <div style="padding:22px 40px 34px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <span style="border:1px solid var(--strong); color:var(--ink); font-size:13.5px; font-weight:600; padding:10px 22px; border-radius:4px;">Load more</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);">Showing 12 of 24</span>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SECTION 04 — POST PAYWALL
+       ============================================================ -->
+  <div style="max-width:1400px; margin:64px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">04</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Post page &mdash; supporter paywall</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">Soft fade into a clear supporters card: two intents (support / sign in) and a plain-terms reassurance line in the manifesto&rsquo;s voice.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT -->
+      <div class="fr" style="width:664px; --bg:#eef1ec; --tint:#e4eae3; --card:#f7f9f6; --ink:#23302a; --body:#415147; --muted:#7c8a82; --accent:#40765b; --bright:#4e8a6b; --border:#e4eae3; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --shsm:0 1px 2px rgba(30,50,40,.06); --shmd:0 4px 12px rgba(30,50,40,.08); background:var(--bg); border:1px solid var(--strong); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:40px 40px 34px;">
+          <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.15; letter-spacing:-0.01em; color:var(--ink); max-width:520px;">Reeling In the Right Gear: A Beginner&rsquo;s Guide to Fishing Equipment</h1>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">2 Aug 2026</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">fishing</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">gear</span>
+          </div>
+          <!-- body + fade -->
+          <div style="position:relative; margin-top:24px;">
+            <p style="font-size:15.5px; line-height:1.7; color:var(--body);">So you&rsquo;ve decided to take up fishing. Maybe you&rsquo;ve watched one too many nature documentaries, or a friend finally convinced you that sitting by the water with a rod and some snacks is a legitimate way to spend a weekend.</p>
+            <p style="font-size:15.5px; line-height:1.7; color:var(--body); margin-top:16px;">But here&rsquo;s the thing: before you can become the fishing legend of your local pond, you need to talk about gear. And not just any gear &mdash; the <span style="font-style:italic;">right</span> gear. The kind that quietly does its job while you pretend you knew what you were doing all along.</p>
+            <div style="position:absolute; left:0; right:0; bottom:-4px; height:96px; background:linear-gradient(to bottom, rgba(238,241,236,0), var(--bg)); pointer-events:none;"></div>
+          </div>
+          <!-- paywall card -->
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:30px 30px 32px; margin-top:14px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:14px;">Supporters only</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:24px; line-height:1.2; color:var(--ink);">Read the rest of this post.</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:12px; max-width:440px;">Alice writes some posts for supporters. Back this plot to read the whole thing &mdash; and everything else behind the same tier.</p>
+            <div style="display:flex; gap:12px; margin-top:22px; flex-wrap:wrap;">
+              <span style="background:var(--accent); color:var(--onacc); font-size:14px; font-weight:600; padding:11px 22px; border-radius:4px;">Support this plot</span>
+              <span style="border:1px solid var(--strong); color:var(--ink); font-size:14px; font-weight:600; padding:11px 22px; border-radius:4px;">Sign in</span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.5; color:var(--muted); margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">Monthly or one-time &middot; cancel anytime &middot; no ads, no tracking &middot; you keep your data.</div>
+          </div>
+          <!-- share + like -->
+          <div style="display:flex; align-items:center; gap:10px; margin-top:32px; padding-top:22px; border-top:1px solid var(--border); flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-right:4px;">Share</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Copy link</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">X</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Bluesky</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Mastodon</span>
+            <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--body); border:1px solid var(--border); padding:6px 14px; border-radius:999px;">&#9825; 0</span>
+          </div>
+          <!-- discussion -->
+          <div style="margin-top:34px;">
+            <h4 style="font-family:'Newsreader',serif; font-weight:500; font-size:20px; color:var(--ink);">Discussion</h4>
+            <p style="font-family:'Newsreader',serif; font-style:italic; font-size:15px; color:var(--muted); margin-top:10px;">The discussion on this post is for supporters.</p>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+      <!-- DARK -->
+      <div class="fr" style="width:664px; --bg:#141a17; --tint:#1a211d; --card:#1f2823; --ink:#e8efe9; --body:#b9cabf; --muted:#8fa096; --accent:#6fb894; --bright:#86c8a6; --border:#2a342e; --strong:#415047; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --shsm:0 1px 2px rgba(0,0,0,.4); --shmd:0 4px 12px rgba(0,0,0,.5); background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; box-shadow:var(--shmd); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:22px; padding:16px 40px; border-bottom:1px solid var(--border);">
+          <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:17px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">home</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.04em; color:var(--muted);">about</span>
+          <span style="margin-left:auto; background:var(--accent); color:var(--onacc); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:4px;">Join</span>
+        </div>
+        <div style="padding:40px 40px 34px;">
+          <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:30px; line-height:1.15; letter-spacing:-0.01em; color:var(--ink); max-width:520px;">Reeling In the Right Gear: A Beginner&rsquo;s Guide to Fishing Equipment</h1>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">2 Aug 2026</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">fishing</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; background:var(--chipbg); color:var(--chipfg); padding:2px 8px; border-radius:999px;">gear</span>
+          </div>
+          <div style="position:relative; margin-top:24px;">
+            <p style="font-size:15.5px; line-height:1.7; color:var(--body);">So you&rsquo;ve decided to take up fishing. Maybe you&rsquo;ve watched one too many nature documentaries, or a friend finally convinced you that sitting by the water with a rod and some snacks is a legitimate way to spend a weekend.</p>
+            <p style="font-size:15.5px; line-height:1.7; color:var(--body); margin-top:16px;">But here&rsquo;s the thing: before you can become the fishing legend of your local pond, you need to talk about gear. And not just any gear &mdash; the <span style="font-style:italic;">right</span> gear. The kind that quietly does its job while you pretend you knew what you were doing all along.</p>
+            <div style="position:absolute; left:0; right:0; bottom:-4px; height:96px; background:linear-gradient(to bottom, rgba(20,26,23,0), var(--bg)); pointer-events:none;"></div>
+          </div>
+          <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:30px 30px 32px; margin-top:14px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:14px;">Supporters only</div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:24px; line-height:1.2; color:var(--ink);">Read the rest of this post.</h3>
+            <p style="font-size:15px; line-height:1.6; color:var(--body); margin-top:12px; max-width:440px;">Alice writes some posts for supporters. Back this plot to read the whole thing &mdash; and everything else behind the same tier.</p>
+            <div style="display:flex; gap:12px; margin-top:22px; flex-wrap:wrap;">
+              <span style="background:var(--accent); color:var(--onacc); font-size:14px; font-weight:600; padding:11px 22px; border-radius:4px;">Support this plot</span>
+              <span style="border:1px solid var(--strong); color:var(--ink); font-size:14px; font-weight:600; padding:11px 22px; border-radius:4px;">Sign in</span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.5; color:var(--muted); margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">Monthly or one-time &middot; cancel anytime &middot; no ads, no tracking &middot; you keep your data.</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:32px; padding-top:22px; border-top:1px solid var(--border); flex-wrap:wrap;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-right:4px;">Share</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Copy link</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">X</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Bluesky</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; border:1px solid var(--border); color:var(--body); padding:5px 11px; border-radius:4px;">Mastodon</span>
+            <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--body); border:1px solid var(--border); padding:6px 14px; border-radius:999px;">&#9825; 0</span>
+          </div>
+          <div style="margin-top:34px;">
+            <h4 style="font-family:'Newsreader',serif; font-weight:500; font-size:20px; color:var(--ink);">Discussion</h4>
+            <p style="font-family:'Newsreader',serif; font-style:italic; font-size:15px; color:var(--muted); margin-top:10px;">The discussion on this post is for supporters.</p>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border); padding:20px 40px; display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);"><span>&copy; 2026</span><span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; color:var(--ink);">nobodyreads<span style="color:var(--bright);">.me</span></span></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

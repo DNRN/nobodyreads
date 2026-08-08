@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #cbd0c6; }
+  .fr a { text-decoration: none; }
+  .ph::selection { background: transparent; }
+</style>
+</helmet>
+
+<div style="font-family:'Hanken Grotesk',system-ui,sans-serif; background:#cbd0c6; padding:64px 56px 110px; color:#23302a;">
+
+  <!-- ===== COVER ===== -->
+  <div style="max-width:1400px; margin:0 auto 20px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; color:#40765b; margin-bottom:18px;">nobodyreads.me &middot; admin &amp; editor redesign &middot; forest &amp; oat</div>
+    <h1 style="font-family:'Newsreader',serif; font-weight:500; font-size:52px; line-height:1.05; letter-spacing:-0.02em; color:#23302a; max-width:900px; text-wrap:balance;">An editor that gets out of the way &mdash; until you need it.</h1>
+    <p style="font-size:18px; line-height:1.6; color:#3a463d; max-width:720px; margin-top:20px;">Today the write screen splits attention three ways: nav, a column of always-open metadata &mdash; slug, excerpt, tags, status, markdown reference &mdash; and the words. This redesign gives the writing <em style="font-style:italic;">the whole canvas</em> and moves every setting behind an on-demand drawer. Power is progressively disclosed: press <b style="font-weight:700;">/</b> to insert, select text to format, open the drawer to publish. Every control explains itself, and a reopenable <b style="font-weight:700;">?</b> help panel is always a click away.</p>
+    <div style="display:flex; gap:22px; flex-wrap:wrap; margin-top:22px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em; color:#5b6a61;">
+      <span><span style="display:inline-block; width:11px; height:11px; border-radius:2px; background:#eef1ec; border:1px solid #b7c0b6; vertical-align:-1px; margin-right:6px;"></span>light</span>
+      <span><span style="display:inline-block; width:11px; height:11px; border-radius:2px; background:#141a17; border:1px solid #3a463d; vertical-align:-1px; margin-right:6px;"></span>dark</span>
+      <span>hero shell + 6 close-up studies</span>
+    </div>
+  </div>
+
+  <!-- ============================================================ HERO — FULL ADMIN SHELL ============================================================ -->
+  <div style="max-width:1400px; margin:52px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">00</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">The editor, in its shell</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">Same nav and header you have now, restyled. The metadata column is gone &mdash; the canvas runs full width, settings wait in the drawer, and the editor top bar carries only the four things you act on.</span>
+    </div>
+
+    <!-- FULL SHELL FRAME -->
+    <div class="fr" id="frame-0" data-name="00-shell" style="width:1280px; --bg:#eef1ec; --canvas:#f4f7f2; --nav:#e7ece4; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; --barbg:#f3f6f1; --tip:#1c2621; --tipink:#e8efe9; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 10px 34px rgba(30,50,40,.14); font-family:'Hanken Grotesk',sans-serif;">
+      <!-- app header -->
+      <div style="display:flex; align-items:center; padding:14px 26px; background:var(--barbg); border-bottom:1px solid var(--border);">
+        <span style="font-family:'Hanken Grotesk',sans-serif; font-weight:800; font-size:19px; letter-spacing:-0.02em; color:var(--ink);">nobodyreads<span style="color:var(--accent);">.</span></span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:20px;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--muted);">View site <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+          <span style="width:34px; height:34px; border-radius:50%; border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted); background:var(--bg);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span>
+          <span style="font-size:13.5px; color:var(--muted);">Sign out</span>
+        </div>
+      </div>
+      <!-- body: nav + editor -->
+      <div style="display:flex; min-height:660px;">
+        <!-- left nav -->
+        <div style="width:230px; flex-shrink:0; background:var(--nav); border-right:1px solid var(--border); padding:22px 16px; display:flex; flex-direction:column; gap:4px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); padding:6px 12px 8px;">Create</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg><span style="font-size:14px;">Home</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; background:var(--chipbg); color:var(--chipfg);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg><span style="font-size:14px; font-weight:600;">Content</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span style="font-size:14px;">Media</span></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); padding:16px 12px 8px;">Customize</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg><span style="font-size:14px;">Design</span><span style="margin-left:auto; display:inline-flex; align-items:center; gap:3px; font-family:'IBM Plex Mono',monospace; font-size:8.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent); background:var(--chipbg); border-radius:5px; padding:2px 6px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg><span style="font-size:14px;">Collections</span></div>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--faint); padding:16px 12px 8px;">Manage</div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M9 8a3 3 0 106 0 3 3 0 00-6 0M20 20v-2a4 4 0 00-3-3.9"/></svg><span style="font-size:14px;">Community</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V7z"/></svg><span style="font-size:14px;">Moderation</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span style="font-size:14px;">Payments</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; color:var(--body);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg><span style="font-size:14px;">Settings</span></div>
+          <div style="margin-top:auto; background:var(--canvas); border:1px solid var(--border); border-radius:10px; padding:13px 15px;">
+            <div style="font-family:'Newsreader',serif; font-style:italic; font-size:13.5px; line-height:1.5; color:var(--muted);">&ldquo;Nobody reads it anyway &mdash; and that&rsquo;s the point.&rdquo;</div>
+          </div>
+        </div>
+        <!-- editor area -->
+        <div style="flex:1; display:flex; flex-direction:column; background:var(--canvas);">
+          <!-- editor top bar -->
+          <div style="display:flex; align-items:center; gap:16px; padding:14px 28px; border-bottom:1px solid var(--border);">
+            <span style="display:inline-flex; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);">alice<span style="color:var(--faint);">/</span>reeling-in-the-right-gear</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);"><span style="width:6px; height:6px; border-radius:50%; background:var(--bright);"></span>Draft &middot; saved just now</span>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint); margin-right:4px;">840 words</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; color:var(--body); border:1px solid var(--strong); border-radius:8px; padding:8px 13px; font-size:13.5px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>Preview</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; color:var(--body); border:1px solid var(--strong); border-radius:8px; padding:8px 13px; font-size:13.5px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Settings</span>
+              <span style="background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:9px 20px; border-radius:8px;">Publish</span>
+            </div>
+          </div>
+          <!-- canvas -->
+          <div style="position:relative; flex:1; padding:52px 40px 60px;">
+            <div style="max-width:680px; margin:0 auto; position:relative;">
+              <!-- block gutter handle -->
+              <div style="position:absolute; left:-46px; top:120px; display:flex; gap:1px; color:var(--faint);">
+                <span style="display:inline-flex;" title="Add block"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                <span style="display:inline-flex;" title="Drag to move"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint); margin-bottom:14px;">Post title</div>
+              <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:40px; line-height:1.1; letter-spacing:-0.02em; color:var(--ink);">Reeling In the Right Gear</h2>
+              <p style="font-size:17px; line-height:1.75; color:var(--body); margin-top:26px;">So you&rsquo;ve decided to take up fishing. Maybe you watched one too many nature documentaries, or a friend finally convinced you that sitting by the water with a rod is a legitimate way to spend a weekend.</p>
+              <p style="font-size:17px; line-height:1.75; color:var(--body); margin-top:20px;">But here&rsquo;s the thing: before you become the fishing legend of your local pond, you need to talk about gear. And not just any gear &mdash; the <em style="font-style:italic;">right</em> gear.</p>
+              <p class="ph" style="font-size:17px; line-height:1.75; color:var(--faint); margin-top:20px;"><span style="display:inline-block; width:1.5px; height:21px; background:var(--accent); vertical-align:-4px; margin-right:1px;"></span>Keep writing, or press <b style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:500; color:var(--muted); background:var(--chipbg); border:1px solid var(--strong); border-radius:4px; padding:1px 6px;">/</b> to add an image, quote, embed&hellip;</p>
+            </div>
+            <!-- reopenable help button -->
+            <div style="position:absolute; right:24px; bottom:22px; display:flex; align-items:center; gap:8px;">
+              <span style="width:38px; height:38px; border-radius:50%; background:var(--accent); color:var(--onacc); display:inline-flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(30,60,45,.28); font-family:'Newsreader',serif; font-size:19px; font-weight:600;">?</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ 01 CANVAS ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">01</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">The writing canvas</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">A slim top bar and a single column. First-run coach marks fade after the first post. Autosaves silently.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap;">
+
+      <!-- LIGHT CANVAS -->
+      <div class="fr" id="frame-1" data-name="01-canvas-light" style="width:664px; --bg:#eef1ec; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#e0e7df; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; --barbg:#f3f6f1; --tip:#1c2621; --tipink:#e8efe9; background:var(--bg); border:1px solid var(--strong); border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(30,50,40,.10); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- top bar -->
+        <div style="display:flex; align-items:center; gap:14px; padding:11px 18px; background:var(--barbg); border-bottom:1px solid var(--border);">
+          <span style="display:inline-flex; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">alice<span style="color:var(--faint);">/</span>fishing-gear</span>
+          <span style="display:inline-flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint);"><span style="width:6px; height:6px; border-radius:50%; background:var(--bright);"></span>Draft &middot; saved</span>
+          <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint);">840 words</span>
+          <span style="display:inline-flex; color:var(--muted); border:1px solid var(--strong); border-radius:6px; padding:6px;" title="Preview"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span style="display:inline-flex; color:var(--muted); border:1px solid var(--strong); border-radius:6px; padding:6px;" title="Post settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>
+          <span style="background:var(--accent); color:var(--onacc); font-size:13px; font-weight:600; padding:8px 16px; border-radius:6px;">Publish</span>
+        </div>
+        <!-- canvas -->
+        <div style="position:relative; padding:40px 64px 60px;">
+          <!-- block handle gutter -->
+          <div style="position:absolute; left:30px; top:118px; display:flex; gap:2px; color:var(--faint);">
+            <span style="display:inline-flex;" title="Add block"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span style="display:inline-flex;" title="Drag to move"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+          </div>
+          <h2 contenteditable="false" style="font-family:'Newsreader',serif; font-weight:500; font-size:34px; line-height:1.12; letter-spacing:-0.02em; color:var(--ink);">Reeling In the Right Gear</h2>
+          <p style="font-size:16.5px; line-height:1.7; color:var(--body); margin-top:22px;">So you&rsquo;ve decided to take up fishing. Maybe you&rsquo;ve watched one too many nature documentaries, or a friend finally convinced you that sitting by the water with a rod is a legitimate way to spend a weekend.</p>
+          <p style="font-size:16.5px; line-height:1.7; color:var(--body); margin-top:18px;">But here&rsquo;s the thing: before you can become the fishing legend of your local pond, you need to talk about gear. And not just any gear&mdash;the <em style="font-style:italic;">right</em> gear.</p>
+          <!-- active empty line with cursor + coach -->
+          <div style="position:relative; margin-top:18px;">
+            <p class="ph" style="font-size:16.5px; line-height:1.7; color:var(--faint);"><span style="display:inline-block; width:1.5px; height:20px; background:var(--accent); vertical-align:-4px; margin-right:1px;"></span>Start writing, or press <b style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:500; color:var(--muted); background:var(--chipbg); border:1px solid var(--strong); border-radius:4px; padding:1px 6px;">/</b> for blocks&hellip;</p>
+            <!-- coach mark -->
+            <div style="position:absolute; left:0; top:44px; max-width:340px; background:var(--tip); color:var(--tipink); border-radius:8px; padding:12px 14px; box-shadow:0 8px 24px rgba(20,30,25,.28);">
+              <div style="position:absolute; left:26px; top:-6px; width:12px; height:12px; background:var(--tip); transform:rotate(45deg); border-radius:2px;"></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#8fd3b0;">Tip 1 of 3</span></div>
+              <div style="font-size:13.5px; line-height:1.5; color:var(--tipink);">Type <b style="font-family:'IBM Plex Mono',monospace; font-size:12px; background:rgba(255,255,255,.12); border-radius:3px; padding:1px 5px;">/</b> to add images, quotes, code, and embeds. Nothing to hunt for in a toolbar.</div>
+              <div style="display:flex; align-items:center; gap:14px; margin-top:10px;"><span style="font-size:12px; color:#8fd3b0; font-weight:600;">Next</span><span style="font-size:12px; color:#7d8f85;">Skip tour</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK CANVAS -->
+      <div class="fr" id="frame-2" data-name="01-canvas-dark" style="width:664px; --bg:#141a17; --card:#1f2823; --ink:#e8efe9; --body:#c6d5cb; --muted:#8fa096; --faint:#6c7d73; --accent:#6fb894; --bright:#86c8a6; --border:#26302a; --strong:#39463f; --chipbg:#25382d; --chipfg:#6fb894; --onacc:#0f1512; --barbg:#1a211d; --tip:#0b0f0d; --tipink:#e8efe9; background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.5); font-family:'Hanken Grotesk',sans-serif;">
+        <div style="display:flex; align-items:center; gap:14px; padding:11px 18px; background:var(--barbg); border-bottom:1px solid var(--border);">
+          <span style="display:inline-flex; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">alice<span style="color:var(--faint);">/</span>fishing-gear</span>
+          <span style="display:inline-flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint);"><span style="width:6px; height:6px; border-radius:50%; background:var(--bright);"></span>Draft &middot; saved</span>
+          <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint);">840 words</span>
+          <span style="display:inline-flex; color:var(--muted); border:1px solid var(--strong); border-radius:6px; padding:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+          <span style="display:inline-flex; color:var(--muted); border:1px solid var(--strong); border-radius:6px; padding:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span>
+          <span style="background:var(--accent); color:var(--onacc); font-size:13px; font-weight:600; padding:8px 16px; border-radius:6px;">Publish</span>
+        </div>
+        <div style="position:relative; padding:40px 64px 60px;">
+          <div style="position:absolute; left:30px; top:118px; display:flex; gap:2px; color:var(--faint);">
+            <span style="display:inline-flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+            <span style="display:inline-flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>
+          </div>
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:34px; line-height:1.12; letter-spacing:-0.02em; color:var(--ink);">Reeling In the Right Gear</h2>
+          <p style="font-size:16.5px; line-height:1.7; color:var(--body); margin-top:22px;">So you&rsquo;ve decided to take up fishing. Maybe you&rsquo;ve watched one too many nature documentaries, or a friend finally convinced you that sitting by the water with a rod is a legitimate way to spend a weekend.</p>
+          <p style="font-size:16.5px; line-height:1.7; color:var(--body); margin-top:18px;">But here&rsquo;s the thing: before you can become the fishing legend of your local pond, you need to talk about gear. And not just any gear&mdash;the <em style="font-style:italic;">right</em> gear.</p>
+          <div style="position:relative; margin-top:18px;">
+            <p class="ph" style="font-size:16.5px; line-height:1.7; color:var(--faint);"><span style="display:inline-block; width:1.5px; height:20px; background:var(--accent); vertical-align:-4px; margin-right:1px;"></span>Start writing, or press <b style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:500; color:var(--muted); background:var(--chipbg); border:1px solid var(--strong); border-radius:4px; padding:1px 6px;">/</b> for blocks&hellip;</p>
+            <div style="position:absolute; left:0; top:44px; max-width:340px; background:var(--tip); color:var(--tipink); border-radius:8px; padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,.5);">
+              <div style="position:absolute; left:26px; top:-6px; width:12px; height:12px; background:var(--tip); transform:rotate(45deg); border-radius:2px;"></div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#8fd3b0;">Tip 1 of 3</span></div>
+              <div style="font-size:13.5px; line-height:1.5; color:var(--tipink);">Type <b style="font-family:'IBM Plex Mono',monospace; font-size:12px; background:rgba(255,255,255,.12); border-radius:3px; padding:1px 5px;">/</b> to add images, quotes, code, and embeds. Nothing to hunt for in a toolbar.</div>
+              <div style="display:flex; align-items:center; gap:14px; margin-top:10px;"><span style="font-size:12px; color:#8fd3b0; font-weight:600;">Next</span><span style="font-size:12px; color:#7d8f85;">Skip tour</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 02 SLASH MENU ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">02</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Insert anything &mdash; the <span style="font-style:italic;">/</span> menu</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">One keystroke opens every block. Type to filter; each item names itself and says what it does. Grouped so the everyday stuff sits up top.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <!-- LIGHT slash frame -->
+      <div class="fr" id="frame-3" data-name="02-slash-menu" style="width:664px; --bg:#eef1ec; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#e0e7df; --strong:#c3d0c8; --chipbg:#ddece3; --hover:#e7efe8; --onacc:#ffffff; background:var(--bg); border:1px solid var(--strong); border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(30,50,40,.10); font-family:'Hanken Grotesk',sans-serif; padding:38px 64px 40px; position:relative;">
+        <p style="font-size:16.5px; line-height:1.7; color:var(--body);">Every good fishing trip starts with the same question:</p>
+        <p style="font-size:16.5px; line-height:1.7; color:var(--ink); margin-top:6px;"><span style="color:var(--accent); font-weight:600;">/</span><span style="display:inline-block; width:1.5px; height:20px; background:var(--accent); vertical-align:-4px;"></span></p>
+        <!-- menu -->
+        <div style="position:absolute; left:64px; top:150px; width:376px; background:var(--card); border:1px solid var(--strong); border-radius:10px; box-shadow:0 12px 32px rgba(30,50,40,.16); overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--border); color:var(--faint);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+            <span style="font-size:13.5px; color:var(--muted);">Filter blocks&hellip;</span>
+          </div>
+          <div style="padding:8px 8px 10px; max-height:none;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); padding:8px 10px 6px;">Basic</div>
+            <!-- selected row with rich description -->
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px; background:var(--hover);">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--accent);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Text</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">Just start writing plain paragraph text.</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">&#9166;</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12M4 4h4M4 20h4M16 4h4M16 20h4"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Heading</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">A section title. H2 &amp; H3.</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">##</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">List</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">Bulleted, numbered, or a to&#8209;do checklist.</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">- </span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); padding:12px 10px 6px;">Media</div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Image</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">Upload or drag in a photo. Add a caption &amp; alt text.</span></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Embed</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">Paste a link &mdash; video, audio, a post &mdash; it becomes a player.</span></span>
+            </div>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); padding:12px 10px 6px;">Structure</div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h10M7 12h6M6 3h12a1 1 0 011 1v16l-4-3H6a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Quote &amp; callout</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">Set a passage apart, or flag a note.</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">&gt; </span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:7px;">
+              <span style="width:34px; height:34px; border-radius:7px; background:var(--bg); border:1px solid var(--strong); display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></span>
+              <span style="flex:1;"><span style="display:block; font-size:14px; font-weight:600; color:var(--ink);">Code</span><span style="display:block; font-size:12px; color:var(--muted); margin-top:1px;">A monospace block with syntax highlighting.</span></span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">```</span>
+            </div>
+          </div>
+        </div>
+        <!-- spacer to give menu room -->
+        <div style="height:430px;"></div>
+      </div>
+
+      <!-- annotation column -->
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Why this works</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Zero chrome by default.</b> The toolbar isn&rsquo;t stripped away &mdash; it just lives behind one key, so a blank page stays blank.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Every row teaches.</b> Icon, name, and a one-line description, plus the markdown shortcut on the right for people who&rsquo;d rather type it.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Ordered by frequency.</b> Text, headings, lists first; embeds and code below. Filtering as you type collapses it to one match.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 03 SELECTION TOOLBAR ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">03</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Format on selection</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">Highlight text and a small bar appears right above it. Hover any control for a rich tooltip: what it does, plus the shortcut.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <!-- LIGHT selection frame -->
+      <div class="fr" id="frame-4" data-name="03-selection-toolbar" style="width:664px; --bg:#eef1ec; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --border:#e0e7df; --strong:#c3d0c8; --sel:#cfe6d8; --tbar:#20292400; background:var(--bg); border:1px solid var(--strong); border-radius:10px; box-shadow:0 4px 16px rgba(30,50,40,.10); font-family:'Hanken Grotesk',sans-serif; padding:134px 64px 60px; position:relative;">
+        <p style="font-size:16.5px; line-height:1.9; color:var(--body);">Before you can become the fishing legend of your local pond, <span style="background:#cfe6d8; color:var(--ink); border-radius:2px; padding:1px 0;">you need to talk about gear &mdash; and not just any gear</span>, the right gear for the water you fish.</p>
+        <!-- floating toolbar -->
+        <div style="position:absolute; left:110px; top:96px; display:flex; align-items:center; gap:2px; background:#1c2621; border-radius:9px; padding:5px; box-shadow:0 10px 28px rgba(20,30,25,.32);">
+          <span style="width:12px; height:12px; background:#1c2621; transform:rotate(45deg); position:absolute; left:60px; bottom:-4px; border-radius:2px;"></span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#e8efe9; font-family:'Newsreader',serif; font-weight:700; font-size:16px;">B</span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#e8efe9; font-family:'Newsreader',serif; font-style:italic; font-size:16px;">i</span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#e8efe9;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20h16M6 16l6-12 6 12"/></svg></span>
+          <span style="width:1px; height:20px; background:#3a463f; margin:0 4px;"></span>
+          <!-- link, highlighted as hovered -->
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#0f1512; background:#6fb894;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1"/><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1"/></svg></span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#e8efe9;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l-4 4v3h3l9-9M12 8l4 4"/></svg></span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:6px; color:#e8efe9;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></span>
+          <span style="width:1px; height:20px; background:#3a463f; margin:0 4px;"></span>
+          <span style="display:inline-flex; align-items:center; justify-content:center; padding:0 8px; height:30px; border-radius:6px; color:#e8efe9; font-size:13px; font-weight:600; gap:4px;">H2 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <!-- rich tooltip for link -->
+        <div style="position:absolute; left:150px; top:8px; width:216px; background:#f7f9f6; border:1px solid var(--strong); border-radius:8px; padding:11px 13px; box-shadow:0 12px 30px rgba(30,50,40,.18);">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span style="font-size:13.5px; font-weight:700; color:var(--ink);">Add link</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); background:var(--bg); border:1px solid var(--strong); border-radius:4px; padding:2px 6px;">&#8984; K</span>
+          </div>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--muted); margin-top:5px;">Turn the selection into a link. Paste a URL, or search your other posts to link across your plot.</div>
+          <span style="position:absolute; left:34px; bottom:-6px; width:12px; height:12px; background:#f7f9f6; border-right:1px solid var(--strong); border-bottom:1px solid var(--strong); transform:rotate(45deg);"></span>
+        </div>
+      </div>
+
+      <!-- annotation -->
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">The rules</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Only the six you reach for.</b> Bold, italic, link, highlight, inline code, and turn-into (H2 / quote / list). Nothing rarely-used clutters the bar.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Tooltips do the teaching.</b> Label, plain-language description, and the keyboard shortcut &mdash; so people graduate to shortcuts on their own.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">It disappears.</b> Deselect and the bar is gone. The reading experience is never crowded by editing chrome.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 04 MEDIA BLOCK ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">04</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">The complex case &mdash; an image block</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">Media is where editors usually overwhelm. Controls stay hidden until you hover the block, then appear as one compact bar &mdash; alignment, replace, alt text, delete.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <!-- LIGHT media frame -->
+      <div class="fr" id="frame-5" data-name="04-media-block" style="width:664px; --bg:#eef1ec; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#e0e7df; --strong:#c3d0c8; --chipbg:#ddece3; background:var(--bg); border:1px solid var(--strong); border-radius:10px; box-shadow:0 4px 16px rgba(30,50,40,.10); font-family:'Hanken Grotesk',sans-serif; padding:44px 64px 52px;">
+        <p style="font-size:16.5px; line-height:1.7; color:var(--body); margin-bottom:26px;">A rod, a reel, and a small box of the right terminal tackle will out-fish an expensive setup nine times out of ten. Here&rsquo;s the kit I actually carry:</p>
+        <!-- image block, hovered -->
+        <div style="position:relative; border-radius:10px; outline:2px solid var(--bright); outline-offset:3px;">
+          <!-- block toolbar -->
+          <div style="position:absolute; right:8px; top:8px; display:flex; align-items:center; gap:1px; background:#1c2621; border-radius:8px; padding:4px; box-shadow:0 8px 22px rgba(20,30,25,.3); z-index:2;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:5px; color:#e8efe9;" title="Align left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h10M3 18h14"/></svg></span>
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:5px; color:#0f1512; background:#6fb894;" title="Center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M7 12h10M5 18h14"/></svg></span>
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:5px; color:#e8efe9;" title="Full width"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span>
+            <span style="width:1px; height:18px; background:#3a463f; margin:0 3px;"></span>
+            <span style="display:inline-flex; align-items:center; justify-content:center; padding:0 9px; height:28px; border-radius:5px; color:#e8efe9; font-size:12px; font-weight:600;">Replace</span>
+            <span style="display:inline-flex; align-items:center; justify-content:center; padding:0 9px; height:28px; border-radius:5px; color:#0f1512; background:#e6c34d; font-size:12px; font-weight:600;">Alt</span>
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:5px; color:#f0a8a0;" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+          </div>
+          <!-- image placeholder -->
+          <div style="height:280px; border-radius:8px; background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 14px,#dbe3da 14px,#dbe3da 28px); border:1px solid var(--strong); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;">
+            <span style="display:inline-flex; color:var(--faint);"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; color:var(--muted);">my-tackle-box.jpg &middot; 1600&times;1067</span>
+          </div>
+        </div>
+        <!-- caption field with alt-text warning -->
+        <div style="margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span style="font-size:14px; color:var(--muted); font-style:italic;">Write a caption&hellip;</span>
+        </div>
+        <!-- alt-text nudge tooltip -->
+        <div style="margin-top:18px; display:flex; align-items:flex-start; gap:10px; background:#fbf3d6; border:1px solid #e6d79a; border-radius:8px; padding:11px 14px;">
+          <span style="display:inline-flex; color:#9a7d1f; margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span>
+          <span style="font-size:13px; line-height:1.55; color:#6b5b17;"><b style="font-weight:700;">No alt text yet.</b> A sentence describing the image helps screen-reader users and search. Click <b style="font-weight:700;">Alt</b> above to add it &mdash; optional, but encouraged.</span>
+        </div>
+      </div>
+
+      <!-- annotation -->
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Handling complexity</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Contextual, not global.</b> Image controls belong to the image &mdash; they appear on the block, not in a distant top toolbar you have to connect mentally.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Gentle nudges, not blockers.</b> Missing alt text prompts a soft, dismissible note &mdash; it never stops you from publishing.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Same grammar everywhere.</b> Embeds, code, and callouts use the identical hover-bar pattern, so one block teaches them all.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 05 SETTINGS DRAWER ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">05</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Everything else lives in the drawer</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">Visibility, cover, tags, URL, comments, schedule &mdash; the settings that don&rsquo;t belong in the writing flow slide in from the right, only when you ask.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <!-- frame with drawer over dimmed canvas -->
+      <div class="fr" id="frame-6" data-name="05-settings-drawer" style="width:664px; --bg:#eef1ec; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#e0e7df; --strong:#c3d0c8; --chipbg:#ddece3; --chipfg:#336b50; --onacc:#ffffff; background:var(--bg); border:1px solid var(--strong); border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(30,50,40,.10); font-family:'Hanken Grotesk',sans-serif; position:relative; height:560px;">
+        <!-- dimmed canvas behind -->
+        <div style="padding:36px 48px; filter:saturate(.9);">
+          <div style="height:14px; width:60%; background:#d8e0d7; border-radius:4px;"></div>
+          <div style="height:10px; width:90%; background:#e0e7df; border-radius:4px; margin-top:22px;"></div>
+          <div style="height:10px; width:84%; background:#e0e7df; border-radius:4px; margin-top:12px;"></div>
+          <div style="height:10px; width:88%; background:#e0e7df; border-radius:4px; margin-top:12px;"></div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(20,30,25,.28);"></div>
+        <!-- drawer -->
+        <div style="position:absolute; right:0; top:0; bottom:0; width:360px; background:var(--card); border-left:1px solid var(--strong); box-shadow:-16px 0 40px rgba(20,30,25,.18); display:flex; flex-direction:column;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border);">
+            <span style="font-family:'Newsreader',serif; font-size:19px; font-weight:500; color:var(--ink);">Post settings</span>
+            <span style="display:inline-flex; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+          </div>
+          <div style="padding:20px; overflow:auto; display:flex; flex-direction:column; gap:22px;">
+            <!-- visibility -->
+            <div>
+              <div style="display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Who can read this <span style="display:inline-flex; color:var(--faint);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 17h.01"/></svg></span></div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; gap:11px; padding:10px 12px; border:1.5px solid var(--accent); background:var(--chipbg); border-radius:8px;">
+                  <span style="display:inline-flex; color:var(--accent);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"/></svg></span>
+                  <span style="flex:1;"><span style="display:block; font-size:13.5px; font-weight:600; color:var(--ink);">Public</span><span style="display:block; font-size:11.5px; color:var(--muted);">Anyone with the link.</span></span>
+                  <span style="display:inline-flex; color:var(--accent);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:11px; padding:10px 12px; border:1px solid var(--strong); border-radius:8px;">
+                  <span style="display:inline-flex; color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M9 8a3 3 0 106 0 3 3 0 00-6 0M20 20v-1.5a4 4 0 00-3-3.8"/></svg></span>
+                  <span style="flex:1;"><span style="display:block; font-size:13.5px; font-weight:600; color:var(--ink);">Members</span><span style="display:block; font-size:11.5px; color:var(--muted);">Anyone who&rsquo;s joined your plot &mdash; free or paying.</span></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:11px; padding:10px 12px; border:1px solid var(--strong); border-radius:8px;">
+                  <span style="display:inline-flex; color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5L12 15.5 7 18.2l1-5.5-4-3.9L9.5 8z"/></svg></span>
+                  <span style="flex:1;"><span style="display:block; font-size:13.5px; font-weight:600; color:var(--ink);">Supporters only</span><span style="display:block; font-size:11.5px; color:var(--muted);">Paying supporters unlock it.</span></span>
+                </div>
+                <div style="display:flex; align-items:center; gap:11px; padding:10px 12px; border:1px solid var(--strong); border-radius:8px;">
+                  <span style="display:inline-flex; color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8V7a5 5 0 00-10 0M6 11h12v9H6z"/><path d="M3 11l3-3 3 3" style="display:none"/></svg></span>
+                  <span style="flex:1;"><span style="display:block; font-size:13.5px; font-weight:600; color:var(--ink);">Unlisted</span><span style="display:block; font-size:11.5px; color:var(--muted);">Only people with the link; hidden from your plot.</span></span>
+                </div>
+              </div>
+            </div>
+            <!-- cover -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Cover image</div>
+              <div style="height:96px; border-radius:8px; border:1px dashed var(--strong); background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 12px,#dbe3da 12px,#dbe3da 24px); display:flex; align-items:center; justify-content:center; gap:8px; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:13px;">Add a cover</span></div>
+            </div>
+            <!-- tags -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Tags</div>
+              <div style="display:flex; flex-wrap:wrap; gap:7px; align-items:center;">
+                <span style="display:inline-flex; align-items:center; gap:6px; background:var(--chipbg); color:var(--chipfg); font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:5px 9px; border-radius:5px;">fishing<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+                <span style="display:inline-flex; align-items:center; gap:6px; background:var(--chipbg); color:var(--chipfg); font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:5px 9px; border-radius:5px;">gear<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--faint); padding:5px 4px;">+ add&hellip;</span>
+              </div>
+            </div>
+            <!-- url slug -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Page address</div>
+              <div style="display:flex; align-items:center; border:1px solid var(--strong); border-radius:8px; overflow:hidden;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--faint); padding:9px 2px 9px 12px;">/alice/</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ink); padding:9px 12px 9px 0; flex:1;">fishing-gear</span>
+                <span style="display:inline-flex; color:var(--muted); padding:0 12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+              </div>
+            </div>
+            <!-- comments toggle -->
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="flex:1;"><span style="display:block; font-size:13.5px; font-weight:600; color:var(--ink);">Discussion</span><span style="display:block; font-size:11.5px; color:var(--muted);">Let supporters comment on this post.</span></span>
+              <span style="width:38px; height:22px; border-radius:11px; background:var(--accent); position:relative; flex-shrink:0;"><span style="position:absolute; right:2px; top:2px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span>
+            </div>
+          </div>
+          <!-- drawer footer -->
+          <div style="margin-top:auto; padding:16px 20px; border-top:1px solid var(--border); display:flex; gap:10px;">
+            <span style="flex:1; text-align:center; background:var(--accent); color:var(--onacc); font-size:14px; font-weight:600; padding:11px; border-radius:7px;">Publish now</span>
+            <span style="text-align:center; border:1px solid var(--strong); color:var(--ink); font-size:14px; font-weight:600; padding:11px 16px; border-radius:7px;">Schedule</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- annotation -->
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">The split</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Writing vs. shipping.</b> The canvas is only for words and blocks. Every decision <em style="font-style:italic;">about</em> the post &mdash; who sees it, where it lives &mdash; waits in the drawer.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Publish is a two-step.</b> The top-bar button opens this; nothing goes live by accident. Visibility is the first and clearest choice.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Sensible defaults.</b> Public, comments on, slug auto-filled from the title &mdash; a writer can ignore the whole drawer and still publish well.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 06 FOCUS MODE ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">06</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Focus mode &mdash; nothing but the words</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:460px; text-align:right;">One shortcut hides all chrome. The top bar dissolves, the column centres, and a single quiet exit hint sits at the edge. Everything returns on Esc.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <!-- DARK focus frame (writing at night) -->
+      <div class="fr" id="frame-7" data-name="06-focus-mode" style="width:1000px; --bg:#10150f; --ink:#eef2ea; --body:#cdd8cb; --muted:#7f8d7c; --accent:#86c8a6; background:var(--bg); border:1px solid #26302a; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.5); font-family:'Hanken Grotesk',sans-serif; position:relative; overflow:hidden;">
+        <!-- faint top hint bar -->
+        <div style="position:absolute; top:0; left:0; right:0; height:44px; display:flex; align-items:center; justify-content:center; opacity:.35;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.08em; color:var(--muted);">focus mode &middot; press <b style="color:var(--body); background:rgba(255,255,255,.08); border-radius:3px; padding:1px 6px;">Esc</b> to bring everything back</span>
+        </div>
+        <div style="max-width:640px; margin:0 auto; padding:96px 40px 90px;">
+          <h2 style="font-family:'Newsreader',serif; font-weight:500; font-size:38px; line-height:1.1; letter-spacing:-0.02em; color:var(--ink);">Reeling In the Right Gear</h2>
+          <p style="font-size:18px; line-height:1.85; color:var(--body); margin-top:28px;">A rod, a reel, and a small box of the right terminal tackle will out-fish an expensive setup nine times out of ten. The trick was never the money &mdash; it was learning what each piece is <em style="font-style:italic;">for</em>, and leaving the rest at home.</p>
+          <p style="font-size:18px; line-height:1.85; color:var(--body); margin-top:22px;">Start with the rod. A medium-power, fast-action spinning rod around seven feet covers almost everything a beginner will meet: panfish off a dock, bass in the weeds, the occasional hopeful cast for something larger.</p>
+          <p style="font-size:18px; line-height:1.85; color:var(--body); margin-top:22px;">The current line, brightly, sits here &mdash;<span style="display:inline-block; width:2px; height:22px; background:var(--accent); vertical-align:-5px; margin-left:2px;"></span></p>
+        </div>
+      </div>
+
+      <!-- annotation -->
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Calm by design</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">The default already is calm</b> &mdash; focus mode just takes the last step, for people who want the screen to disappear entirely.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Reading type, while writing.</b> Line length and rhythm match the published post, so what you write is what readers will feel.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">The tools never left.</b> <b style="color:#23302a; font-weight:700;">/</b> and text selection still work &mdash; they simply stay invisible until called.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 07 AI ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">07</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Design &middot; the <span style="font-style:italic;">AI</span> tab</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">AI is no longer its own nav item &mdash; it&rsquo;s the first tab of Design, where its output lives anyway. Describe your space and it comes back as a reviewable proposal you tweak before applying to the other tabs.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-8" data-name="07-design-ai" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- tabs -->
+        <div style="display:flex; align-items:center; gap:6px; padding:18px 30px 0;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; color:var(--onacc); background:var(--accent); border-radius:8px 8px 0 0; padding:9px 16px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Theme</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Layout</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Components</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px solid var(--strong); border-radius:8px; padding:7px 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Edit template code</span>
+        </div>
+        <!-- prompt row -->
+        <div style="padding:26px 34px 26px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+          <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:26px; color:var(--ink);">Describe your space</h3>
+          <p style="font-size:14.5px; line-height:1.6; color:var(--muted); margin-top:6px; max-width:560px;">Tell the AI the mood you&rsquo;re after. It proposes colors, typography, and a layout &mdash; you review, tweak, then save it as a draft to publish from <b style="color:var(--body); font-weight:600;">Design</b>.</p>
+          <div style="margin-top:18px; background:var(--card); border:1px solid var(--strong); border-radius:10px; padding:16px 18px;">
+            <p style="font-size:15.5px; line-height:1.6; color:var(--ink);">deep green, a serif body with a quiet mono header, generous whitespace, feels like a well-kept field journal<span style="display:inline-block; width:1.5px; height:18px; background:var(--accent); vertical-align:-3px; margin-left:1px;"></span></p>
+          </div>
+          <!-- starter chips -->
+          <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint); margin-right:2px;">Try</span>
+            <span style="font-size:12.5px; color:var(--chipfg); background:var(--chipbg); border-radius:20px; padding:6px 13px;">warm &amp; literary</span>
+            <span style="font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:6px 13px;">brutalist zine</span>
+            <span style="font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:6px 13px;">calm podcast landing</span>
+            <span style="font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:6px 13px;">minimal mono</span>
+            <span style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+              <span style="font-size:13.5px; color:var(--muted);">Save as draft</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>Generate</span>
+            </span>
+          </div>
+        </div>
+        <!-- result: proposal + preview -->
+        <div style="display:flex;">
+          <!-- proposal -->
+          <div style="width:420px; flex-shrink:0; border-right:1px solid var(--border); padding:22px 26px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent);">Proposal &middot; Field Journal</span><span style="font-size:11.5px; color:var(--faint);">1 of 3</span></div>
+            <!-- palette -->
+            <div style="margin-bottom:20px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font-size:13px; font-weight:600; color:var(--ink);">Palette</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--accent); border:1px solid var(--strong); border-radius:6px; padding:3px 9px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h13M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18.5" cy="18" r="2"/></svg>Tweak</span></div>
+              <div style="display:flex; gap:8px;">
+                <span style="flex:1; height:46px; border-radius:7px; background:#2e4636; border:1px solid rgba(0,0,0,.08);"></span>
+                <span style="flex:1; height:46px; border-radius:7px; background:#5b8a6a;"></span>
+                <span style="flex:1; height:46px; border-radius:7px; background:#c8a24a;"></span>
+                <span style="flex:1; height:46px; border-radius:7px; background:#e9ead9; border:1px solid var(--strong);"></span>
+                <span style="flex:1; height:46px; border-radius:7px; background:#f6f4ec; border:1px solid var(--strong);"></span>
+              </div>
+            </div>
+            <!-- type -->
+            <div style="margin-bottom:20px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font-size:13px; font-weight:600; color:var(--ink);">Typography</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--accent); border:1px solid var(--strong); border-radius:6px; padding:3px 9px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h13M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18.5" cy="18" r="2"/></svg>Tweak</span></div>
+              <div style="border:1px solid var(--border); border-radius:9px; padding:14px 16px; background:var(--card);">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">IBM Plex Mono &middot; header</div>
+                <div style="font-family:'Newsreader',serif; font-size:24px; color:var(--ink); margin-top:6px; line-height:1.15;">The quiet of open water</div>
+                <div style="font-size:13px; color:var(--body); margin-top:6px; line-height:1.55;">Newsreader carries the body &mdash; a warm literary serif that reads long and easy.</div>
+              </div>
+            </div>
+            <!-- layout -->
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font-size:13px; font-weight:600; color:var(--ink);">Layout</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--accent); border:1px solid var(--strong); border-radius:6px; padding:3px 9px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h13M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18.5" cy="18" r="2"/></svg>Tweak</span></div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:6px; padding:5px 11px;">Single column</span>
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:6px; padding:5px 11px;">Generous whitespace</span>
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:6px; padding:5px 11px;">Minimal header</span>
+              </div>
+            </div>
+          </div>
+          <!-- live preview -->
+          <div style="flex:1; padding:22px 26px; background:var(--bg);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">Live preview</span>
+              <div style="display:flex; gap:8px;">
+                <span style="font-size:12.5px; color:var(--body); border:1px solid var(--strong); border-radius:7px; padding:6px 12px;">Regenerate</span>
+                <span style="font-size:12.5px; color:var(--onacc); background:var(--accent); border-radius:7px; padding:6px 13px; font-weight:600;">Apply to Design</span>
+              </div>
+            </div>
+            <!-- mini site render in proposed theme -->
+            <div style="border:1px solid var(--strong); border-radius:10px; overflow:hidden; background:#f6f4ec;">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #e2e0cf;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#2e4636;">nobodyreads<span style="color:#c8a24a;">.me</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#7c8a6a; margin-left:auto;">home &nbsp; about</span>
+              </div>
+              <div style="padding:22px 20px 26px;">
+                <div style="font-family:'Newsreader',serif; font-size:28px; color:#2e4636; line-height:1.1;">Alice</div>
+                <div style="font-family:'Newsreader',serif; font-size:13.5px; color:#5b6a52; margin-top:6px;">Another simple blog engine. For writing mostly to yourself.</div>
+                <div style="height:1px; background:#e2e0cf; margin:18px 0;"></div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9a9a7c;">2 Aug 2026</div>
+                <div style="font-family:'Newsreader',serif; font-size:19px; color:#2e4636; margin-top:5px; line-height:1.2;">Reeling In the Right Gear</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#5b8a6a; margin-top:12px;">read more &rarr;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Why this works</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">A blank box is intimidating.</b> Starter chips give people a way in and quietly teach what kind of prompt works.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">AI proposes, you decide.</b> The result is a reviewable draft &mdash; palette, type, layout &mdash; each tweakable, nothing applied to the live site until you say so.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">It hands off to Design.</b> &ldquo;Apply&rdquo; drops the proposal into the same theme controls below, so AI and manual editing share one language.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 08 DESIGN ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">08</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Design &mdash; a visual theme first, code when you want it</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">Today Design opens straight into raw HTML with six code tabs. Most writers never need that. This leads with a visual Theme editor &mdash; colors, type, density &mdash; and keeps the template code one tab away for those who do.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-9" data-name="08-design-theme" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; --code:#1c2621; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- header -->
+        <div style="display:flex; align-items:center; padding:22px 30px 0;">
+          <div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:24px; color:var(--ink);">Design</h3>
+            <p style="font-size:13.5px; color:var(--muted); margin-top:3px;">Your site&rsquo;s look. Changes save as a draft first.</p>
+          </div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#a06a1f;"><span style="width:6px; height:6px; border-radius:50%; background:#d79a2b;"></span>Unsaved changes</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; color:var(--body); border:1px solid var(--strong); border-radius:8px; padding:9px 15px; font-size:13.5px; font-weight:600;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Save draft</span>
+            <span style="background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:8px;">Publish theme</span>
+          </div>
+        </div>
+        <!-- tabs: visual first, code last -->
+        <div style="display:flex; align-items:center; gap:6px; padding:18px 30px 0;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--body); padding:9px 14px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span>
+          <span style="font-size:13.5px; font-weight:600; color:var(--onacc); background:var(--accent); border-radius:8px 8px 0 0; padding:9px 16px;">Theme</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Layout</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Components</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px solid var(--strong); border-radius:8px; padding:7px 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Edit template code</span>
+        </div>
+        <div style="border-top:1px solid var(--border); display:flex;">
+          <!-- visual controls -->
+          <div style="width:430px; flex-shrink:0; border-right:1px solid var(--border); padding:24px 28px; display:flex; flex-direction:column; gap:24px;">
+            <!-- colors -->
+            <div>
+              <div style="display:flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">Colors<span style="display:inline-flex; color:var(--faint);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 17h.01"/></svg></span></div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:7px; background:#2e4636; border:1px solid rgba(0,0,0,.1);"></span><span style="flex:1; font-size:13.5px; color:var(--ink);">Ink</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">#2E4636</span></div>
+                <div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:7px; background:#5b8a6a;"></span><span style="flex:1; font-size:13.5px; color:var(--ink);">Accent</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">#5B8A6A</span></div>
+                <div style="display:flex; align-items:center; gap:11px;"><span style="width:30px; height:30px; border-radius:7px; background:#f6f4ec; border:1px solid var(--strong);"></span><span style="flex:1; font-size:13.5px; color:var(--ink);">Paper</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--muted);">#F6F4EC</span></div>
+              </div>
+            </div>
+            <!-- type pairing -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">Type pairing</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; border:1.5px solid var(--accent); background:var(--chipbg); border-radius:9px; padding:11px 14px;">
+                <span><span style="font-family:'Newsreader',serif; font-size:17px; color:var(--ink);">Newsreader</span> <span style="font-size:12.5px; color:var(--muted);">+ IBM Plex Mono</span></span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2f6249" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </div>
+            <!-- density slider -->
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">Density &amp; whitespace</span><span style="font-size:12px; color:var(--accent);">Spacious</span></div>
+              <div style="position:relative; height:6px; border-radius:3px; background:var(--strong);"><span style="position:absolute; left:0; top:0; bottom:0; width:72%; background:var(--accent); border-radius:3px;"></span><span style="position:absolute; left:72%; top:50%; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:var(--onacc); border:2px solid var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.15);"></span></div>
+            </div>
+            <!-- corner radius -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">Corners</div>
+              <div style="display:flex; gap:8px;">
+                <span style="flex:1; text-align:center; font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:2px; padding:8px 0;">Sharp</span>
+                <span style="flex:1; text-align:center; font-size:12.5px; color:var(--onacc); background:var(--accent); border-radius:8px; padding:8px 0; font-weight:600;">Soft</span>
+                <span style="flex:1; text-align:center; font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:8px 0;">Round</span>
+              </div>
+            </div>
+          </div>
+          <!-- live preview -->
+          <div style="flex:1; padding:24px 26px; background:var(--bg);">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); margin-bottom:12px;">Live preview &middot; updates as you edit</div>
+            <div style="border:1px solid var(--strong); border-radius:10px; overflow:hidden; background:#f6f4ec;">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #e2e0cf;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#2e4636;">nobodyreads<span style="color:#5b8a6a;">.me</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#7c8a6a; margin-left:auto;">home &nbsp; about</span>
+              </div>
+              <div style="padding:24px 22px 28px;">
+                <div style="font-family:'Newsreader',serif; font-size:30px; color:#2e4636; line-height:1.1;">Alice</div>
+                <div style="font-family:'Newsreader',serif; font-size:14px; color:#5b6a52; margin-top:7px;">Another simple blog engine. For writing mostly to yourself.</div>
+                <div style="height:1px; background:#e2e0cf; margin:20px 0;"></div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9a9a7c;">2 Aug 2026</div>
+                <div style="font-family:'Newsreader',serif; font-size:21px; color:#2e4636; margin-top:5px; line-height:1.2;">Reeling In the Right Gear</div>
+                <div style="font-family:'Newsreader',serif; font-size:13.5px; color:#5b6a52; margin-top:8px; line-height:1.5;">So you&rsquo;ve decided to take up fishing. Before the legend, though, we need to talk about gear.</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#5b8a6a; margin-top:14px;">read more &rarr;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- saved variants strip -->
+        <div style="border-top:1px solid var(--border); background:var(--bg); padding:13px 30px; display:flex; align-items:center; gap:12px;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint); margin-right:2px;">Saved trials</span>
+          <span style="display:inline-flex; align-items:center; gap:8px; background:var(--chipbg); border:1.5px solid var(--accent); border-radius:8px; padding:6px 12px;"><span style="display:flex; gap:2px;"><span style="width:10px; height:10px; border-radius:2px; background:#2e4636;"></span><span style="width:10px; height:10px; border-radius:2px; background:#5b8a6a;"></span><span style="width:10px; height:10px; border-radius:2px; background:#f6f4ec; border:1px solid var(--strong);"></span></span><span style="font-size:12.5px; font-weight:600; color:var(--chipfg);">Field Journal</span></span>
+          <span style="display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--strong); border-radius:8px; padding:6px 12px;"><span style="display:flex; gap:2px;"><span style="width:10px; height:10px; border-radius:2px; background:#1a1a1a;"></span><span style="width:10px; height:10px; border-radius:2px; background:#e5432f;"></span><span style="width:10px; height:10px; border-radius:2px; background:#f2f0e9; border:1px solid var(--strong);"></span></span><span style="font-size:12.5px; color:var(--body);">Brutalist zine</span></span>
+          <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px dashed var(--strong); border-radius:8px; padding:6px 12px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Save current as trial</span>
+          <span style="margin-left:auto; font-size:11.5px; color:var(--faint);">Bank a look, try another &mdash; publish only when you&rsquo;re sure.</span>
+        </div>
+        <!-- collapsed advanced code drawer -->
+        <div style="border-top:1px solid var(--border); background:var(--card); padding:14px 30px; display:flex; align-items:center; gap:12px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l-6-6 6-6M15 6l6 6-6 6"/></svg>
+          <span style="font-size:13.5px; color:var(--body);"><b style="font-weight:600;">Advanced &mdash; template code.</b> HTML, CSS, JS &amp; tokens with live token reference. Everything the visual editor writes, editable by hand.</span>
+          <span style="margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint);">for developers</span>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Taming the template</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Code is opt-in, not the front door.</b> A writer changes colors, type, and spacing with visual controls &mdash; and never has to read a line of HTML.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">One live preview for both.</b> Visual edits and hand-written code render into the same panel, so cause and effect are always visible.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Power fully intact.</b> The raw HTML/CSS/JS/tokens editor is still there, one tab away &mdash; nothing is taken from people who want it.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 08b LAYOUT TAB ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">08<span style="font-size:20px; color:#7c8a82;">b</span></span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Design &middot; the <span style="font-style:italic;">Layout</span> tab</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">Structure, not style: what the header holds, how posts are arranged on the home page, the reading measure, and which bits of metadata show. Every toggle is reflected instantly in the preview.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-10" data-name="08b-design-layout" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- tabs -->
+        <div style="display:flex; align-items:center; gap:6px; padding:18px 30px 0;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--body); padding:9px 14px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Theme</span>
+          <span style="font-size:13.5px; font-weight:600; color:var(--onacc); background:var(--accent); border-radius:8px 8px 0 0; padding:9px 16px;">Layout</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Components</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px solid var(--strong); border-radius:8px; padding:7px 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Edit template code</span>
+        </div>
+        <div style="border-top:1px solid var(--border); display:flex;">
+          <!-- controls -->
+          <div style="width:430px; flex-shrink:0; border-right:1px solid var(--border); padding:24px 28px; display:flex; flex-direction:column; gap:24px;">
+            <!-- home arrangement -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">Home page posts</div>
+              <div style="display:flex; gap:8px;">
+                <span style="flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; border:1.5px solid var(--accent); background:var(--chipbg); border-radius:9px; padding:11px 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f6249" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span style="font-size:12px; font-weight:600; color:var(--chipfg);">List</span></span>
+                <span style="flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; border:1px solid var(--strong); background:var(--bg); border-radius:9px; padding:11px 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg><span style="font-size:12px; color:var(--body);">Grid</span></span>
+                <span style="flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; border:1px solid var(--strong); background:var(--bg); border-radius:9px; padding:11px 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/></svg><span style="font-size:12px; color:var(--body);">Cards</span></span>
+              </div>
+            </div>
+            <!-- reading measure -->
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted);">Reading width</span><span style="font-size:12px; color:var(--accent);">680px &middot; comfortable</span></div>
+              <div style="position:relative; height:6px; border-radius:3px; background:var(--strong);"><span style="position:absolute; left:0; top:0; bottom:0; width:55%; background:var(--accent); border-radius:3px;"></span><span style="position:absolute; left:55%; top:50%; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:var(--onacc); border:2px solid var(--accent); box-shadow:0 1px 4px rgba(0,0,0,.15);"></span></div>
+            </div>
+            <!-- header contents -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">In the header</div>
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <div style="display:flex; align-items:center; gap:11px;"><span style="flex:1; font-size:13.5px; color:var(--ink);">Site name &amp; tagline</span><span style="width:34px; height:20px; border-radius:10px; background:var(--accent); position:relative;"><span style="position:absolute; right:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span></div>
+                <div style="display:flex; align-items:center; gap:11px;"><span style="flex:1; font-size:13.5px; color:var(--ink);">Navigation links</span><span style="width:34px; height:20px; border-radius:10px; background:var(--accent); position:relative;"><span style="position:absolute; right:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span></div>
+                <div style="display:flex; align-items:center; gap:11px;"><span style="flex:1; font-size:13.5px; color:var(--muted);">Subscribe button</span><span style="width:34px; height:20px; border-radius:10px; background:var(--strong); position:relative;"><span style="position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span></div>
+              </div>
+            </div>
+            <!-- per-post metadata -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:11px;">Show on each post</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--chipfg); background:var(--chipbg); border:1px solid var(--accent); border-radius:20px; padding:5px 12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Date</span>
+                <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--chipfg); background:var(--chipbg); border:1px solid var(--accent); border-radius:20px; padding:5px 12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Read more</span>
+                <span style="font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:5px 12px;">Tags</span>
+                <span style="font-size:12.5px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:5px 12px;">Excerpt</span>
+              </div>
+            </div>
+          </div>
+          <!-- live preview -->
+          <div style="flex:1; padding:24px 26px; background:var(--bg);">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); margin-bottom:12px;">Live preview &middot; home page</div>
+            <div style="border:1px solid var(--strong); border-radius:10px; overflow:hidden; background:#f6f4ec;">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #e2e0cf;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:#2e4636;">nobodyreads<span style="color:#5b8a6a;">.me</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#7c8a6a; margin-left:auto;">home &nbsp; about</span>
+              </div>
+              <div style="padding:22px 20px 26px;">
+                <div style="font-family:'Newsreader',serif; font-size:26px; color:#2e4636; line-height:1.1;">Alice</div>
+                <div style="font-family:'Newsreader',serif; font-size:13px; color:#5b6a52; margin-top:5px;">Another simple blog engine.</div>
+                <div style="height:1px; background:#e2e0cf; margin:18px 0;"></div>
+                <!-- list rows -->
+                <div style="margin-bottom:16px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9a9a7c;">2 Aug 2026</div>
+                  <div style="font-family:'Newsreader',serif; font-size:18px; color:#2e4636; margin-top:3px; line-height:1.2;">Reeling In the Right Gear</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#5b8a6a; margin-top:8px;">read more &rarr;</div>
+                </div>
+                <div style="height:1px; background:#e2e0cf; margin:16px 0;"></div>
+                <div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#9a9a7c;">29 Jun 2026</div>
+                  <div style="font-family:'Newsreader',serif; font-size:18px; color:#2e4636; margin-top:3px; line-height:1.2;">My first post</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#5b8a6a; margin-top:8px;">read more &rarr;</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Structure over style</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Choices, not code.</b> List vs. grid, what the header carries, which metadata shows &mdash; the structural decisions that used to mean editing the template.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Named, plain-language toggles.</b> &ldquo;Reading width &middot; comfortable&rdquo; beats a pixel value with no context. The preview confirms every change.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Theme and Layout stay separate.</b> One tab is how it looks, the other is how it&rsquo;s arranged &mdash; so neither becomes a wall of mixed controls.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 08c COMPONENTS TAB ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">08<span style="font-size:20px; color:#7c8a82;">c</span></span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Design &middot; the <span style="font-style:italic;">Components</span> tab</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">The reusable pieces &mdash; buttons, post cards, tags, quotes, code, the subscribe form &mdash; shown as a gallery of live specimens. Pick one to style it; changes ripple everywhere it&rsquo;s used.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-11" data-name="08c-design-components" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- tabs -->
+        <div style="display:flex; align-items:center; gap:6px; padding:18px 30px 0;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--body); padding:9px 14px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Theme</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Layout</span>
+          <span style="font-size:13.5px; font-weight:600; color:var(--onacc); background:var(--accent); border-radius:8px 8px 0 0; padding:9px 16px;">Components</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px solid var(--strong); border-radius:8px; padding:7px 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Edit template code</span>
+        </div>
+        <div style="border-top:1px solid var(--border); display:flex;">
+          <!-- component list -->
+          <div style="width:220px; flex-shrink:0; border-right:1px solid var(--border); padding:16px 14px; display:flex; flex-direction:column; gap:3px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); padding:6px 10px 8px;">Components</div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; background:var(--chipbg); color:var(--chipfg);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4"/></svg><span style="font-size:13.5px; font-weight:600;">Buttons</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--body);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8"/></svg><span style="font-size:13.5px;">Post cards</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--body);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 8.4l-8-5.6a2 2 0 00-2.3 0L2 8.4V20a1 1 0 001 1h6v-6h6v6h6a1 1 0 001-1z" style="display:none"/><path d="M7 7h.01M11 3H4a1 1 0 00-1 1v7l9 9 8-8-9-9z"/></svg><span style="font-size:13.5px;">Tags</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--body);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h10M7 12h6M6 3h12a1 1 0 011 1v16l-4-3H6a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg><span style="font-size:13.5px;">Quotes</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--body);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg><span style="font-size:13.5px;">Code blocks</span></div>
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px; color:var(--body);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg><span style="font-size:13.5px;">Subscribe form</span></div>
+          </div>
+          <!-- specimen + controls -->
+          <div style="flex:1; display:flex;">
+            <!-- specimen preview -->
+            <div style="flex:1; padding:24px 26px; background:var(--bg);">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); margin-bottom:14px;">Buttons &middot; live specimen</div>
+              <div style="background:#f6f4ec; border:1px solid var(--strong); border-radius:10px; padding:26px; display:flex; flex-direction:column; gap:16px; align-items:flex-start;">
+                <span style="background:#2e4636; color:#f6f4ec; font-size:14px; font-weight:600; padding:10px 20px; border-radius:8px;">Subscribe</span>
+                <span style="border:1.5px solid #2e4636; color:#2e4636; font-size:14px; font-weight:600; padding:9px 19px; border-radius:8px;">Read more</span>
+                <span style="color:#5b8a6a; font-size:14px; font-weight:600;">Text link &rarr;</span>
+              </div>
+            </div>
+            <!-- controls for selected component -->
+            <div style="width:250px; flex-shrink:0; border-left:1px solid var(--border); padding:22px 22px; display:flex; flex-direction:column; gap:20px;">
+              <div style="font-size:14px; font-weight:600; color:var(--ink);">Button style</div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Shape</div>
+                <div style="display:flex; gap:7px;">
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:3px; padding:7px 0;">Square</span>
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--onacc); background:var(--accent); border-radius:8px; padding:7px 0; font-weight:600;">Soft</span>
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:7px 0;">Pill</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Fill</div>
+                <div style="display:flex; gap:7px;">
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--onacc); background:var(--accent); border-radius:7px; padding:7px 0; font-weight:600;">Solid</span>
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--accent); background:var(--bg); border:1.5px solid var(--accent); border-radius:7px; padding:7px 0;">Outline</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Weight</div>
+                <div style="display:flex; gap:7px;">
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:7px; padding:7px 0;">Regular</span>
+                  <span style="flex:1; text-align:center; font-size:12px; color:var(--onacc); background:var(--accent); border-radius:7px; padding:7px 0; font-weight:600;">Bold</span>
+                </div>
+              </div>
+              <div style="margin-top:auto; display:flex; align-items:flex-start; gap:8px; background:var(--chipbg); border-radius:8px; padding:10px 12px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2f6249" stroke-width="2" stroke-linecap="round" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+                <span style="font-size:11.5px; line-height:1.5; color:#2f6249;">Applies everywhere this button appears &mdash; subscribe bar, post footers, forms.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Style once, everywhere</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">A gallery, not a spec sheet.</b> Each component is a real, live specimen &mdash; you edit what you can see, not an abstract rule.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Consistency for free.</b> Style the button once; every subscribe bar and post footer updates. No hunting through the template.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Same three-part shell.</b> List &middot; specimen &middot; controls mirrors Theme and Layout, so the whole Design section is learned once.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 09 COLLECTIONS LIST ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">09</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Views, renamed &mdash; <span style="font-style:italic;">Collections</span></span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">A collection is a reusable, embeddable way of showing posts &mdash; filtered, ordered, styled &mdash; that you drop into any page with a token. &ldquo;Views&rdquo; sounded like a database term; &ldquo;Collections&rdquo; says what it is.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-12" data-name="09-collections-list" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif; padding:28px 30px 30px;">
+        <div style="display:flex; align-items:flex-start;">
+          <div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:26px; color:var(--ink);">Collections</h3>
+            <p style="font-size:14px; color:var(--muted); margin-top:5px; max-width:560px;">Reusable lists of posts you can embed anywhere. Drop one into a page with <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--chipfg); background:var(--chipbg); border-radius:4px; padding:1px 6px;">{​{collection:slug}​}</span> &mdash; as many per page as you like.</p>
+          </div>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:10px 18px; border-radius:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New collection</span>
+        </div>
+        <!-- collection cards -->
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px;">
+          <!-- card -->
+          <div style="border:1px solid var(--border); border-radius:11px; overflow:hidden; background:var(--card);">
+            <div style="padding:16px 16px 14px; background:var(--bg); border-bottom:1px solid var(--border);">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="height:8px; width:70%; background:var(--strong); border-radius:3px;"></div>
+                <div style="height:6px; width:90%; background:var(--border); border-radius:3px;"></div>
+                <div style="height:6px; width:52%; background:var(--border); border-radius:3px; margin-bottom:4px;"></div>
+                <div style="height:8px; width:64%; background:var(--strong); border-radius:3px;"></div>
+                <div style="height:6px; width:84%; background:var(--border); border-radius:3px;"></div>
+              </div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:14.5px; font-weight:600; color:var(--ink);">Fishing posts</span><span style="display:inline-flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--bright); margin-left:auto;"><span style="width:6px; height:6px; border-radius:50%; background:var(--bright);"></span>Live</span></div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">By tag &middot; newest first &middot; cards</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                <span style="flex:1; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--chipfg); background:var(--chipbg); border-radius:5px; padding:5px 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">{​{collection:fishing}​}</span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <!-- card 2 -->
+          <div style="border:1px solid var(--border); border-radius:11px; overflow:hidden; background:var(--card);">
+            <div style="padding:16px 16px 14px; background:var(--bg); border-bottom:1px solid var(--border);">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="height:8px; width:60%; background:var(--strong); border-radius:3px;"></div>
+                <div style="height:6px; width:88%; background:var(--border); border-radius:3px; margin-bottom:4px;"></div>
+                <div style="height:8px; width:72%; background:var(--strong); border-radius:3px;"></div>
+                <div style="height:6px; width:80%; background:var(--border); border-radius:3px; margin-bottom:4px;"></div>
+                <div style="height:8px; width:56%; background:var(--strong); border-radius:3px;"></div>
+              </div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:14.5px; font-weight:600; color:var(--ink);">Most liked</span><span style="display:inline-flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--bright); margin-left:auto;"><span style="width:6px; height:6px; border-radius:50%; background:var(--bright);"></span>Live</span></div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">Top 5 by likes &middot; compact list</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                <span style="flex:1; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--chipfg); background:var(--chipbg); border-radius:5px; padding:5px 8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">{​{collection:most-liked}​}</span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+              </div>
+            </div>
+          </div>
+          <!-- draft card -->
+          <div style="border:1px dashed var(--strong); border-radius:11px; overflow:hidden; background:var(--bg);">
+            <div style="padding:16px 16px 14px; border-bottom:1px solid var(--border); opacity:.6;">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="height:8px; width:66%; background:var(--strong); border-radius:3px;"></div>
+                <div style="height:6px; width:84%; background:var(--border); border-radius:3px;"></div>
+                <div style="height:6px; width:48%; background:var(--border); border-radius:3px; margin-bottom:4px;"></div>
+                <div style="height:8px; width:70%; background:var(--strong); border-radius:3px;"></div>
+              </div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div style="display:flex; align-items:center; gap:8px;"><span style="font-size:14.5px; font-weight:600; color:var(--ink);">Series: Field notes</span><span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--faint); margin-left:auto;">Draft</span></div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">Custom query &middot; not embedded yet</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+                <span style="flex:1; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--faint); border:1px dashed var(--strong); border-radius:5px; padding:5px 8px;">publish to embed</span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Why rename</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">&ldquo;View&rdquo; is developer-speak.</b> To a writer it means nothing. <b style="color:#23302a; font-weight:700;">Collection</b> &mdash; a curated set of posts &mdash; matches what they&rsquo;re actually making. (Feeds / Lists work too.)</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Each card shows its shape.</b> A mini render, the plain-language rule (&ldquo;by tag &middot; newest first&rdquo;), and the copy-ready embed token &mdash; no need to open it to remember what it does.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Empty state stays.</b> Your calm &ldquo;Nothing here yet&rdquo; welcome is kept for a first-time list.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 10 CREATE A COLLECTION ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">10</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Create a collection &mdash; <span style="font-style:italic;">describe it</span>, don&rsquo;t code it</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:500px; text-align:right;">Instead of raw SQL and a JS template, you say what you want in plain words. AI writes the query and the layout, shows a live preview, and tucks the generated code in an Advanced panel for anyone who wants to hand-tune it.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-13" data-name="10-collection-create" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; --code:#1c2621; --codeink:#cfe0d5; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- focused top bar with collapsed nav rail -->
+        <div style="display:flex; align-items:center; gap:14px; padding:13px 24px; background:var(--bg); border-bottom:1px solid var(--border);">
+          <span style="display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:13px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Collections</span>
+          <span style="font-family:'Newsreader',serif; font-size:18px; color:var(--ink);">New collection</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#a06a1f;"><span style="width:6px; height:6px; border-radius:50%; background:#d79a2b;"></span>Unsaved</span>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <span style="color:var(--body); border:1px solid var(--strong); border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600;">Save draft</span>
+            <span style="background:var(--accent); color:var(--onacc); font-size:13px; font-weight:600; padding:8px 16px; border-radius:8px;">Publish</span>
+          </div>
+        </div>
+        <div style="display:flex;">
+          <!-- describe / control column -->
+          <div style="width:452px; flex-shrink:0; border-right:1px solid var(--border); padding:24px 26px; display:flex; flex-direction:column; gap:22px;">
+            <!-- describe -->
+            <div>
+              <div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg><span style="font-size:14px; font-weight:600; color:var(--ink);">What do you want to show?</span></div>
+              <div style="background:var(--card); border:1px solid var(--strong); border-radius:10px; padding:14px 15px;">
+                <p style="font-size:14.5px; line-height:1.6; color:var(--ink);">My posts tagged <b style="font-weight:600;">fishing</b>, newest first &mdash; show each as a card with the date, title, and a short excerpt.<span style="display:inline-block; width:1.5px; height:17px; background:var(--accent); vertical-align:-3px; margin-left:1px;"></span></p>
+              </div>
+              <!-- presets -->
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--faint); margin-right:2px;">Or start from</span>
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:5px 12px;">All posts</span>
+                <span style="font-size:12px; color:var(--chipfg); background:var(--chipbg); border:1px solid var(--accent); border-radius:20px; padding:5px 12px;">By tag</span>
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:5px 12px;">Most liked</span>
+                <span style="font-size:12px; color:var(--body); background:var(--bg); border:1px solid var(--strong); border-radius:20px; padding:5px 12px;">A series</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:16px;">
+                <span style="display:inline-flex; align-items:center; gap:7px; background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:10px 18px; border-radius:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>Build it</span>
+                <span style="font-size:12.5px; color:var(--muted);">AI writes the query &amp; layout</span>
+              </div>
+            </div>
+            <div style="height:1px; background:var(--border);"></div>
+            <!-- name + slug -->
+            <div style="display:flex; gap:14px;">
+              <div style="flex:1;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Name</div>
+                <div style="border:1px solid var(--strong); border-radius:8px; padding:9px 12px; font-size:13.5px; color:var(--ink); background:var(--card);">Fishing posts</div>
+              </div>
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Slug <span style="text-transform:none; letter-spacing:0; color:var(--faint);">&middot; auto</span></div>
+                <div style="border:1px solid var(--strong); border-radius:8px; padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--body); background:var(--card);">fishing</div>
+              </div>
+            </div>
+            <!-- embed token -->
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Embed token</div>
+              <div style="display:flex; align-items:center; gap:8px; border:1px solid var(--strong); border-radius:8px; padding:9px 12px; background:var(--card);">
+                <span style="flex:1; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--chipfg);">{​{collection:fishing}​}</span>
+                <span style="display:inline-flex; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg></span>
+              </div>
+              <div style="font-size:11.5px; color:var(--muted); margin-top:7px; line-height:1.5;">Paste into any page&rsquo;s markdown to drop this collection in.</div>
+            </div>
+          </div>
+          <!-- preview + generated code -->
+          <div style="flex:1; padding:24px 26px; background:var(--bg); display:flex; flex-direction:column; gap:20px;">
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint);">Live preview</span>
+                <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--body); border:1px solid var(--strong); border-radius:7px; padding:5px 11px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>Regenerate</span>
+              </div>
+              <div style="border:1px solid var(--strong); border-radius:10px; overflow:hidden; background:var(--card);">
+                <div style="padding:16px 18px; display:flex; flex-direction:column; gap:14px;">
+                  <div style="border-bottom:1px solid var(--border); padding-bottom:14px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint);">2 Aug 2026</div>
+                    <div style="font-family:'Newsreader',serif; font-size:18px; color:var(--ink); margin-top:3px; line-height:1.2;">Reeling In the Right Gear</div>
+                    <div style="font-size:12.5px; color:var(--body); margin-top:5px; line-height:1.5;">So you&rsquo;ve decided to take up fishing. Before the legend, we need to talk gear.</div>
+                  </div>
+                  <div>
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint);">18 Jul 2026</div>
+                    <div style="font-family:'Newsreader',serif; font-size:18px; color:var(--ink); margin-top:3px; line-height:1.2;">Reading the Water</div>
+                    <div style="font-size:12.5px; color:var(--body); margin-top:5px; line-height:1.5;">Where the fish are is rarely where you&rsquo;d guess. A short field guide.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- advanced generated code -->
+            <div style="border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; background:var(--card); border-bottom:1px solid var(--border);">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                <span style="font-size:13px; font-weight:600; color:var(--body);">Advanced &mdash; query &amp; template</span>
+                <span style="display:inline-flex; align-items:center; gap:5px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent); background:var(--chipbg); border-radius:5px; padding:2px 7px; margin-left:auto;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>Written by AI</span>
+              </div>
+              <div style="background:var(--code); padding:14px 16px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:#6f8a7c; margin-bottom:8px;">SQL query</div>
+                <pre style="margin:0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.65; color:var(--codeink); white-space:pre-wrap;">SELECT slug, title, excerpt, date
+FROM page_public
+WHERE tag = 'fishing' AND published = 1
+ORDER BY date DESC LIMIT 10</pre>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:#6f8a7c; margin:14px 0 8px;">Template</div>
+                <pre style="margin:0; font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.65; color:var(--codeink); white-space:pre-wrap;">rows.map(r =&gt; `&lt;article class="card"&gt;
+  &lt;time&gt;${r.date}&lt;/time&gt;
+  &lt;h3&gt;${r.title}&lt;/h3&gt; …`)</pre>
+                <div style="display:flex; align-items:flex-start; gap:8px; margin-top:14px; background:rgba(255,255,255,.06); border-radius:7px; padding:9px 11px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8fd3b0" stroke-width="2" stroke-linecap="round" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+                  <span style="font-size:11px; line-height:1.5; color:#9db8a9;">Read-only tables, tenant-scoped automatically. Edit by hand if you like &mdash; the preview stays in sync.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Untangling new &amp; edit</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Words, not a query language.</b> The old screen opened on SQL and a JS function &mdash; a wall for most writers. Now you describe the result and AI writes both.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">The code isn&rsquo;t gone.</b> It&rsquo;s generated, labelled, and editable in the Advanced panel &mdash; power users keep full control, beginners never have to look.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Less chrome to fight.</b> The full sidebar collapses to a &ldquo;&larr; Collections&rdquo; breadcrumb, so creating one is a calm, focused task &mdash; not a form buried in nav.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">New and Edit are one screen.</b> Same layout either way &mdash; nothing new to learn to change an existing collection.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 11 DESIGN / BRAND ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">11</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Site identity, rehoused &mdash; Design &middot; <span style="font-style:italic;">Brand</span></span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:520px; text-align:right;">Name, tagline and logo are what visitors see &mdash; and they feed the same theme tokens as the rest of Design. So they move out of the borrowed Content route into a Brand tab, with the live preview the old form never had.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-14" data-name="11-design-brand" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif;">
+        <!-- header -->
+        <div style="display:flex; align-items:center; padding:22px 30px 0;">
+          <div>
+            <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:24px; color:var(--ink);">Design</h3>
+            <p style="font-size:13.5px; color:var(--muted); margin-top:3px;">Your site&rsquo;s look and identity. Changes save as a draft first.</p>
+          </div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#a06a1f;"><span style="width:6px; height:6px; border-radius:50%; background:#d79a2b;"></span>Unsaved changes</span>
+            <span style="color:var(--body); border:1px solid var(--strong); border-radius:8px; padding:9px 15px; font-size:13.5px; font-weight:600;">Save draft</span>
+            <span style="background:var(--accent); color:var(--onacc); font-size:13.5px; font-weight:600; padding:9px 18px; border-radius:8px;">Publish</span>
+          </div>
+        </div>
+        <!-- tabs: Brand first -->
+        <div style="display:flex; align-items:center; gap:6px; padding:18px 30px 0;">
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; font-weight:600; color:var(--onacc); background:var(--accent); border-radius:8px 8px 0 0; padding:9px 16px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 6.9L12 18.6 5.8 22l1.4-6.9L2 9.4l7-.9z"/></svg>Brand</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--body); padding:9px 14px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>AI</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Theme</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Layout</span>
+          <span style="font-size:13.5px; color:var(--body); padding:9px 14px;">Components</span>
+          <span style="margin-left:auto; display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted); border:1px solid var(--strong); border-radius:8px; padding:7px 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Edit template code</span>
+        </div>
+        <div style="border-top:1px solid var(--border); display:flex;">
+          <!-- controls -->
+          <div style="width:430px; flex-shrink:0; border-right:1px solid var(--border); padding:24px 28px; display:flex; flex-direction:column; gap:22px;">
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Site name</div>
+              <div style="border:1px solid var(--strong); border-radius:8px; padding:10px 13px; font-size:14.5px; color:var(--ink); background:var(--card);">Alice</div>
+              <div style="font-size:11.5px; color:var(--muted); margin-top:6px;">Shown in the header. Feeds <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--chipfg);">{&#8203;{siteName}&#8203;}</span>.</div>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Tagline</div>
+              <div style="border:1px solid var(--strong); border-radius:8px; padding:10px 13px; font-size:14.5px; color:var(--ink); background:var(--card);">Another simple blog engine.</div>
+              <div style="font-size:11.5px; color:var(--muted); margin-top:6px;">Feeds <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--chipfg);">{&#8203;{siteTagline}&#8203;}</span>.</div>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Logo</div>
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:64px; height:64px; border-radius:10px; border:1px dashed var(--strong); background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 10px,#dbe3da 10px,#dbe3da 20px); display:flex; align-items:center; justify-content:center; color:var(--faint); flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <div style="display:flex; gap:8px;">
+                    <span style="font-size:12.5px; color:var(--onacc); background:var(--accent); border-radius:7px; padding:7px 13px; font-weight:600;">Upload</span>
+                    <span style="font-size:12.5px; color:var(--body); border:1px solid var(--strong); border-radius:7px; padding:7px 13px;">From library</span>
+                  </div>
+                  <span style="font-size:11.5px; color:var(--muted);">No logo &mdash; the site name shows instead.</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:8px; background:var(--chipbg); border-radius:8px; padding:11px 13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2f6249" stroke-width="2" stroke-linecap="round" style="flex-shrink:0; margin-top:1px;"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+              <span style="font-size:11.5px; line-height:1.5; color:#2f6249;">Favicon &amp; the default social image now live in <b style="font-weight:700;">Settings &middot; Sharing &amp; SEO</b> &mdash; they&rsquo;re about how your site looks <em style="font-style:italic;">elsewhere</em>, not on the page.</span>
+            </div>
+          </div>
+          <!-- live preview -->
+          <div style="flex:1; padding:24px 26px; background:var(--bg);">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); margin-bottom:12px;">Live preview &middot; your header</div>
+            <div style="border:1px solid var(--strong); border-radius:10px; overflow:hidden; background:#f6f4ec;">
+              <div style="display:flex; align-items:center; gap:12px; padding:20px 22px; border-bottom:1px solid #e2e0cf;">
+                <span style="font-family:'Newsreader',serif; font-size:24px; color:#2e4636;">Alice</span>
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#7c8a6a; margin-left:auto;">home &nbsp; about</span>
+              </div>
+              <div style="padding:22px;">
+                <div style="font-family:'Newsreader',serif; font-size:15px; color:#5b6a52;">Another simple blog engine.</div>
+                <div style="height:1px; background:#e2e0cf; margin:18px 0;"></div>
+                <div style="font-family:'Newsreader',serif; font-size:19px; color:#2e4636; line-height:1.2;">Reeling In the Right Gear</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#5b8a6a; margin-top:12px;">read more &rarr;</div>
+              </div>
+            </div>
+            <div style="font-size:11.5px; color:var(--muted); margin-top:12px; line-height:1.5;">Name and tagline update here as you type &mdash; the same surface Theme, Layout, and Components preview into.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">Why Design</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">It was homeless.</b> The edit form lived under Content&rsquo;s <span style="font-family:'IBM Plex Mono',monospace; font-size:12px;">/editor/site</span> route while Settings only linked to it &mdash; owned by neither.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Same tokens, same preview.</b> Name, tagline, and logo drive theme tokens &mdash; so they belong beside Theme, sharing one live preview instead of a blind form.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">First tab for a reason.</b> Identity comes before styling &mdash; you name the place, then dress it.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ 12 SETTINGS REFOCUSED ============================================================ -->
+  <div style="max-width:1400px; margin:56px auto 0;">
+    <div style="display:flex; align-items:baseline; gap:18px; padding-bottom:14px; border-bottom:1px solid #a9b1a5; margin-bottom:26px;">
+      <span style="font-family:'Newsreader',serif; font-size:30px; color:#4e8a6b; line-height:1;">12</span>
+      <span style="font-family:'Newsreader',serif; font-size:26px; font-weight:500; color:#23302a;">Settings, refocused &mdash; the <span style="font-style:italic;">other</span> half</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5b6a61; margin-left:auto; letter-spacing:0.04em; max-width:520px; text-align:right;">With brand moved to Design, Settings keeps only the operational essentials &mdash; and gains a purposeful home for the sharing metadata that was buried inside &ldquo;Site identity&rdquo;.</span>
+    </div>
+    <div style="display:flex; gap:36px; flex-wrap:wrap; align-items:flex-start;">
+
+      <div class="fr" id="frame-15" data-name="12-settings" style="width:1000px; --bg:#eef1ec; --canvas:#f4f7f2; --card:#f7f9f6; --ink:#23302a; --body:#2f3c34; --muted:#7c8a82; --faint:#9aa89f; --accent:#40765b; --bright:#4e8a6b; --border:#dbe3da; --strong:#c3d0c8; --chipbg:#d7e7dd; --chipfg:#2f6249; --onacc:#ffffff; background:var(--canvas); border:1px solid var(--strong); border-radius:12px; overflow:hidden; box-shadow:0 6px 22px rgba(30,50,40,.12); font-family:'Hanken Grotesk',sans-serif; padding:30px 34px 34px;">
+        <h3 style="font-family:'Newsreader',serif; font-weight:500; font-size:26px; color:var(--ink);">Settings</h3>
+        <p style="font-size:14px; color:var(--muted); margin-top:4px;">The essentials. Nothing you don&rsquo;t need.</p>
+
+        <!-- moved pointer -->
+        <div style="display:flex; align-items:center; gap:10px; margin-top:22px; background:var(--chipbg); border-radius:9px; padding:12px 15px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f6249" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span style="font-size:13.5px; color:#2f6249;">Looking for name, tagline &amp; logo? They moved to <b style="font-weight:700;">Design &middot; Brand</b>.</span>
+        </div>
+
+        <!-- Sharing & SEO -->
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin:26px 0 12px;">Sharing &amp; SEO</div>
+        <div style="border:1px solid var(--border); border-radius:11px; background:var(--card); padding:22px 24px; display:flex; gap:30px;">
+          <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Favicon</div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:8px; border:1px dashed var(--strong); background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 8px,#dbe3da 8px,#dbe3da 16px);"></div>
+                <span style="font-size:12.5px; color:var(--onacc); background:var(--accent); border-radius:7px; padding:7px 13px; font-weight:600;">Upload</span>
+                <span style="font-size:11.5px; color:var(--muted);">The little icon in the browser tab.</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:9px;">Default social image</div>
+              <div style="height:96px; border-radius:9px; border:1px dashed var(--strong); background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 12px,#dbe3da 12px,#dbe3da 24px); display:flex; align-items:center; justify-content:center; gap:8px; color:var(--muted);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:12.5px;">Add an image (1200&times;630)</span></div>
+              <div style="font-size:11.5px; color:var(--muted); margin-top:7px;">Shown when a link to your site is shared. Feeds the Open Graph tags.</div>
+            </div>
+          </div>
+          <!-- share preview -->
+          <div style="width:290px; flex-shrink:0;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--faint); margin-bottom:10px;">Preview</div>
+            <!-- browser tab -->
+            <div style="display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--strong); border-radius:8px 8px 0 0; padding:8px 12px;">
+              <span style="width:14px; height:14px; border-radius:3px; background:var(--strong);"></span>
+              <span style="font-size:12px; color:var(--body);">Alice</span>
+              <span style="margin-left:auto; color:var(--faint);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+            </div>
+            <!-- social card -->
+            <div style="border:1px solid var(--strong); border-top:none; border-radius:0 0 10px 10px; overflow:hidden;">
+              <div style="height:120px; background:repeating-linear-gradient(135deg,#e4eae3,#e4eae3 12px,#dbe3da 12px,#dbe3da 24px);"></div>
+              <div style="padding:12px 14px; background:var(--card);">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--faint); text-transform:uppercase; letter-spacing:0.06em;">nobodyreads.me</div>
+                <div style="font-size:13.5px; font-weight:600; color:var(--ink); margin-top:3px;">Alice</div>
+                <div style="font-size:12px; color:var(--muted); margin-top:2px;">Another simple blog engine.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email subscriptions -->
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin:26px 0 12px;">Email subscriptions</div>
+        <div style="border:1px solid var(--border); border-radius:11px; background:var(--card); padding:18px 24px; display:flex; align-items:center; gap:16px;">
+          <div style="flex:1;"><div style="font-size:15px; font-weight:600; color:var(--ink);">Send new posts to subscribers</div><div style="font-size:12.5px; color:var(--muted); margin-top:3px;">Currently <b style="font-weight:700; color:var(--body);">disabled</b></div></div>
+          <span style="width:44px; height:24px; border-radius:12px; background:var(--strong); position:relative; flex-shrink:0;"><span style="position:absolute; left:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#fff;"></span></span>
+        </div>
+        <div style="font-size:12px; color:var(--muted); margin-top:10px;">Subscriber numbers live under <b style="font-weight:600; color:var(--body);">Community</b>.</div>
+      </div>
+
+      <div style="width:300px; padding-top:8px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#40765b; margin-bottom:14px;">A clean split</div>
+        <ul style="list-style:none; display:flex; flex-direction:column; gap:16px;">
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Seen on the site &rarr; Design.</b> Name, tagline, logo.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Seen elsewhere &rarr; Settings.</b> Favicon and the social image are metadata for tabs and link previews &mdash; here they get a real preview instead of hiding in a form.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">No more borrow.</b> Settings stops linking off to a Content route; each setting is owned by the section it belongs to.</li>
+          <li style="font-size:14.5px; line-height:1.6; color:#3a463d;"><b style="color:#23302a; font-weight:700;">Still &ldquo;nothing you don&rsquo;t need.&rdquo;</b> The page stays short &mdash; two cards and a pointer.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================ PRINCIPLES ============================================================ -->
+  <div style="max-width:1400px; margin:64px auto 0; border-top:1px solid #a9b1a5; padding-top:34px;">
+    <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#40765b; margin-bottom:22px;">The whole idea, in four lines</div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:30px;">
+      <div><div style="font-family:'Newsreader',serif; font-size:22px; color:#4e8a6b; margin-bottom:8px;">01</div><div style="font-size:15px; font-weight:600; color:#23302a; margin-bottom:5px;">Blank by default.</div><div style="font-size:13.5px; line-height:1.55; color:#4a574d;">A new page is a title and a cursor. No toolbar wall to decode before you can write a sentence.</div></div>
+      <div><div style="font-family:'Newsreader',serif; font-size:22px; color:#4e8a6b; margin-bottom:8px;">02</div><div style="font-size:15px; font-weight:600; color:#23302a; margin-bottom:5px;">Power on demand.</div><div style="font-size:13.5px; line-height:1.55; color:#4a574d;">Every function is one keystroke, hover, or drawer away &mdash; present the instant you reach for it, gone when you don&rsquo;t.</div></div>
+      <div><div style="font-family:'Newsreader',serif; font-size:22px; color:#4e8a6b; margin-bottom:8px;">03</div><div style="font-size:15px; font-weight:600; color:#23302a; margin-bottom:5px;">Everything explains itself.</div><div style="font-size:13.5px; line-height:1.55; color:#4a574d;">Rich tooltips and a three-step first-run tour teach the tools in place &mdash; no manual, no guessing.</div></div>
+      <div><div style="font-family:'Newsreader',serif; font-size:22px; color:#4e8a6b; margin-bottom:8px;">04</div><div style="font-size:15px; font-weight:600; color:#23302a; margin-bottom:5px;">Complexity, contained.</div><div style="font-size:13.5px; line-height:1.55; color:#4a574d;">Media and layout controls live on the block itself, using one repeated pattern so a single lesson covers them all.</div></div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

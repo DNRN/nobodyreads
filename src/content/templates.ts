@@ -9,7 +9,7 @@ import { escapeHtml } from "../shared/http.js";
  * best as a scannable grid. An owner who picks one explicitly in the theme
  * editor overrides the guess.
  */
-export type PostListVariant = "auto" | "default" | "compact" | "card";
+export type PostListVariant = "auto" | "default" | "compact" | "grid" | "card";
 
 /** Above this many posts, `auto` switches from rows to a card grid. */
 const ROWS_MAX_POSTS = 4;

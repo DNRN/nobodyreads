@@ -111,7 +111,8 @@ export async function resolveViews(
 async function postListVariant(db: Database, tenantId: string): Promise<PostListVariant> {
   const template = await getSiteTemplate(db, tenantId);
   const variant = template?.components?.postPreview?.variant;
-  return variant === "default" || variant === "compact" || variant === "card" ? variant : "auto";
+  const known: PostListVariant[] = ["default", "compact", "grid", "card"];
+  return known.includes(variant as PostListVariant) ? (variant as PostListVariant) : "auto";
 }
 
 /** Render each distinct {{collection:slug}} in `markdown` to its HTML. */

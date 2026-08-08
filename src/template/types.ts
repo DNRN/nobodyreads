@@ -27,6 +27,14 @@ export interface TokenSet {
   lineHeight: string;
   maxWidth: string;
   containerPadding: string;
+  /**
+   * Base of the corner-radius scale. `--radius-sm` and `--radius-lg` derive
+   * from it (half and double), so one control moves every rounded surface.
+   *
+   * Optional: a theme stored before this existed simply omits it and the scale
+   * falls back to the values it has always had.
+   */
+  radius?: string;
 }
 
 export interface HeaderSectionConfig {
@@ -36,6 +44,10 @@ export interface HeaderSectionConfig {
   showTagline: boolean;
   logoText: string;
   logoDotText: string;
+  /** Navigation links in the header. Omitted means shown. */
+  showNav?: boolean;
+  /** Subscribe form in the header. Omitted means hidden. */
+  showSubscribe?: boolean;
 }
 
 export interface ContentSectionConfig {
@@ -61,6 +73,23 @@ export type SectionConfig =
   | HeaderSectionConfig
   | ContentSectionConfig
   | FooterSectionConfig;
+
+/**
+ * Which supporting details a post listing shows.
+ *
+ * Modelled here rather than as component tokens because these are booleans, and
+ * the component token types are CSS values — a toggle expressed as
+ * `display: none` would render as a text box in the generic Components editor.
+ *
+ * Every flag omitted means shown, so a theme stored before this existed keeps
+ * rendering exactly as it did.
+ */
+export interface PostMetaConfig {
+  date?: boolean;
+  excerpt?: boolean;
+  readMore?: boolean;
+  tags?: boolean;
+}
 
 export interface ComponentConfig {
   variant?: string;
@@ -104,4 +133,5 @@ export interface SiteTemplateDefinition {
   layoutHtml?: string;
   customTokens?: CustomToken[];
   themeMeta?: ThemeMeta;
+  postMeta?: PostMetaConfig;
 }

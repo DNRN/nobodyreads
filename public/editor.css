@@ -3583,3 +3583,104 @@
 		display: none;
 	}
 }
+
+/* ----- Image block (docs/designs/admin-editor.md §6.04) -----
+   Controls live on the object they affect, in the same dark bar every other
+   block type will use. */
+.nr-admin .nbr-image {
+	position: relative;
+	margin: 22px 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.nr-admin .nbr-image[data-align="center"] {
+	align-items: center;
+}
+
+.nr-admin .nbr-image[data-align="right"] {
+	align-items: flex-end;
+}
+
+.nr-admin .nbr-image-img {
+	display: block;
+	max-width: 100%;
+	border-radius: var(--nr-radius-control);
+}
+
+.nr-admin .nbr-image.is-selected .nbr-image-img {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+/* The bar sits over the top edge of the image and appears on hover, on
+   keyboard focus, or when the node is selected — reaching for it should not
+   require a mouse. */
+.nr-admin .nbr-image-bar {
+	position: absolute;
+	top: 8px;
+	left: 50%;
+	transform: translateX(-50%) translateY(-4px);
+	opacity: 0;
+	visibility: hidden;
+	transition:
+		opacity 0.12s ease,
+		transform 0.12s ease,
+		visibility 0.12s;
+	z-index: 5;
+}
+
+.nr-admin .nbr-image:hover .nbr-image-bar,
+.nr-admin .nbr-image.is-selected .nbr-image-bar,
+.nr-admin .nbr-image:focus-within .nbr-image-bar {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(0);
+}
+
+.nr-admin .nbr-image-altrow {
+	display: none;
+	width: 100%;
+	max-width: 520px;
+	margin-top: 8px;
+}
+
+.nr-admin .nbr-image.is-editing-alt .nbr-image-altrow {
+	display: block;
+}
+
+.nr-admin .nbr-image-altinput {
+	width: 100%;
+	padding: 8px 11px;
+	font-family: var(--nr-font);
+	font-size: 13px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-image-altinput:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+/* Soft warning, never a blocker — publishing is never prevented by it. */
+.nr-admin .nbr-image-nudge {
+	display: none;
+	margin-top: 8px;
+	padding: 6px 10px;
+	border: 1px solid var(--nr-warning);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-family: var(--nr-font);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.nr-admin .nbr-image.has-no-alt .nbr-image-nudge {
+	display: block;
+}

@@ -78,7 +78,8 @@
   let pickerOpen = $state(false);
   // Which field an open MediaPicker selection should land in: the post body
   // (inserted at the caret) or the Share image field (replaces its value).
-  let pickerTarget: "body" | "seo" = "body";
+  let pickerTarget: "body" | "seo" | "pick" = "body";
+  let resolvePick: ((url: string | null) => void) | null = null;
 
   // --- Chrome state --------------------------------------------------------
   let drawerOpen = $state(false);
@@ -317,6 +318,11 @@
 
   function insertImage({ url, name }: { url: string; name: string }) {
     pickerOpen = false;
+    if (pickerTarget === "pick") {
+      resolvePick?.(url);
+      resolvePick = null;
+      return;
+    }
     if (pickerTarget === "seo") {
       seoOgImage = url;
       return;
@@ -331,13 +337,27 @@
 
   function closePicker() {
     pickerOpen = false;
+    resolvePick?.(null);
+    resolvePick = null;
+  }
+
+  /**
+   * Open the picker and resolve with the chosen URL, or null if it was closed
+   * without a choice. Used by controls that need the result back rather than
+   * inserting at the caret — currently the image block's Replace button.
+   */
+  function pickImageUrl(): Promise<string | null> {
+    resolvePick?.(null);
+    pickerTarget = "pick";
+    pickerOpen = true;
+    return new Promise((resolve) => (resolvePick = resolve));
   }
 
   async function createCrepe(initial: string) {
     const [
       { Crepe },
       { upload, uploadConfig },
-      { nobodyreadsMilkdownPlugins },
+      { nobodyreadsMilkdownPlugins, nobodyreadsImageBlock, configureImageBlock },
       { commandsCtx },
       { clearTextInCurrentBlockCommand },
     ] = await Promise.all([
@@ -458,7 +478,12 @@
         }));
       })
       .use(upload)
-      .use(nobodyreadsMilkdownPlugins);
+      .use(nobodyreadsMilkdownPlugins)
+      .use(nobodyreadsImageBlock);
+    // The image block's Replace button opens the same picker as everything
+    // else; the plugin stays unaware of how media is stored or browsed.
+    configureImageBlock({ onReplace: pickImageUrl });
+
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown) => {
         content = markdown;

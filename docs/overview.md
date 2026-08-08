@@ -224,6 +224,8 @@ All three admin editors are interactive **Svelte islands** in `astro/components/
 - `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
 - `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
 
+Images use a **NodeView** in the same directory (`image-block.ts`): a hover bar for alignment, width, replace, alt text and delete, plus a soft nudge when alt text is missing. Crepe's own `ImageBlock` feature stays disabled because it stores its aspect ratio in the alt slot, which is where our `![alt|400px|right]` hints live; `parseImageAlt`/`formatImageAlt` in `src/shared/image-markdown.ts` are the single reader and writer of that grammar, shared with the server renderer.
+
 The custom Markdown constructs (`[[wiki]]`, `{{collection:slug}}`) are Milkdown **atom-node** plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`): a shared `$remark` transform/serializer plus a `$node` schema and input rule each. Modelling them as dedicated nodes (never plain text) is what keeps the Markdown serializer from escaping them — round-trip fidelity verified end-to-end (`prototype/`). The other editor helpers in `src/admin/client/` are exported as `nobodyreads/editor`.
 
 Svelte powers admin islands only; the public site ships no islands and stays zero-framework. There is no longer a separate `build:editors` step. ProseMirror is deduped via `astro.config.mjs` `vite.resolve.dedupe` (Milkdown breaks with multiple ProseMirror instances).

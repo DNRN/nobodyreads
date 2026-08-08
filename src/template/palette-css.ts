@@ -108,14 +108,26 @@ export function editorDeclarations(theme: ThemeName): Record<string, string> {
     "--nr-bg": p.bg,
     "--nr-surface": p.surface,
     "--nr-card": p.card,
+    "--nr-canvas": p.canvas,
+    "--nr-nav": p.nav,
+    "--nr-bar": p.bar,
     "--nr-text": p.text,
     "--nr-muted": p.muted,
     "--nr-faint": p.faint,
     "--nr-border": p.border,
+    "--nr-border-strong": p.borderStrong,
     "--nr-hover": alpha(p.text, hoverOpacity),
     "--nr-accent": p.accent,
+    // The fill under white text — a primary button, an active tab. It is the
+    // same value as `link` by construction rather than by coincidence: both
+    // want the accent darkened until 4.5:1 holds against `bg`, and a button
+    // that stopped tracking the link colour would just be a second answer to
+    // the same question. Split them the day they need to disagree.
+    "--nr-accent-strong": p.link,
+    "--nr-accent-bright": p.accentBright,
     "--nr-accent-text": p.accentText,
     "--nr-accent-soft": p.accentSoft,
+    "--nr-chip-text": p.chipText,
     "--nr-accent-tint": p.accentTint,
     // The editor's chrome links are ink, going accent on hover — unlike a
     // plot's body links, they are not sitting in running prose.
@@ -126,18 +138,25 @@ export function editorDeclarations(theme: ThemeName): Record<string, string> {
     "--nr-danger": p.danger,
     "--nr-danger-soft": alpha(p.danger, softOpacity),
     "--nr-warning": p.warning,
+    "--nr-warning-bright": p.warningBright,
     "--nr-warning-soft": alpha(p.warning, warningOpacity),
     "--nr-code": p.bodyText,
     "--nr-codebg": p.codeBg,
+    "--nr-overlay": p.overlay,
+    "--nr-overlay-text": p.overlayText,
+    "--nr-danger-overlay": p.dangerOverlay,
     "--nr-shadow": `0 8px 24px -18px ${alpha(p.shadowInk, shadowOpacity)}`,
     "--nr-shadow-lg": `0 30px 60px -34px ${alpha(p.shadowInk, shadowOpacity)}`,
   };
 
   if (theme === "light") {
     // Mirrors the platform chrome so the admin matches the site around it.
-    // Declared once; the dark block inherits both.
+    // Declared once; the dark block inherits all three.
     declarations["--nr-font"] = FONTS.sans;
     declarations["--nr-font-mono"] = FONTS.mono;
+    // Screen titles, post titles and the editor canvas — the editorial voice.
+    // UI chrome (labels, buttons, controls) never uses this.
+    declarations["--nr-font-serif"] = FONTS.serif;
   }
 
   return declarations;

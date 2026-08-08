@@ -137,6 +137,7 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 |-------|---------|
 | `tenant` | Platform-mode user accounts (not used in default single-tenant setup) |
 | `page` | All content: posts, static pages, and the home page |
+| `site_template_trial` | Named theme trials — a look banked deliberately, separate from revision history |
 | `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` (legacy `{{view:slug}}` still parses) |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |

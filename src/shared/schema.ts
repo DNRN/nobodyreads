@@ -39,6 +39,27 @@ export const siteTemplateRevision = sqliteTable("site_template_revision", {
     .default(sql`(datetime('now'))`),
 });
 
+// --- Saved theme trials ---
+//
+// Deliberately separate from `site_template_revision`. A revision is history —
+// every save appends one. A trial is a look somebody deliberately banked and
+// named so they can try another and come back to it. Keeping them in one table
+// would mean either naming every autosave or hiding most rows from the strip.
+
+export const siteTemplateTrial = sqliteTable(
+  "site_template_trial",
+  {
+    trialId: text("trial_id").notNull(),
+    tenantId: text("tenant_id").notNull().default("_default"),
+    name: text("name").notNull(),
+    template: text("template", { mode: "json" }).notNull().default({}),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => [primaryKey({ columns: [table.trialId, table.tenantId] })]
+);
+
 // --- Key-value settings per tenant ---
 
 export const siteSettings = sqliteTable(

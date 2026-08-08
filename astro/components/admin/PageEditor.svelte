@@ -334,12 +334,19 @@
   }
 
   async function createCrepe(initial: string) {
-    const [{ Crepe }, { upload, uploadConfig }, { nobodyreadsMilkdownPlugins }] =
-      await Promise.all([
-        import("@milkdown/crepe"),
-        import("@milkdown/kit/plugin/upload"),
-        import("nobodyreads/editor/milkdown"),
-      ]);
+    const [
+      { Crepe },
+      { upload, uploadConfig },
+      { nobodyreadsMilkdownPlugins },
+      { commandsCtx },
+      { clearTextInCurrentBlockCommand },
+    ] = await Promise.all([
+      import("@milkdown/crepe"),
+      import("@milkdown/kit/plugin/upload"),
+      import("nobodyreads/editor/milkdown"),
+      import("@milkdown/kit/core"),
+      import("@milkdown/kit/preset/commonmark"),
+    ]);
 
     crepe = new Crepe({
       root: crepeMount,
@@ -354,6 +361,83 @@
       },
       featureConfigs: {
         [Crepe.Feature.Placeholder]: { text: "Keep writing, or press / for blocks…" },
+        [Crepe.Feature.BlockEdit]: {
+          /**
+           * Regroup the slash menu as Basic · Media · Structure, ordered by how
+           * often a post actually reaches for them (§6.02). Crepe ships them as
+           * Text · List · Advanced in that order, which buries images below
+           * task lists and calls a code block "advanced".
+           *
+           * The default items are rebuilt rather than redefined: `buildMenu`
+           * runs after Crepe has populated the builder, so reading each item
+           * back out keeps its `onRun` — reimplementing those would be a second
+           * copy of Crepe's command wiring, drifting on every upgrade.
+           */
+          buildMenu: (builder: any) => {
+            const imageMenuItem = {
+              key: "image",
+              label: "Image",
+              icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 4.5-4 3.5 3L16 12l4 4"/></svg>`,
+              onRun: (menuCtx: any) => {
+                // The typed "/" is still in the document; Crepe's own items
+                // clear it before acting, so this has to as well.
+                menuCtx.get(commandsCtx).call(clearTextInCurrentBlockCommand.key);
+                openPicker("body");
+              },
+            };
+
+            const take = (groupKey: string, itemKey: string) => {
+              try {
+                return builder
+                  .getGroup(groupKey)
+                  .group.items.find((item: any) => item.key === itemKey);
+              } catch {
+                return undefined;
+              }
+            };
+
+            const layout: { key: string; label: string; items: any[] }[] = [
+              {
+                key: "basic",
+                label: "Basic",
+                items: [
+                  take("text", "text"),
+                  take("text", "h2"),
+                  take("text", "h3"),
+                  take("text", "quote"),
+                  take("text", "divider"),
+                ],
+              },
+              {
+                key: "media",
+                label: "Media",
+                // Crepe only contributes its own image item when the ImageBlock
+                // feature is on, and we keep that off so `![alt|400px|right]`
+                // survives (see `features` above). Without this entry the Media
+                // group would offer everything except the obvious thing.
+                items: [imageMenuItem, take("advanced", "code")],
+              },
+              {
+                key: "structure",
+                label: "Structure",
+                items: [
+                  take("list", "bullet-list"),
+                  take("list", "ordered-list"),
+                  take("list", "task-list"),
+                  take("advanced", "table"),
+                ],
+              },
+            ];
+
+            builder.clear();
+            for (const group of layout) {
+              const present = group.items.filter(Boolean);
+              if (present.length === 0) continue;
+              const added = builder.addGroup(group.key, group.label);
+              for (const { key, ...item } of present) added.addItem(key, item);
+            }
+          },
+        },
       },
     });
     crepe.editor

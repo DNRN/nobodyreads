@@ -5,6 +5,7 @@ import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, getPageById } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const { id } = Astro.params;
 if (!id || id === "new" || id === "save" || id === "login" || id === "delete") {
@@ -22,5 +23,11 @@ if (!page) {
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <PageEditor client:load page={page} editorBase={ctx.editorBase} adminBase={ctx.adminBase} />
+  <PageEditor
+    client:load
+    page={page}
+    editorBase={ctx.editorBase}
+    adminBase={ctx.adminBase}
+    previewBase={previewBase}
+  />
 </AdminLayout>

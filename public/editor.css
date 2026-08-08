@@ -1091,6 +1091,9 @@
 	overflow: auto;
 }
 
+/* Two-column shell: a settings rail beside a work area. Used by the Collection
+   editor. The page editor used to share it and no longer does — its canvas runs
+   full width with settings in a drawer. */
 .nr-admin .editor-form {
 	flex: 1;
 	display: grid;
@@ -1118,7 +1121,7 @@
 	pointer-events: none;
 }
 
-.nr-admin .editor-form > .editor-split {
+.nr-admin .editor-form > .editor-content {
 	grid-column: 2;
 	grid-row: 1;
 }
@@ -2290,55 +2293,21 @@
 	gap: 0.5rem;
 }
 
-/* The document title. Deliberately chrome-less and sharing the ProseMirror
-   column's measure and horizontal padding below, so it reads as the first line
-   of the document rather than as a form field. */
-.nr-admin .editor-doc-title {
-	flex-shrink: 0;
-	width: 100%;
-	box-sizing: border-box;
-	padding: 1.75rem max(2rem, calc((100% - 44rem) / 2)) 0;
-	border: none;
-	background: var(--nr-bg);
-	color: var(--nr-text);
-	font-family: inherit;
-	font-size: 1.75rem;
-	font-weight: 700;
-	line-height: 1.25;
-}
-
-.nr-admin .editor-doc-title::placeholder {
-	color: var(--nr-muted);
-	opacity: 0.55;
-}
-
-.nr-admin .editor-doc-title:focus {
-	outline: none;
-}
-
-/* Focus is still discoverable without a box: keyboard users get a ring. */
-.nr-admin .editor-doc-title:focus-visible {
-	outline: 2px solid var(--nr-accent, currentColor);
-	outline-offset: 2px;
-}
-
-/* The title supplies the column's top padding, so the body starts flush. */
-.nr-admin .editor-doc-title + .nbr-milkdown .milkdown > .ProseMirror {
-	padding-top: 1rem;
-}
-
+/* The prose area. The canvas column above owns the measure and the scroll, so
+   the editable element only supplies the space between the title and the first
+   paragraph — its own centring padding would inset the body a second time and
+   knock it out of line with the title. */
 .nr-admin .nbr-milkdown {
 	flex: 1;
 	min-height: 0;
-	background: var(--nr-bg);
-	overflow: auto;
+	background: transparent;
 }
 
 .nr-admin .nbr-milkdown.hidden {
 	display: none;
 }
 
-/* Flex chain so the editable area grows to fill the pane — the overlay
+/* Flex chain so the editable area grows to fill the column — the overlay
    siblings (toolbar, block handle, slash menu) are absolutely positioned and
    stay out of flow. This makes the whole region clickable, not just the text. */
 .nr-admin .nbr-milkdown .milkdown {
@@ -2347,13 +2316,12 @@
 	min-height: 100%;
 }
 
-/* Centered, readable column: the editable element stays full-width (so clicking
-   anywhere focuses), while horizontal padding collapses to center a ~44rem
-   measure on wide panes and falls back to 2rem on narrow ones. */
 .nr-admin .nbr-milkdown .milkdown > .ProseMirror {
 	flex: 1 0 auto;
-	padding: 2rem max(2rem, calc((100% - 44rem) / 2));
+	padding: 0;
 	box-sizing: border-box;
+	font-size: 17px;
+	line-height: 1.7;
 }
 
 /* Custom-token chips rendered inside the editor */
@@ -2366,7 +2334,7 @@
 
 .nr-admin .nbr-wiki-link {
 	background: var(--nr-accent-soft);
-	color: var(--nr-accent);
+	color: var(--nr-chip-text);
 }
 
 .nr-admin .nbr-view-embed {
@@ -2385,7 +2353,7 @@
 	--crepe-font-title: var(--nr-font);
 	--crepe-font-code: var(--nr-font-mono);
 
-	--crepe-color-background: var(--nr-bg);
+	--crepe-color-background: var(--nr-canvas);
 	--crepe-color-on-background: var(--nr-text);
 	--crepe-color-surface: var(--nr-surface);
 	--crepe-color-surface-low: var(--nr-surface);
@@ -3017,4 +2985,601 @@
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	line-height: 1.5;
+}
+
+/* ========================================
+   Writing canvas (docs/designs/admin-editor.md §6)
+   ----------------------------------------
+   The canvas runs the full width of the shell. The always-open metadata column
+   this replaces split the author's attention with slug/excerpt/tags before a
+   sentence was written; all of it now lives in a drawer, one click away.
+   ======================================== */
+
+.nr-admin-content:has(.nbr-editor) {
+	overflow: hidden;
+	padding: 0;
+}
+
+.nr-admin .nbr-editor {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-canvas);
+}
+
+.nr-admin .nbr-editor-form {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+/* ----- Top bar ----- */
+.nr-admin .nbr-topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+	padding: 10px 18px;
+	background: var(--nr-bar);
+	border-bottom: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-topbar-spacer {
+	flex: 1;
+}
+
+.nr-admin .nbr-topbar-back {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border-radius: var(--nr-radius-control);
+	color: var(--nr-muted);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-topbar-back:hover {
+	background: var(--nr-hover);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-topbar-back svg {
+	width: 18px;
+	height: 18px;
+}
+
+.nr-admin .nbr-breadcrumb {
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+	color: var(--nr-body, var(--nr-text));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 34ch;
+}
+
+.nr-admin .nbr-wordcount {
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	color: var(--nr-faint);
+	white-space: nowrap;
+}
+
+/* Square icon button — the top bar's secondary actions. */
+.nr-admin .nbr-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	color: var(--nr-muted);
+	cursor: pointer;
+	transition:
+		color 0.15s,
+		border-color 0.15s,
+		background 0.15s;
+}
+
+.nr-admin .nbr-icon-btn:hover {
+	color: var(--nr-text);
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nbr-icon-btn.is-active {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-icon-btn svg {
+	width: 17px;
+	height: 17px;
+}
+
+/* ----- Canvas ----- */
+.nr-admin .nbr-canvas {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	background: var(--nr-canvas);
+}
+
+.nr-admin .nbr-canvas-col {
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+	width: 100%;
+	max-width: var(--nr-measure);
+	margin: 0 auto;
+	padding: 56px 24px 40vh;
+}
+
+/* The title heads the writing column rather than sitting in a sidebar: it
+   becomes the document's <h1>, so it has to read as part of the document.
+   Tucked into metadata, authors re-type it as a `# ` heading in the body. */
+.nr-admin .nbr-doc-title {
+	width: 100%;
+	border: 0;
+	outline: none;
+	background: transparent;
+	font-family: var(--nr-font-serif);
+	font-size: 40px;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	color: var(--nr-text);
+	padding: 0 0 14px;
+}
+
+.nr-admin .nbr-doc-title::placeholder {
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-milkdown {
+	flex: 1;
+	min-height: 0;
+}
+
+.nr-admin .nbr-source {
+	flex: 1;
+	width: 100%;
+	min-height: 50vh;
+	padding: 0;
+	border: none;
+	outline: none;
+	resize: none;
+	background: transparent;
+	color: var(--nr-text);
+	font-family: var(--nr-font-mono);
+	font-size: 14px;
+	line-height: 1.75;
+	tab-size: 2;
+}
+
+/* ----- Focus mode -----
+   One shortcut hides every piece of chrome. `/` and the selection toolbar keep
+   working — they are just invisible until reached for. */
+.nr-admin:has(.nbr-editor.is-focus) .nr-admin-header,
+.nr-admin:has(.nbr-editor.is-focus) .nr-admin-sidebar {
+	display: none;
+}
+
+.nr-admin .nbr-editor.is-focus .nbr-topbar {
+	display: none;
+}
+
+.nr-admin .nbr-editor.is-focus .nbr-canvas-col {
+	padding-top: 12vh;
+}
+
+.nr-admin .nbr-focus-hint {
+	position: fixed;
+	left: 50%;
+	bottom: 22px;
+	transform: translateX(-50%);
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--nr-faint);
+	pointer-events: none;
+}
+
+/* ----- Settings drawer ----- */
+/* Above the app header (100) and the mobile nav drawer (200): the comp puts
+   this over everything, and a scrim that dims only part of the page reads as a
+   rendering bug. Neutral black rather than --nr-overlay, which is nearly
+   invisible against a dark background. */
+.nr-admin .nbr-drawer-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 300;
+	background: rgba(0, 0, 0, 0.38);
+}
+
+.nr-admin .nbr-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 301;
+	width: min(400px, 100vw);
+	display: flex;
+	flex-direction: column;
+	background: var(--nr-card);
+	border-left: 1px solid var(--nr-border);
+	box-shadow: var(--nr-shadow-lg);
+	transform: translateX(101%);
+	visibility: hidden;
+	transition:
+		transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+		visibility 0.22s;
+}
+
+.nr-admin .nbr-drawer.is-open {
+	transform: translateX(0);
+	visibility: visible;
+}
+
+/* The fields live in the <form> even when the drawer is shut, so a no-JS
+   submit still carries them. Hiding by transform alone would leave them
+   tabbable off-screen. */
+.nr-admin .nbr-drawer:not(.is-open) {
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nr-admin .nbr-drawer {
+		transition: none;
+	}
+}
+
+.nr-admin .nbr-drawer:focus {
+	outline: none;
+}
+
+.nr-admin .nbr-drawer-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid var(--nr-border);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-drawer-title {
+	font-size: 21px;
+}
+
+.nr-admin .nbr-drawer-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 18px 20px 24px;
+}
+
+.nr-admin .nbr-drawer-foot {
+	display: flex;
+	gap: 8px;
+	padding: 14px 20px;
+	border-top: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-drawer-foot .btn {
+	flex: 1;
+}
+
+.nr-admin .nbr-drawer-danger {
+	margin-top: 28px;
+	padding-top: 18px;
+	border-top: 1px solid var(--nr-border);
+}
+
+/* ----- Drawer fields ----- */
+.nr-admin .nbr-field {
+	margin-bottom: 20px;
+	border: 0;
+	padding: 0;
+}
+
+.nr-admin .nbr-field > label,
+.nr-admin .nbr-field > legend {
+	display: block;
+	margin-bottom: 7px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-field > legend.nr-eyebrow {
+	font-weight: 500;
+}
+
+.nr-admin .nbr-field input[type="text"],
+.nr-admin .nbr-field input[type="date"],
+.nr-admin .nbr-field input[type="number"],
+.nr-admin .nbr-field textarea,
+.nr-admin .nbr-field select {
+	width: 100%;
+	padding: 9px 11px;
+	font-family: var(--nr-font);
+	font-size: 13.5px;
+	color: var(--nr-text);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-field textarea {
+	resize: vertical;
+	line-height: 1.55;
+}
+
+.nr-admin .nbr-field input:focus,
+.nr-admin .nbr-field textarea:focus,
+.nr-admin .nbr-field select:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-field .hint {
+	margin-top: 6px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-check {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+	cursor: pointer;
+	margin-bottom: 0;
+}
+
+.nr-admin .nbr-check input {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--nr-accent-strong);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-advanced > summary {
+	cursor: pointer;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--nr-muted);
+	padding: 8px 0;
+	list-style: none;
+}
+
+.nr-admin .nbr-advanced > summary::-webkit-details-marker {
+	display: none;
+}
+
+.nr-admin .nbr-advanced > summary::before {
+	content: "▸";
+	display: inline-block;
+	margin-right: 7px;
+	transition: transform 0.15s;
+}
+
+.nr-admin .nbr-advanced[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.nr-admin .nbr-advanced > summary:hover {
+	color: var(--nr-text);
+}
+
+/* ----- Visibility choices -----
+   Radios rather than a segmented control: each option needs a sentence of
+   consequence beside it, and this is the choice people open the drawer for. */
+.nr-admin .nbr-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nr-admin .nbr-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 11px 12px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-bg);
+	cursor: pointer;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+}
+
+.nr-admin .nbr-choice:hover {
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nbr-choice:has(input:checked) {
+	border-color: var(--nr-accent);
+	background: var(--nr-accent-tint);
+}
+
+.nr-admin .nbr-choice:has(input:focus-visible) {
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-choice input {
+	margin-top: 2px;
+	width: 15px;
+	height: 15px;
+	accent-color: var(--nr-accent-strong);
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-choice-body {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.nr-admin .nbr-choice-title {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-choice-desc {
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+/* A nudge, never a blocker — nothing here prevents publishing. */
+.nr-admin .nbr-nudge {
+	margin-bottom: 20px;
+	padding: 10px 12px;
+	border: 1px solid var(--nr-warning);
+	border-left-width: 3px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.nr-admin .nbr-slug-row {
+	display: flex;
+	align-items: center;
+	gap: 0;
+}
+
+.nr-admin .nbr-slug-prefix {
+	padding: 9px 8px 9px 11px;
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+	color: var(--nr-faint);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-right: 0;
+	border-radius: var(--nr-radius-control) 0 0 var(--nr-radius-control);
+	white-space: nowrap;
+}
+
+.nr-admin .nbr-slug-row input[type="text"] {
+	border-radius: 0 var(--nr-radius-control) var(--nr-radius-control) 0;
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+}
+
+.nr-admin .nbr-image-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.nr-admin .nbr-image-preview {
+	margin-top: 10px;
+	max-width: 100%;
+	border-radius: var(--nr-radius-control);
+	border: 1px solid var(--nr-border);
+}
+
+/* ----- Help panel ----- */
+.nr-admin .nbr-help {
+	position: fixed;
+	right: 24px;
+	bottom: 74px;
+	z-index: 49;
+	width: min(340px, calc(100vw - 48px));
+	max-height: 60vh;
+	overflow-y: auto;
+	padding: 16px 18px 18px;
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	box-shadow: var(--nr-shadow-lg);
+}
+
+.nr-admin .nbr-help-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.nr-admin .nbr-help-head .nbr-icon-btn {
+	width: 26px;
+	height: 26px;
+	border-color: transparent;
+	background: transparent;
+}
+
+.nr-admin .nbr-help-head .nbr-icon-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.nr-admin .nbr-help-list {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 8px 12px;
+	margin: 0;
+	align-items: baseline;
+}
+
+.nr-admin .nbr-help-list dt {
+	white-space: nowrap;
+	font-size: 12px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-help-list dt kbd,
+.nr-admin .nbr-help-list dt code {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	padding: 2px 5px;
+	border-radius: 5px;
+	background: var(--nr-codebg);
+	border: 1px solid var(--nr-border);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-help-list dd {
+	margin: 0;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-body, var(--nr-muted));
+}
+
+/* ----- Narrow screens ----- */
+@media (max-width: 720px) {
+	.nr-admin .nbr-canvas-col {
+		padding: 32px 18px 40vh;
+	}
+
+	.nr-admin .nbr-doc-title {
+		font-size: 30px;
+	}
+
+	.nr-admin .nbr-breadcrumb,
+	.nr-admin .nbr-wordcount {
+		display: none;
+	}
 }

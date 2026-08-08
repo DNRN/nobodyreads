@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { fade } from "svelte/transition";
+  import { fade, fly } from "svelte/transition";
   import type { Crepe as CrepeType } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/frame.css";
@@ -12,6 +12,8 @@
     page?: Page;
     editorBase?: string;
     adminBase?: string;
+    /** Owner-only draft preview base, e.g. "/alice/preview". Empty hides Preview. */
+    previewBase?: string;
     kind?: PageKind;
   }
 
@@ -19,6 +21,7 @@
     page,
     editorBase = "/admin/editor",
     adminBase = "/admin",
+    previewBase = "",
     kind: kindProp,
   }: Props = $props();
 
@@ -77,10 +80,29 @@
   // (inserted at the caret) or the Share image field (replaces its value).
   let pickerTarget: "body" | "seo" = "body";
 
+  // --- Chrome state --------------------------------------------------------
+  let drawerOpen = $state(false);
+  let helpOpen = $state(false);
+  let focusMode = $state(false);
+
+  /**
+   * Without JS nothing can open the drawer, which would make every setting in
+   * it unreachable — the fields still submit, but an author could not change
+   * them. This unpins the panel so it renders as a plain block below the
+   * canvas. Browsers with JS ignore <noscript> content entirely.
+   */
+  const noJsDrawerCss =
+    "<noscript><style>" +
+    ".nbr-drawer{position:static;transform:none;visibility:visible;width:auto;" +
+    "pointer-events:auto;box-shadow:none;border-left:0;border-top:1px solid var(--nr-border)}" +
+    ".nbr-drawer-head button,.nr-help-disc{display:none}" +
+    "</style></noscript>";
+
   let formEl: HTMLFormElement;
   let crepeMount: HTMLElement;
   let sourceEl: HTMLTextAreaElement;
-  let imageBtnEl: HTMLButtonElement;
+  let drawerEl = $state<HTMLElement | undefined>();
+  let settingsBtnEl = $state<HTMLButtonElement | undefined>();
   let crepe: CrepeType | null = null;
 
   function onTitleInput() {
@@ -93,7 +115,7 @@
   }
 
   // --- Save / autosave / toast ---------------------------------------------
-  let saving = false;
+  let saving = $state(false);
   let baselineInitialized = false;
   let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
   let toast = $state<{ message: string; type: "info" | "success" | "error" } | null>(null);
@@ -110,7 +132,36 @@
   function snapshot() {
     return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard });
   }
-  let baseline = snapshot();
+  // $state, so the status pill re-derives when a save moves the baseline.
+  let baseline = $state(snapshot());
+
+  const dirty = $derived(snapshot() !== baseline);
+
+  /**
+   * The top bar's status line. Autosave is deliberately silent, so the amber
+   * "unsaved" state is the only thing telling an author work is pending.
+   */
+  const status = $derived.by(() => {
+    if (saving) return { tone: "", text: "Saving…" };
+    if (dirty) return { tone: "is-unsaved", text: "Unsaved changes" };
+    return {
+      tone: published ? "is-live" : "is-saved",
+      text: published ? "Published · saved" : "Draft · saved",
+    };
+  });
+
+  const wordCount = $derived(content.trim() ? content.trim().split(/\s+/).length : 0);
+
+  /** The page's public path — what the breadcrumb shows. */
+  const pagePath = $derived(
+    kind === "home" ? "/" : kind === "post" ? `posts/${slug}` : slug,
+  );
+
+  const previewHref = $derived(
+    previewBase && (kind === "home" || slug)
+      ? `${previewBase}/${kind === "home" ? "" : pagePath}`
+      : "",
+  );
 
   function isValid() {
     return title.trim().length > 0 && (kind === "home" || slug.trim().length > 0);
@@ -138,15 +189,14 @@
     return body;
   }
 
-  async function save(opts: { silent?: boolean; label?: string } = {}) {
-    const { silent = false, label } = opts;
+  async function save(opts: { label?: string } = {}) {
+    const { label } = opts;
     if (saving) return;
     if (!isValid()) {
-      if (!silent) showToast("Add a title and slug before saving", "error");
+      if (label) showToast("Add a title and address before saving", "error");
       return;
     }
     saving = true;
-    if (!silent) showToast("Saving…", "info", 0);
     try {
       const res = await fetch(saveUrl, {
         method: "POST",
@@ -170,7 +220,9 @@
         history.replaceState(null, "", `${editorBase}/${data.id}`);
       }
       baseline = snapshot();
-      showToast(label ?? (silent ? "Draft saved" : "Saved"), "success");
+      // The status pill already reads "saved", so only deliberate actions
+      // announce themselves — a toast per autosave is noise.
+      if (label) showToast(label, "success");
     } catch {
       showToast("Save failed", "error", 4000);
     } finally {
@@ -181,15 +233,15 @@
   function scheduleAutosave() {
     if (autosaveTimer) clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => {
-      if (saving || snapshot() === baseline || !isValid()) return;
-      save({ silent: true });
+      if (saving || !dirty || !isValid()) return;
+      save();
     }, 2500);
   }
 
-  // Any edit to content or metadata (re)arms the autosave timer. The baseline
+  // Any edit to content or metadata (re)arms the autosave timer. The dirty
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, seoOgImage, seoTwitterCard];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard];
     if (editorReady) scheduleAutosave();
   });
 
@@ -204,7 +256,19 @@
     const submitter = e.submitter as HTMLElement | null;
     if (submitter?.getAttribute("formaction")?.includes("/delete/")) return;
     e.preventDefault();
-    save();
+    save({ label: "Draft saved" });
+  }
+
+  // --- Drawer --------------------------------------------------------------
+  function openDrawer() {
+    drawerOpen = true;
+    // Move focus into the panel so Tab walks the settings, not the canvas.
+    tick().then(() => drawerEl?.focus());
+  }
+
+  function closeDrawer() {
+    drawerOpen = false;
+    settingsBtnEl?.focus();
   }
 
   async function uploadImage(file: File): Promise<string> {
@@ -267,7 +331,6 @@
 
   function closePicker() {
     pickerOpen = false;
-    if (pickerTarget === "body") imageBtnEl?.focus();
   }
 
   async function createCrepe(initial: string) {
@@ -290,7 +353,7 @@
         [Crepe.Feature.ImageBlock]: false,
       },
       featureConfigs: {
-        [Crepe.Feature.Placeholder]: { text: "Write your post… type / for commands" },
+        [Crepe.Feature.Placeholder]: { text: "Keep writing, or press / for blocks…" },
       },
     });
     crepe.editor
@@ -346,9 +409,22 @@
   onMount(() => {
     createCrepe(content);
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        save();
+        save({ label: "Draft saved" });
+        return;
+      }
+      if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        focusMode = !focusMode;
+        return;
+      }
+      // One way out of everything, innermost first.
+      if (e.key === "Escape") {
+        if (helpOpen) helpOpen = false;
+        else if (drawerOpen) closeDrawer();
+        else if (focusMode) focusMode = false;
       }
     };
     document.addEventListener("keydown", onKey);
@@ -361,45 +437,111 @@
   });
 </script>
 
-<main class="editor-main">
-  <form method="POST" action={saveUrl} class="editor-form" bind:this={formEl} onsubmit={onFormSubmit}>
+<main class="nbr-editor" class:is-focus={focusMode}>
+  {@html noJsDrawerCss}
+  <form method="POST" action={saveUrl} class="nbr-editor-form" bind:this={formEl} onsubmit={onFormSubmit}>
     <input type="hidden" name="id" value={currentId} />
     <input type="hidden" name="kind" value={kind} />
     {#if published}
       <input type="hidden" name="published" value="on" />
     {/if}
 
-    <div class="editor-split">
-      <div class="editor-pane editor-pane-write">
-        <div class="editor-toolbar editor-toolbar--wysiwyg">
-          <span class="editor-mode-label">{sourceMode ? "Markdown source" : "Visual editor"}</span>
-          <div class="editor-toolbar-actions">
-            <button
-              type="button"
-              class="btn btn-sm btn-ghost"
-              bind:this={imageBtnEl}
-              onclick={() => openPicker("body")}
-            >
-              Image
-            </button>
-            <button type="button" class="btn btn-sm btn-ghost" onclick={toggleSource}>
-              {sourceMode ? "Visual" : "Source"}
-            </button>
-          </div>
-        </div>
+    <!--
+      The top bar carries only what an author acts on: where they are, whether
+      the work is saved, how much they have written, and the two or three things
+      they might do next. Everything else lives in the drawer.
+    -->
+    <header class="nbr-topbar">
+      <a class="nbr-topbar-back" href={editorBase} aria-label="Back to content">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+      </a>
 
-        <!--
-          The title heads the writing column rather than sitting in the sidebar:
-          it becomes the document's <h1> on the published page, so it has to
-          read as part of the document. Tucked into the sidebar it looks like
-          metadata, and authors re-type it as a `# ` heading in the body.
-        -->
+      <span class="nbr-breadcrumb" title={`${kindLabel} · ${pagePath}`}>
+        {pagePath || `new ${kind}`}
+      </span>
+
+      <span class={`nr-status ${status.tone}`} aria-live="polite">
+        <i class="nr-status-dot"></i>{status.text}
+      </span>
+
+      <span class="nbr-topbar-spacer"></span>
+
+      <span class="nbr-wordcount">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
+
+      <span class="nr-tip">
+        <button
+          type="button"
+          class="nbr-icon-btn"
+          class:is-active={sourceMode}
+          onclick={toggleSource}
+          aria-pressed={sourceMode}
+          aria-describedby="tip-source"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>
+        </button>
+        <span class="nr-tip-panel" role="tooltip" id="tip-source">
+          <b class="nr-tip-label">{sourceMode ? "Visual editor" : "Markdown source"}</b>
+          <span class="nr-tip-desc">
+            {sourceMode
+              ? "Go back to the formatted view."
+              : "Edit the raw Markdown behind this post."}
+          </span>
+        </span>
+      </span>
+
+      {#if previewHref}
+        <span class="nr-tip">
+          <a
+            class="nbr-icon-btn"
+            href={previewHref}
+            target="_blank"
+            rel="noreferrer"
+            aria-describedby="tip-preview"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </a>
+          <span class="nr-tip-panel" role="tooltip" id="tip-preview">
+            <b class="nr-tip-label">Preview</b>
+            <span class="nr-tip-desc">See this draft as a reader would, in a new tab.</span>
+          </span>
+        </span>
+      {/if}
+
+      <span class="nr-tip">
+        <button
+          type="button"
+          class="nbr-icon-btn"
+          bind:this={settingsBtnEl}
+          onclick={openDrawer}
+          aria-expanded={drawerOpen}
+          aria-describedby="tip-settings"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14M5 16h14"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>
+        </button>
+        <span class="nr-tip-panel" role="tooltip" id="tip-settings">
+          <b class="nr-tip-label">{kindLabel} settings</b>
+          <span class="nr-tip-desc">Who can read it, tags, address, discussion.</span>
+        </span>
+      </span>
+
+      <button type="button" class="btn btn-primary btn-sm" onclick={togglePublish}>
+        {published ? "Unpublish" : "Publish"}
+      </button>
+    </header>
+
+    <!--
+      The canvas runs the full width of the shell. The always-open metadata
+      column this replaces split the author's attention with slug/excerpt/tags
+      before they had written a sentence; all of it is one click away now.
+    -->
+    <div class="nbr-canvas">
+      <div class="nbr-canvas-col">
         <label class="visually-hidden" for="title">Title</label>
         <input
           type="text"
           id="title"
           name="title"
-          class="editor-doc-title"
+          class="nbr-doc-title"
           placeholder="Title"
           bind:value={title}
           oninput={onTitleInput}
@@ -411,7 +553,7 @@
         <!-- Markdown source view + no-JS fallback; carries the form value. -->
         <textarea
           name="content"
-          class="editor-textarea"
+          class="nbr-source"
           class:hidden={editorReady && !sourceMode}
           placeholder="Write your markdown here..."
           spellcheck="true"
@@ -421,205 +563,270 @@
       </div>
     </div>
 
-    <aside class="editor-sidebar">
-      {#if kind === "home"}
-        <input type="hidden" name="slug" value={slug || "home"} />
-      {:else}
-        <div class="field">
-          <label for="slug">Slug</label>
-          <input
-            type="text"
-            id="slug"
-            name="slug"
-            bind:value={slug}
-            oninput={() => (slugManuallyEdited = true)}
-            required
-            pattern="[a-z0-9-]+"
-            title="Lowercase letters, numbers, and hyphens only"
-          />
-        </div>
-      {/if}
-
-      <div class="field">
-        <label>Kind</label>
-        <p class="editor-kind-display">{kindLabel}</p>
+    <!--
+      Post settings. Every field stays inside the <form> so a no-JS submit still
+      carries it — the drawer is presentation, not a separate document.
+    -->
+    {#if drawerOpen}
+      <div
+        class="nbr-drawer-scrim"
+        role="presentation"
+        onclick={closeDrawer}
+        transition:fade={{ duration: 150 }}
+      ></div>
+    {/if}
+    <aside
+      class="nbr-drawer"
+      class:is-open={drawerOpen}
+      aria-label={`${kindLabel} settings`}
+      tabindex="-1"
+      bind:this={drawerEl}
+    >
+      <div class="nbr-drawer-head">
+        <h2 class="nr-title nbr-drawer-title">{kindLabel} settings</h2>
+        <button type="button" class="nbr-icon-btn" onclick={closeDrawer} aria-label="Close settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
       </div>
 
-      <div class="field">
-        <label for="excerpt">Excerpt</label>
-        <textarea id="excerpt" name="excerpt" rows="3" bind:value={excerpt}></textarea>
-      </div>
+      <div class="nbr-drawer-body">
+        {#if kind === "post"}
+          <!-- Visibility first and clearest: it is the choice with consequences,
+               and the one people open this drawer for. -->
+          <fieldset class="nbr-field">
+            <legend class="nr-eyebrow">Who can read this</legend>
+            <div class="nbr-choices">
+              <label class="nbr-choice">
+                <input type="radio" name="access_tier" value="public" bind:group={accessTier} />
+                <span class="nbr-choice-body">
+                  <span class="nbr-choice-title">Public</span>
+                  <span class="nbr-choice-desc">Anyone can read the whole post.</span>
+                </span>
+              </label>
+              <label class="nbr-choice">
+                <input type="radio" name="access_tier" value="members" bind:group={accessTier} />
+                <span class="nbr-choice-body">
+                  <span class="nbr-choice-title">Members</span>
+                  <span class="nbr-choice-desc">
+                    Anyone who has joined your plot, free or paying. Everyone else sees a teaser.
+                  </span>
+                </span>
+              </label>
+              <label class="nbr-choice">
+                <input type="radio" name="access_tier" value="paid" bind:group={accessTier} />
+                <span class="nbr-choice-body">
+                  <span class="nbr-choice-title">Supporters</span>
+                  <span class="nbr-choice-desc">
+                    Paying readers only. Everyone else sees a teaser and a way to pay.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
 
-      <div class="field">
-        <label for="tags">Tags <span class="hint">(comma-separated)</span></label>
-        <input type="text" id="tags" name="tags" bind:value={tags} />
-      </div>
+          {#if accessTier === "paid"}
+            <div class="nbr-field">
+              <label for="price_amount">Sell this post on its own <span class="hint">(optional)</span></label>
+              <input
+                id="price_amount"
+                type="text"
+                inputmode="decimal"
+                placeholder="e.g. 3.00"
+                bind:value={priceAmount}
+              />
+              <p class="hint">
+                A one-off price for this post alone, on top of the subscription option.
+                Leave empty to offer the subscription only.
+              </p>
+            </div>
+          {/if}
 
-      <div class="field">
-        <label for="date">Date</label>
-        <input type="date" id="date" name="date" bind:value={date} />
-      </div>
-
-      <div class="field">
-        <label>Status</label>
-        <div class="publish-control">
-          <span class={`badge ${published ? "badge-published" : "badge-draft"}`}>
-            {published ? "Published" : "Draft"}
-          </span>
-          <button type="button" class="btn btn-sm" onclick={togglePublish}>
-            {published ? "Unpublish" : "Publish"}
-          </button>
-        </div>
-        <p class="hint">
-          {published ? "Live and visible to readers." : "Saved as a draft. Not visible to readers."}
-        </p>
-      </div>
-
-      {#if kind === "post"}
-        <div class="field">
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={commentsEnabled} />
-            Allow comments
-          </label>
-          <p class="hint">
-            {commentsEnabled
-              ? "Readers can comment and reply on this post."
-              : "Comments are closed for this post."}
-          </p>
-        </div>
-        <div class="field">
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={inFeed} />
-            Include in RSS feed
-          </label>
-          <p class="hint">
-            {inFeed
-              ? "This post appears in your RSS / podcast feed."
-              : "This post is excluded from the feed."}
-          </p>
-        </div>
-        <div class="field">
-          <label for="access_tier">Who can read this</label>
-          <select id="access_tier" bind:value={accessTier}>
-            <option value="public">Everyone</option>
-            <option value="members">Members of your plot</option>
-            <option value="paid">Paying supporters</option>
-          </select>
-          <p class="hint">
-            {accessTier === "public"
-              ? "Anyone can read the whole post."
-              : accessTier === "members"
-                ? "Readers who have joined your plot see the full post. Everyone else sees a teaser."
-                : "Subscribers see the full post. Everyone else sees a teaser and a way to pay."}
-          </p>
-        </div>
-        {#if accessTier === "paid"}
-          <div class="field">
-            <label for="price_amount">Sell this post on its own <span class="hint">(optional)</span></label>
-            <input
-              id="price_amount"
-              type="text"
-              inputmode="decimal"
-              placeholder="e.g. 3.00"
-              bind:value={priceAmount}
-            />
-            <p class="hint">
-              A one-off price for this post alone, on top of the subscription option.
-              Leave empty to offer the subscription only.
+          {#if accessTier !== "public" && !excerpt.trim()}
+            <!-- A nudge, not a blocker: nothing here stops a publish. -->
+            <p class="nbr-nudge">
+              No summary set, so the teaser will be built from the first ~75 words.
+              Write one below to control exactly what non-paying readers see.
             </p>
+          {/if}
+        {/if}
+
+        <div class="nbr-field">
+          <label for="excerpt">Summary</label>
+          <textarea id="excerpt" name="excerpt" rows="3" bind:value={excerpt}></textarea>
+          <p class="hint">Shown in listings, the feed and search results.</p>
+        </div>
+
+        {#if kind === "post"}
+          <div class="nbr-field">
+            <label for="tags">Tags <span class="hint">(comma-separated)</span></label>
+            <input type="text" id="tags" name="tags" bind:value={tags} />
           </div>
         {/if}
-        {#if accessTier !== "public" && !excerpt.trim()}
-          <p class="hint hint-warn">
-            No summary set, so the teaser will be built from the first ~75 words of the post.
-            Write a summary above to control exactly what non-paying readers see.
-          </p>
-        {/if}
-      {/if}
 
-      {#if kind === "post"}
-        <details class="field">
-          <summary>Social sharing</summary>
-          <div class="field">
-            <label for="seo_og_image">Share image</label>
-            <p class="hint">
-              Defaults to the first image in the post, or the site default if there isn't one.
-              Pick a different image or paste a URL to override it.
-            </p>
-            <div class="seo-image-row">
+        {#if kind !== "home"}
+          <div class="nbr-field">
+            <label for="slug">Page address</label>
+            <div class="nbr-slug-row">
+              <span class="nbr-slug-prefix">{kind === "post" ? "posts/" : "/"}</span>
               <input
                 type="text"
-                id="seo_og_image"
-                name="seo_og_image"
-                placeholder="https://… or choose below"
-                bind:value={seoOgImage}
+                id="slug"
+                name="slug"
+                bind:value={slug}
+                oninput={() => (slugManuallyEdited = true)}
+                required
+                pattern="[a-z0-9-]+"
+                title="Lowercase letters, numbers, and hyphens only"
               />
-              <button type="button" class="btn btn-sm btn-ghost" onclick={() => openPicker("seo")}>
-                Choose…
-              </button>
             </div>
-            {#if seoOgImage}
-              <img
-                src={seoOgImage}
-                alt="Share preview"
-                class="seo-image-preview"
-                onerror={(e) => { (e.target as HTMLImageElement).hidden = true; }}
-              />
-            {/if}
+            <p class="hint">Filled in from the title. Best changed before publishing, not after.</p>
           </div>
-          <div class="field">
-            <label for="seo_twitter_card">Card style</label>
-            <select id="seo_twitter_card" name="seo_twitter_card" bind:value={seoTwitterCard}>
-              <option value="summary">Summary (small image)</option>
-              <option value="summary_large_image">Large image</option>
-            </select>
-          </div>
-        </details>
-      {/if}
-
-      {#if kind === "page" || kind === "home"}
-        <details class="field">
-          <summary>Navigation</summary>
-          <div class="field">
-            <label for="nav_label">Nav label</label>
-            <input type="text" id="nav_label" name="nav_label" bind:value={navLabel} />
-          </div>
-          <div class="field">
-            <label for="nav_order">Nav order</label>
-            <input type="number" id="nav_order" name="nav_order" bind:value={navOrder} />
-          </div>
-        </details>
-      {/if}
-
-      <details class="field">
-        <summary>Markdown reference</summary>
-        <div class="editor-help">
-          <p class="editor-help-note">
-            Type <code>/</code> for the command menu, or write Markdown directly. Special tokens:
-          </p>
-          <table class="editor-help-table">
-            <tbody>
-              <tr><td><code>[[page-id]]</code></td><td>Internal link (by page ID)</td></tr>
-              <tr><td><code>[[page-id|text]]</code></td><td>Internal link with custom text</td></tr>
-              <tr><td><code>{"{{collection:slug}}"}</code></td><td>Embed a collection of posts</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </details>
-
-      <div class="editor-actions">
-        <button type="submit" class="btn btn-primary">Save</button>
-        {#if !isNew}
-          <button
-            type="submit"
-            formaction={`${editorBase}/delete/${currentId}`}
-            class="btn btn-danger"
-            onclick={(e) => { if (!confirm("Delete this page permanently?")) e.preventDefault(); }}
-          >Delete</button>
+        {:else}
+          <input type="hidden" name="slug" value={slug || "home"} />
         {/if}
+
+        <div class="nbr-field">
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" bind:value={date} />
+        </div>
+
+        {#if kind === "post"}
+          <div class="nbr-field">
+            <label class="nbr-check">
+              <input type="checkbox" bind:checked={commentsEnabled} />
+              <span>Allow discussion</span>
+            </label>
+            <p class="hint">
+              {commentsEnabled
+                ? "Readers can comment and reply on this post."
+                : "Comments are closed for this post."}
+            </p>
+          </div>
+
+          <div class="nbr-field">
+            <label class="nbr-check">
+              <input type="checkbox" bind:checked={inFeed} />
+              <span>Include in RSS feed</span>
+            </label>
+            <p class="hint">
+              {inFeed
+                ? "This post appears in your RSS / podcast feed."
+                : "This post is excluded from the feed."}
+            </p>
+          </div>
+
+          <details class="nbr-field nbr-advanced">
+            <summary>Social sharing</summary>
+            <div class="nbr-field">
+              <label for="seo_og_image">Share image</label>
+              <p class="hint">
+                Defaults to the first image in the post, or the site default if there isn't one.
+              </p>
+              <div class="nbr-image-row">
+                <input
+                  type="text"
+                  id="seo_og_image"
+                  name="seo_og_image"
+                  placeholder="https://… or choose below"
+                  bind:value={seoOgImage}
+                />
+                <button type="button" class="btn btn-sm btn-ghost" onclick={() => openPicker("seo")}>
+                  Choose…
+                </button>
+              </div>
+              {#if seoOgImage}
+                <img
+                  src={seoOgImage}
+                  alt="Share preview"
+                  class="nbr-image-preview"
+                  onerror={(e) => { (e.target as HTMLImageElement).hidden = true; }}
+                />
+              {/if}
+            </div>
+            <div class="nbr-field">
+              <label for="seo_twitter_card">Card style</label>
+              <select id="seo_twitter_card" name="seo_twitter_card" bind:value={seoTwitterCard}>
+                <option value="summary">Summary (small image)</option>
+                <option value="summary_large_image">Large image</option>
+              </select>
+            </div>
+          </details>
+        {/if}
+
+        {#if kind === "page" || kind === "home"}
+          <details class="nbr-field nbr-advanced">
+            <summary>Navigation</summary>
+            <div class="nbr-field">
+              <label for="nav_label">Nav label</label>
+              <input type="text" id="nav_label" name="nav_label" bind:value={navLabel} />
+            </div>
+            <div class="nbr-field">
+              <label for="nav_order">Nav order</label>
+              <input type="number" id="nav_order" name="nav_order" bind:value={navOrder} />
+            </div>
+          </details>
+        {/if}
+
+        {#if !isNew}
+          <div class="nbr-drawer-danger">
+            <button
+              type="submit"
+              formaction={`${editorBase}/delete/${currentId}`}
+              class="btn btn-danger btn-sm"
+              onclick={(e) => { if (!confirm("Delete this page permanently?")) e.preventDefault(); }}
+            >Delete {kindLabel.toLowerCase()}</button>
+          </div>
+        {/if}
+      </div>
+
+      <div class="nbr-drawer-foot">
+        <button type="submit" class="btn btn-sm">Save draft</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick={togglePublish}>
+          {published ? "Unpublish" : "Publish now"}
+        </button>
       </div>
     </aside>
   </form>
+
+  {#if focusMode}
+    <p class="nbr-focus-hint" transition:fade={{ duration: 200 }}>Esc to bring everything back</p>
+  {/if}
+
+  <!-- Reopenable help. Everything explains itself, but only when asked. -->
+  <button
+    type="button"
+    class="nr-help-disc"
+    onclick={() => (helpOpen = !helpOpen)}
+    aria-expanded={helpOpen}
+    aria-label="Help"
+  >?</button>
+
+  {#if helpOpen}
+    <aside class="nbr-help" transition:fly={{ y: 12, duration: 180 }} aria-label="Editor help">
+      <div class="nbr-help-head">
+        <span class="nr-eyebrow">Writing here</span>
+        <button type="button" class="nbr-icon-btn" onclick={() => (helpOpen = false)} aria-label="Close help">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <dl class="nbr-help-list">
+        <dt><kbd>/</kbd></dt>
+        <dd>Insert an image, quote, code block, list or embed.</dd>
+        <dt>Select text</dt>
+        <dd>A formatting bar appears above the selection.</dd>
+        <dt><kbd>⌘S</kbd></dt>
+        <dd>Save a draft. Typing autosaves anyway.</dd>
+        <dt><kbd>⌘⇧F</kbd></dt>
+        <dd>Focus mode — hide everything but the words.</dd>
+        <dt><code>[[page-id]]</code></dt>
+        <dd>Link to another of your pages.</dd>
+        <dt><code>{"{{collection:slug}}"}</code></dt>
+        <dd>Embed a collection of posts.</dd>
+        <dt><code>![alt|400px|right]</code></dt>
+        <dd>Size and align an image.</dd>
+      </dl>
+    </aside>
+  {/if}
 
   {#if pickerOpen}
     <MediaPicker

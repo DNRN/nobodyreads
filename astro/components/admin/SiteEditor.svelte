@@ -26,6 +26,8 @@
     componentRegistry: RegistryComponent[];
     componentConfigs: ComponentMap;
     previewUrl: string;
+    /** Link to the AI theming screen, or null when no provider is configured. */
+    aiHref?: string | null;
   }
 
   let {
@@ -41,6 +43,7 @@
     componentRegistry,
     componentConfigs,
     previewUrl,
+    aiHref = null,
   }: Props = $props();
 
   function isHexColor(value: string): boolean {
@@ -97,6 +100,11 @@
       </p>
     </div>
     <div class="editor-actions">
+      {#if aiHref}
+        <!-- AI is Design's business now that it has left the nav. It becomes
+             this screen's first tab once Design grows its tab bar. -->
+        <a href={aiHref} class="btn btn-sm">Describe a look with AI</a>
+      {/if}
       <span bind:this={saveStatus} class="editor-save-status" aria-live="polite">Saved</span>
       <button type="submit" class="btn btn-primary">Save draft</button>
     </div>

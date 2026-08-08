@@ -55,8 +55,6 @@ import {
   renderContent,
   resolveLinks,
   resolveViews,
-  embedToken,
-  EMBED_TOKEN_NAME,
 
   // SEO
   buildMetaTags,
@@ -170,9 +168,6 @@ describe("public API exports", () => {
     expect(renderContent).toBeTypeOf("function");
     expect(resolveLinks).toBeTypeOf("function");
     expect(resolveViews).toBeTypeOf("function");
-    expect(embedToken).toBeTypeOf("function");
-    expect(embedToken("latest-posts")).toBe("{{collection:latest-posts}}");
-    expect(EMBED_TOKEN_NAME).toBe("collection");
   });
 
   it("exports SEO utilities", () => {

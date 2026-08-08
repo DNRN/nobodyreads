@@ -1,0 +1,18 @@
+---
+/**
+ * Permanent redirect from the pre-rename `/views` URLs to `/collections`.
+ *
+ * Injected at `{admin}/views`, `{admin}/views/new` and `{admin}/views/[id]` so a
+ * bookmark, a link in an old email, or a script survives the rename. The tail of
+ * the path is carried across, so `/views/abc` lands on `/collections/abc`.
+ */
+import { requireAdminContext } from "nobodyreads/astro/context";
+
+const ctx = requireAdminContext(Astro.locals);
+const viewsBase = `${ctx.adminBase}/views`;
+const tail = Astro.url.pathname.startsWith(viewsBase)
+  ? Astro.url.pathname.slice(viewsBase.length)
+  : "";
+
+return Astro.redirect(`${ctx.adminBase}/collections${tail}${Astro.url.search}`, 301);
+---

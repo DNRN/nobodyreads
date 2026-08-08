@@ -10,18 +10,34 @@ import {
 import type { ContentView, ContentViewKind } from "../../../content/types.js";
 import type { AdminModuleContext } from "./types.js";
 
+/**
+ * URL prefixes these routes answer on, current spelling first.
+ *
+ * `/views/*` was the path before the rename to Collections. It stays mounted
+ * because a self-hosting operator may have it in a bookmark, a reverse-proxy
+ * rule or a script; redirects always land on the `/collections` URL.
+ */
+const PREFIXES = ["/collections", "/views"] as const;
+
+/**
+ * Collection mutation routes.
+ *
+ * The factory keeps its name deliberately: `content_view` is still the table and
+ * `ContentView` still the type, so renaming a published export to follow a UI
+ * label would break every consumer for no change in behaviour.
+ */
 export function createViewRoutes(ctx: AdminModuleContext): Hono {
   const { db, tenantId, adminBase } = ctx;
   const app = new Hono();
 
-  app.post(
-    "/views/save",
-    zValidator("form", viewFormSchema, (result, c) => {
-      if (!result.success) {
-        return c.json({ error: "Validation failed", details: result.error.issues }, 400);
-      }
-    }),
-    async (c) => {
+  const validateForm = zValidator("form", viewFormSchema, (result, c) => {
+    if (!result.success) {
+      return c.json({ error: "Validation failed", details: result.error.issues }, 400);
+    }
+  });
+
+  for (const prefix of PREFIXES) {
+    app.post(`${prefix}/save`, validateForm, async (c) => {
       const data = c.req.valid("form");
       const isNew = !data.id || data.id.trim() === "";
       const viewId = isNew ? randomUUID() : data.id!.trim();
@@ -31,8 +47,8 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
 
       let config: ContentView["config"];
       if (kind === "custom") {
-        // Reject at save time, not only at render time — a custom view's query
-        // runs server-side and its rows land on a public page.
+        // Reject at save time, not only at render time — a custom collection's
+        // query runs server-side and its rows land on a public page.
         const queryError = validateCustomQuery(data.query ?? "");
         if (queryError) {
           return c.json({ error: "Validation failed", details: [{ message: queryError }] }, 400);
@@ -62,15 +78,15 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
       };
 
       await upsertContentView(db, view, tenantId);
-      return c.redirect(`${adminBase}/views/${viewId}`);
-    }
-  );
+      return c.redirect(`${adminBase}/collections/${viewId}`);
+    });
 
-  app.post("/views/delete/:id", async (c) => {
-    const viewId = c.req.param("id");
-    await deleteContentView(db, viewId, tenantId);
-    return c.redirect(`${adminBase}/views`);
-  });
+    app.post(`${prefix}/delete/:id`, async (c) => {
+      const viewId = c.req.param("id");
+      await deleteContentView(db, viewId, tenantId);
+      return c.redirect(`${adminBase}/collections`);
+    });
+  }
 
   return app;
 }

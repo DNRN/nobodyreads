@@ -245,17 +245,6 @@ export type { PostListVariant, PostListRenderOptions } from "./content/templates
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
 export type { RenderMarkdownOptions, RenderContentOptions } from "./content/render.js";
 
-// The collection embed token. Exported so admin UIs render the token they are
-// telling an author to copy, rather than restating its spelling.
-export {
-  EMBED_TOKEN_NAME,
-  EMBED_TOKEN_NAMES,
-  embedToken,
-  embedTokenPattern,
-  hasEmbedToken,
-} from "./shared/embed-token.js";
-export type { EmbedTokenName } from "./shared/embed-token.js";
-
 // SEO
 export { buildMetaTags, buildStructuredData, navHref } from "./shared/seo.js";
 

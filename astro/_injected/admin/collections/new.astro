@@ -1,15 +1,15 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import ViewEditor from "../../../components/admin/ViewEditor.svelte";
+import CollectionEditor from "../../../components/admin/CollectionEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
 
 const ctx = requireAdminContext(Astro.locals);
-const viewsBase = `${ctx.adminBase}/views`;
+const collectionsBase = `${ctx.adminBase}/collections`;
 ---
 <AdminLayout
   title="New View — Admin"
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <ViewEditor client:load viewsBase={viewsBase} />
+  <CollectionEditor client:load collectionsBase={collectionsBase} />
 </AdminLayout>

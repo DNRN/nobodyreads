@@ -187,9 +187,9 @@ they will on the public page. The endpoint falls back to the client render if
 unreachable. This is distinct from the `/preview/*` Astro routes used by the
 site-template editor iframe, which render *saved* content from the DB.
 
-### Content views
+### Collections (`content_view`)
 
-Views are defined in the admin UI or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
+Collections are defined in the admin UI at `/admin/collections` (the pre-rename `/admin/views` 301s there) or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---
 
@@ -216,7 +216,7 @@ The admin UI is split across **two layers** by design:
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
 
-The navigation is grouped into five areas — **Home** (dashboard), **Content**, **Design** (Theme/Layout + Views), **Community** (subscribers; comments later), and **Settings** (site identity, email) — chosen to match user mental models and leave a home for future roadmap features. Site identity is reached from **Settings**, not the Content editor. See [`../plan.md`](../plan.md) for the staged admin/editor reorganization.
+The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
 All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
 
@@ -250,7 +250,7 @@ The host Astro app must populate this via middleware before any admin page rende
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
 | `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
-| `views` | `/views/save`, `/views/delete` | Content view CRUD |
+| `views` | `/collections/save`, `/collections/delete` (also mounted at the pre-rename `/views/*`) | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
 

@@ -1,21 +1,21 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
-import ViewEditor from "../../../components/admin/ViewEditor.svelte";
+import CollectionEditor from "../../../components/admin/CollectionEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, getContentViewById } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
-const viewsBase = `${ctx.adminBase}/views`;
+const collectionsBase = `${ctx.adminBase}/collections`;
 
 const { id } = Astro.params;
 if (!id || id === "new" || id === "save" || id === "delete") {
-  return Astro.redirect(viewsBase);
+  return Astro.redirect(collectionsBase);
 }
 
 const db = await initDb();
 const view = await getContentViewById(db, id, ctx.tenantId);
 if (!view) {
-  return Astro.redirect(viewsBase);
+  return Astro.redirect(collectionsBase);
 }
 ---
 <AdminLayout
@@ -23,5 +23,5 @@ if (!view) {
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <ViewEditor client:load view={view} viewsBase={viewsBase} />
+  <CollectionEditor client:load view={view} collectionsBase={collectionsBase} />
 </AdminLayout>

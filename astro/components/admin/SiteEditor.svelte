@@ -1,7 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { createSiteEditor } from "nobodyreads/editor";
-  import type { SiteEditorInstance } from "nobodyreads/editor";
+  import {
+    createSiteEditor,
+    TYPE_PAIRINGS,
+    DENSITY_STEPS,
+    CORNER_STEPS,
+    COLOR_SLOTS,
+    matchTypePairing,
+    matchDensityStep,
+    matchCornerStep,
+  } from "nobodyreads/editor";
+  import type { SiteEditorInstance, TokenSet } from "nobodyreads/editor";
   import type { ComponentMap, CustomToken, SiteTemplateDefinition } from "nobodyreads";
   import MediaPicker from "./MediaPicker.svelte";
 
@@ -77,10 +86,11 @@
   // --- Tabs ----------------------------------------------------------------
   // Only tabs with something behind them are listed; the rest arrive as they
   // are built rather than shipping as empty panels.
-  type TabId = "brand" | "layout" | "components";
+  type TabId = "brand" | "theme" | "layout" | "components";
 
   const tabs: { id: TabId; label: string; hint: string }[] = [
     { id: "brand", label: "Brand", hint: "your site" },
+    { id: "theme", label: "Theme", hint: "your site" },
     { id: "layout", label: "Layout", hint: "your home page" },
     { id: "components", label: "Components", hint: "your home page" },
   ];
@@ -112,6 +122,119 @@
   let metaExcerpt = $state(stored.postMeta?.excerpt !== false);
   let metaReadMore = $state(stored.postMeta?.readMore !== false);
   let metaTags = $state(stored.postMeta?.tags !== false);
+
+  // --- Theme ---------------------------------------------------------------
+  // Colours are edited as a patch over the stored light token set; anything not
+  // shown here (and the whole dark set) is left exactly as it was.
+  let colors = $state<Record<string, string>>(
+    Object.fromEntries(
+      COLOR_SLOTS.map((slot) => [slot.key, String(stored.tokens?.light?.[slot.key] ?? "")]),
+    ),
+  );
+  let moreColors = $state(false);
+  let typePairing = $state(matchTypePairing(stored.tokens.light) ?? "");
+  let densityStep = $state(matchDensityStep(stored.tokens.light) ?? "comfortable");
+  let cornerStep = $state(matchCornerStep(stored.tokens.light.radius) ?? "soft");
+
+  const primarySlots = COLOR_SLOTS.filter((slot) => slot.primary);
+  const secondarySlots = COLOR_SLOTS.filter((slot) => !slot.primary);
+
+  /** The token overrides the Theme tab contributes. */
+  function themeTokens(): Partial<TokenSet> {
+    const pairing = TYPE_PAIRINGS.find((p) => p.id === typePairing);
+    const density = DENSITY_STEPS.find((d) => d.id === densityStep);
+    const corner = CORNER_STEPS.find((c) => c.id === cornerStep);
+
+    return {
+      ...Object.fromEntries(Object.entries(colors).filter(([, v]) => v)),
+      ...(pairing ? { font: pairing.font, brandFont: pairing.brandFont } : {}),
+      ...(density
+        ? { lineHeight: density.lineHeight, containerPadding: density.containerPadding }
+        : {}),
+      ...(corner ? { radius: corner.radius } : {}),
+    } as Partial<TokenSet>;
+  }
+
+  // --- Saved trials --------------------------------------------------------
+  interface TrialSummary {
+    trialId: string;
+    name: string;
+    createdAt: string;
+    swatches: string[];
+  }
+
+  let trials = $state<TrialSummary[]>([]);
+
+  async function loadTrials() {
+    const res = await fetch(`${adminBase}/design/trials`, {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    if (!res.ok) return;
+    trials = (await res.json()).trials ?? [];
+  }
+
+  async function saveTrial() {
+    const name = prompt("Name this look")?.trim();
+    if (!name) return;
+    const res = await fetch(`${adminBase}/design/trials`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ name, template: JSON.parse(currentTemplateJson()) }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}) as { error?: string });
+      alert(`Could not save the trial: ${data.error ?? res.status}`);
+      return;
+    }
+    await loadTrials();
+  }
+
+  /**
+   * Load a banked look into the editor as unsaved work.
+   *
+   * Never publishes and never even saves — the author still decides. Both this
+   * component's state and the code panes are reset, so the next save is the
+   * trial rather than a splice of it onto what was here before.
+   */
+  async function applyTrial(trialId: string) {
+    const res = await fetch(`${adminBase}/design/trials/${trialId}`, {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    if (!res.ok) return;
+    const { trial } = await res.json();
+    const t = trial.template as SiteTemplateDefinition;
+
+    colors = Object.fromEntries(
+      COLOR_SLOTS.map((slot) => [slot.key, String(t.tokens?.light?.[slot.key] ?? "")]),
+    );
+    typePairing = matchTypePairing(t.tokens.light) ?? "";
+    densityStep = matchDensityStep(t.tokens.light) ?? densityStep;
+    cornerStep = matchCornerStep(t.tokens.light.radius) ?? cornerStep;
+    readingWidth = parseInt(t.tokens?.light?.maxWidth ?? "900", 10) || readingWidth;
+    postArrangement = t.components?.postPreview?.variant ?? postArrangement;
+
+    editor?.loadTemplate(t as unknown as Record<string, unknown>);
+  }
+
+  async function deleteTrial(trialId: string) {
+    if (!confirm("Delete this trial?")) return;
+    await fetch(`${adminBase}/design/trials/${trialId}/delete`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+    await loadTrials();
+  }
+
+  /** The template as it stands, for banking a trial. */
+  function currentTemplateJson(): string {
+    const base = JSON.parse(templateHidden.value) as Record<string, unknown>;
+    Object.assign(base, templatePatch(base));
+    return JSON.stringify(base);
+  }
 
   const arrangements = [
     { id: "auto", label: "Automatic" },
@@ -148,7 +271,7 @@
       components,
       tokens: {
         ...stored.tokens,
-        light: { ...stored.tokens.light, maxWidth: `${readingWidth}px` },
+        light: { ...stored.tokens.light, ...themeTokens(), maxWidth: `${readingWidth}px` },
       },
       postMeta: {
         date: metaDate,
@@ -296,6 +419,7 @@
     editor = instance;
     // Nothing else loads the iframe now that Preview is not a tab of its own.
     instance.refreshPreviewCss();
+    void loadTrials();
     return () => instance.destroy();
   });
 </script>
@@ -421,6 +545,120 @@
           <a href={`${adminBase}/settings`}>Settings · Sharing &amp; SEO</a> — they are about how
           your site looks <em>elsewhere</em>, not on the page.
         </p>
+      {/if}
+
+      {#if !codeMode && activeTab === "theme"}
+        <div class="nbr-control">
+          <span class="nr-eyebrow">Colours</span>
+          <div class="nbr-swatches">
+            {#each primarySlots as slot}
+              <label class="nbr-swatch">
+                <input type="color" bind:value={colors[slot.key]} oninput={touched} />
+                <span class="nbr-swatch-name">{slot.label}</span>
+                <span class="nbr-swatch-hex">{colors[slot.key]}</span>
+              </label>
+            {/each}
+          </div>
+
+          <details class="nbr-advanced" bind:open={moreColors}>
+            <summary>More colours</summary>
+            <div class="nbr-swatches">
+              {#each secondarySlots as slot}
+                <label class="nbr-swatch">
+                  <input type="color" bind:value={colors[slot.key]} oninput={touched} />
+                  <span class="nbr-swatch-name">{slot.label}</span>
+                  <span class="nbr-swatch-hex">{colors[slot.key]}</span>
+                </label>
+              {/each}
+            </div>
+            <p class="hint">
+              Dark-mode colours are not shown here — they live in the template code.
+            </p>
+          </details>
+        </div>
+
+        <div class="nbr-control">
+          <label class="nr-eyebrow" for="type-pairing">Type pairing</label>
+          <select id="type-pairing" bind:value={typePairing} onchange={touched}>
+            {#if !typePairing}
+              <option value="">Custom (set in template code)</option>
+            {/if}
+            {#each TYPE_PAIRINGS as pairing}
+              <option value={pairing.id}>{pairing.label}</option>
+            {/each}
+          </select>
+          <p class="hint">
+            Only faces the site actually loads are offered — anything else would fall back
+            silently and look like a bug.
+          </p>
+        </div>
+
+        <div class="nbr-control">
+          <span class="nr-eyebrow">
+            Density &amp; whitespace
+            <span class="nbr-control-value">
+              {DENSITY_STEPS.find((d) => d.id === densityStep)?.label}
+            </span>
+          </span>
+          <!-- A slider, not segments: the steps are ordered (less air → more),
+               and four segments do not fit the controls column. -->
+          <input
+            type="range"
+            min="0"
+            max={DENSITY_STEPS.length - 1}
+            step="1"
+            aria-label="Density and whitespace"
+            value={Math.max(0, DENSITY_STEPS.findIndex((d) => d.id === densityStep))}
+            oninput={(e) => {
+              densityStep = DENSITY_STEPS[Number((e.currentTarget as HTMLInputElement).value)]!.id;
+              touched();
+            }}
+          />
+        </div>
+
+        <div class="nbr-control">
+          <span class="nr-eyebrow">Corners</span>
+          <div class="nr-segmented" role="radiogroup" aria-label="Corners">
+            {#each CORNER_STEPS as step}
+              <label class="nr-segmented-option">
+                <input type="radio" name="corners" value={step.id} bind:group={cornerStep} onchange={touched} />
+                {step.label}
+              </label>
+            {/each}
+          </div>
+          <p class="hint">Moves every rounded surface at once.</p>
+        </div>
+
+        <!--
+          Saved trials. Banking a look never publishes it and never even saves a
+          draft — applying one loads it in as unsaved work, so switching between
+          looks stays free.
+        -->
+        <div class="nbr-control nbr-trials">
+          <span class="nr-eyebrow">Saved trials</span>
+          <div class="nbr-trial-strip">
+            {#each trials as trial}
+              <span class="nbr-trial">
+                <button type="button" class="nbr-trial-apply" onclick={() => applyTrial(trial.trialId)}>
+                  <span class="nbr-trial-swatches">
+                    {#each trial.swatches.slice(0, 3) as swatch}
+                      <i style={`background:${swatch}`}></i>
+                    {/each}
+                  </span>
+                  {trial.name}
+                </button>
+                <button
+                  type="button"
+                  class="nbr-trial-remove"
+                  aria-label={`Delete ${trial.name}`}
+                  onclick={() => deleteTrial(trial.trialId)}
+                >×</button>
+              </span>
+            {/each}
+            <button type="button" class="nbr-trial-add" onclick={saveTrial}>+ Save current as trial</button>
+          </div>
+          <p class="hint">Bank a look, try another — publish only when you're sure.</p>
+        </div>
       {/if}
 
       {#if !codeMode && activeTab === "layout"}

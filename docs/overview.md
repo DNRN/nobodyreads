@@ -219,6 +219,8 @@ Live in `astro/_injected/admin/`. They are **not** file-system-routed in consumi
 
 Design (`/admin/layout`) is one shell reused by every tab: controls on the left, a single live preview on the right. Visual edits and hand-written template code render into the same preview. `Edit template code` swaps the visual tabs for the raw HTML/CSS/JS/tokens/JSON panes, which also hold revision history and theme import/export. `createSiteEditor` (`src/admin/client/site-editor.ts`) still owns serialisation, saving and the preview; tabs whose state lives in Svelte contribute through its `templatePatch` hook, and Brand saves its site settings through `beforeSave` so one Save button means one save.
 
+Theme's named choices — type pairings, density steps, corner steps and which colours lead — are data in `src/template/presets.ts`, shared by the visual controls and (later) the AI proposal so both mean the same thing by "Spacious". Type pairings are limited to faces `SiteLayout.astro` actually loads plus system stacks; offering anything else renders as a silent fallback. Saved trials load into the editor as unsaved work via `loadTemplate`, so banking a look never saves or publishes it.
+
 The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
 All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:

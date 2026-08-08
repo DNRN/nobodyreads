@@ -355,6 +355,32 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     applyLivePreviewCss();
   });
 
+  function setEditorValue(editor: EditorInstance | null, value: string) {
+    if (!editor) return;
+    editor.view.dispatch({
+      changes: { from: 0, to: editor.view.state.doc.length, insert: value },
+    });
+  }
+
+  /**
+   * Replace everything this module owns with a stored template.
+   *
+   * Used when a saved trial is applied: the code panes, the hidden template and
+   * the preview all have to move together, or the next save would splice the
+   * trial's tokens onto the previous theme's layout HTML.
+   *
+   * Controls that live in Svelte reset their own state — this only covers what
+   * this module reads out of the DOM.
+   */
+  function loadTemplate(template: Record<string, unknown>) {
+    templateHidden.value = JSON.stringify(template, null, 2);
+    setEditorValue(htmlEditor, String(template.layoutHtml ?? ""));
+    setEditorValue(cssEditor, String(template.customCss ?? ""));
+    setEditorValue(tsEditor, String(template.customJs ?? ""));
+    markDirty();
+    scheduleLivePreview();
+  }
+
   /**
    * Persist the current state as a draft revision.
    *
@@ -435,6 +461,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
   return {
     markDirty,
+    loadTemplate,
     save,
     refreshPreviewCss: scheduleLivePreview,
     destroy() {

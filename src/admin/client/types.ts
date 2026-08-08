@@ -103,6 +103,8 @@ export interface SiteEditorInstance {
   markDirty(): void;
   /** Save a draft revision; resolves with its id, or null if the save failed. */
   save(): Promise<number | null>;
+  /** Replace the code panes and hidden template with a stored template. */
+  loadTemplate(template: Record<string, unknown>): void;
   /** Re-generate and inject the preview stylesheet now. */
   refreshPreviewCss(): void;
 }

@@ -95,10 +95,7 @@ export async function resolveViews(
 ): Promise<string> {
   const viewHtml = await resolveViewSlugs(db, markdown, tenantId, urlPrefix, options);
   if (viewHtml.size === 0) return markdown;
-  return markdown.replace(
-    embedTokenPattern(),
-    (_match, _name: string, slug: string) => viewHtml.get(slug) ?? "",
-  );
+  return markdown.replace(embedTokenPattern(), (_match, slug: string) => viewHtml.get(slug) ?? "");
 }
 
 /**
@@ -127,7 +124,7 @@ async function resolveViewSlugs(
   const viewHtml = new Map<string, string>();
   if (matches.length === 0) return viewHtml;
 
-  const slugs = [...new Set(matches.map((m) => m[2]))];
+  const slugs = [...new Set(matches.map((m) => m[1]))];
   let listDefaults: PostListRenderOptions | null = null;
 
   for (const slug of slugs) {
@@ -339,8 +336,7 @@ async function resolveViewPlaceholders(
 
   const text = markdown.replace(
     embedTokenPattern(),
-    (_match, _name: string, slug: string) =>
-      `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
+    (_match, slug: string) => `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
   );
 
   return { text, viewHtml };

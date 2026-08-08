@@ -88,13 +88,6 @@ export function nobodyreadsAdmin(
           pattern: `${pattern}/collections/[id]`,
           entrypoint: entry("collections/[id].astro"),
         });
-
-        // Pre-rename URLs. Collections used to live at `/views`; these 301 to
-        // the new path so bookmarks and old links survive.
-        const legacyViews = entry("collections/legacy-redirect.astro");
-        injectRoute({ pattern: `${pattern}/views`, entrypoint: legacyViews });
-        injectRoute({ pattern: `${pattern}/views/new`, entrypoint: legacyViews });
-        injectRoute({ pattern: `${pattern}/views/[id]`, entrypoint: legacyViews });
         injectRoute({
           pattern: `${pattern}/media`,
           entrypoint: entry("media/index.astro"),

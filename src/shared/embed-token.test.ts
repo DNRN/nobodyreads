@@ -12,29 +12,23 @@ describe("embed token", () => {
     expect(EMBED_TOKEN_NAME).toBe("collection");
   });
 
-  it("matches the current spelling, capturing name then slug", () => {
-    const m = embedTokenPattern().exec("before {{collection:latest-posts}} after");
-    expect(m?.[1]).toBe("collection");
-    expect(m?.[2]).toBe("latest-posts");
+  it("captures the slug", () => {
+    expect(embedTokenPattern().exec("before {{collection:latest-posts}} after")?.[1]).toBe(
+      "latest-posts",
+    );
   });
 
-  it("still matches the legacy {{view:slug}} spelling", () => {
-    const m = embedTokenPattern().exec("before {{view:latest-posts}} after");
-    expect(m?.[1]).toBe("view");
-    expect(m?.[2]).toBe("latest-posts");
-  });
-
-  it("matches both spellings in one document", () => {
+  it("matches every token in a document", () => {
     const slugs = [
-      ...("{{view:a}} and {{collection:b}}".matchAll(embedTokenPattern())),
-    ].map((m) => m[2]);
+      ...("{{collection:a}} and {{collection:b}}".matchAll(embedTokenPattern())),
+    ].map((m) => m[1]);
     expect(slugs).toEqual(["a", "b"]);
   });
 
   it("rejects anything that is not a slug", () => {
     expect(hasEmbedToken("{{collection:Not A Slug}}")).toBe(false);
     expect(hasEmbedToken("{{collections:a}}")).toBe(false);
-    expect(hasEmbedToken("{{views:a}}")).toBe(false);
+    expect(hasEmbedToken("{{view:a}}")).toBe(false);
     expect(hasEmbedToken("{{siteName}}")).toBe(false);
   });
 
@@ -44,7 +38,7 @@ describe("embed token", () => {
     const text = "{{collection:a}}";
     expect(hasEmbedToken(text)).toBe(true);
     expect(hasEmbedToken(text)).toBe(true);
-    expect(embedTokenPattern().exec(text)?.[2]).toBe("a");
-    expect(embedTokenPattern().exec(text)?.[2]).toBe("a");
+    expect(embedTokenPattern().exec(text)?.[1]).toBe("a");
+    expect(embedTokenPattern().exec(text)?.[1]).toBe("a");
   });
 });

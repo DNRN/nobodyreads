@@ -138,7 +138,7 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 | `tenant` | Platform-mode user accounts (not used in default single-tenant setup) |
 | `page` | All content: posts, static pages, and the home page |
 | `site_template_trial` | Named theme trials — a look banked deliberately, separate from revision history |
-| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` (legacy `{{view:slug}}` still parses) |
+| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |
 | `site_settings` | Key-value settings per tenant (site name, logo, favicon, etc.) |
@@ -171,7 +171,7 @@ Content can be created two ways:
 `src/content/render.ts` is the core renderer:
 
 1. **`resolveLinks`** — replaces `[[page-id]]` and `[[page-id|label]]` wiki-style links with Markdown links, resolved against the DB at render time.
-2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). The original `{{view:slug}}` spelling is a permanent alias; `src/shared/embed-token.ts` is the single source for both.
+2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). `src/shared/embed-token.ts` is the single source of the token's syntax.
 3. **`renderMarkdown`** — GFM Markdown to HTML via `marked`, with a custom image renderer for size/alignment hints in alt text.
 
 Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLayout.astro` wraps output in the generated site template (CSS + section HTML).
@@ -190,7 +190,7 @@ site-template editor iframe, which render *saved* content from the DB.
 
 ### Collections (`content_view`)
 
-Collections are defined in the admin UI at `/admin/collections` (the pre-rename `/admin/views` 301s there) or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
+Collections are defined in the admin UI at `/admin/collections` or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---
 
@@ -253,7 +253,7 @@ The host Astro app must populate this via middleware before any admin page rende
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
 | `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
-| `views` | `/collections/save`, `/collections/delete` (also mounted at the pre-rename `/views/*`) | Collection CRUD |
+| `views` | `/collections/save`, `/collections/delete` | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
 

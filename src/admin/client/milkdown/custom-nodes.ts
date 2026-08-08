@@ -3,7 +3,6 @@
  *
  *   [[page-id]] / [[page-id|label]]  → wiki links   (atom inline node)
  *   {{collection:slug}}              → collection embeds (atom inline node)
- *   {{view:slug}}                    → the same, legacy spelling
  *
  * Each construct is modelled as a dedicated atom node (never plain text) so the
  * Markdown serializer can never escape it — the round-trip fidelity proven in
@@ -21,15 +20,11 @@ import { $remark, $node, $inputRule } from "@milkdown/kit/utils";
 import { InputRule } from "@milkdown/kit/prose/inputrules";
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { visit, SKIP } from "unist-util-visit";
-import {
-  EMBED_TOKEN_NAME,
-  EMBED_TOKEN_SOURCE,
-  type EmbedTokenName,
-} from "../../../shared/embed-token.js";
+import { EMBED_TOKEN_SOURCE } from "../../../shared/embed-token.js";
 
 // Matches a wiki link OR a collection embed in a single pass. Built rather than
-// written out so the accepted token spellings live in exactly one module.
-// Groups: 1 wiki target, 2 wiki label, 3 token name, 4 slug.
+// written out so the token's syntax lives in exactly one module.
+// Groups: 1 wiki target, 2 wiki label, 3 collection slug.
 const TOKEN_SOURCE = `\\[\\[([a-z0-9-]+)(?:\\|([^\\]]+))?\\]\\]|${EMBED_TOKEN_SOURCE}`;
 const TOKEN = new RegExp(TOKEN_SOURCE, "g");
 
@@ -42,10 +37,7 @@ const remarkNbrTokens = $remark("nbrTokens", () =>
       handlers: {
         wikiLink: (node: any) =>
           node.label ? `[[${node.target}|${node.label}]]` : `[[${node.target}]]`,
-        // Round-trips the spelling it was parsed from. Migrating legacy
-        // tokens here would mean a silent rewrite of every embed in the
-        // document the first time autosave fires after opening it.
-        viewEmbed: (node: any) => `{{${node.name ?? EMBED_TOKEN_NAME}:${node.slug}}}`,
+        viewEmbed: (node: any) => `{{collection:${node.slug}}}`,
       },
     });
 
@@ -63,7 +55,7 @@ const remarkNbrTokens = $remark("nbrTokens", () =>
         while ((m = TOKEN.exec(value)) !== null) {
           if (m.index > last) out.push({ type: "text", value: value.slice(last, m.index) });
           if (m[1] !== undefined) out.push({ type: "wikiLink", target: m[1], label: m[2] ?? null });
-          else out.push({ type: "viewEmbed", name: m[3], slug: m[4] });
+          else out.push({ type: "viewEmbed", slug: m[3] });
           last = m.index + m[0].length;
         }
         if (last < value.length) out.push({ type: "text", value: value.slice(last) });
@@ -124,39 +116,32 @@ const viewEmbedNode = $node("view_embed", () => ({
   inline: true,
   atom: true,
   selectable: true,
-  attrs: { slug: { default: "" }, name: { default: EMBED_TOKEN_NAME } },
+  attrs: { slug: { default: "" } },
   parseDOM: [
     {
       tag: "span[data-view-embed]",
-      getAttrs: (dom: any) => ({
-        slug: dom.getAttribute("data-view-embed") ?? "",
-        name: (dom.getAttribute("data-token-name") as EmbedTokenName) || EMBED_TOKEN_NAME,
-      }),
+      getAttrs: (dom: any) => ({ slug: dom.getAttribute("data-view-embed") ?? "" }),
     },
   ],
   toDOM: (node: any) => [
     "span",
     {
       "data-view-embed": node.attrs.slug,
-      "data-token-name": node.attrs.name,
       class: "nbr-view-embed",
       title: `Collection → ${node.attrs.slug}`,
     },
-    `{{${node.attrs.name}:${node.attrs.slug}}}`,
+    `{{collection:${node.attrs.slug}}}`,
   ],
   parseMarkdown: {
     match: (node: any) => node.type === "viewEmbed",
     runner: (state: any, node: any, type: any) => {
-      state.addNode(type, { slug: node.slug, name: node.name ?? EMBED_TOKEN_NAME });
+      state.addNode(type, { slug: node.slug });
     },
   },
   toMarkdown: {
     match: (node: any) => node.type.name === "view_embed",
     runner: (state: any, node: any) => {
-      state.addNode("viewEmbed", undefined, undefined, {
-        slug: node.attrs.slug,
-        name: node.attrs.name,
-      });
+      state.addNode("viewEmbed", undefined, undefined, { slug: node.attrs.slug });
     },
   },
 }));
@@ -175,15 +160,14 @@ const wikiLinkInputRule = $inputRule((ctx) =>
 );
 
 const viewEmbedInputRule = $inputRule((ctx) =>
-  // Anchored to the caret, so typing either spelling yields a live node — and
-  // keeps the one that was typed.
+  // Anchored to the caret, so typing the raw token yields a live node.
   new InputRule(new RegExp(`${EMBED_TOKEN_SOURCE}$`), (state, match, start, end) => {
-    const [, name, slug] = match;
+    const [, slug] = match;
     if (!slug) return null;
     return state.tr.replaceRangeWith(
       start,
       end,
-      viewEmbedNode.type(ctx).create({ slug, name: name ?? EMBED_TOKEN_NAME }),
+      viewEmbedNode.type(ctx).create({ slug }),
     );
   }),
 );

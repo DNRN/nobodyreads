@@ -29,6 +29,8 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     customTokensEditor,
     componentsPane,
     addTokenBtn,
+    templatePatch,
+    beforeSave,
   } = options;
   let isDirty = false;
   let editMode: "tabs" | "advanced" = "tabs";
@@ -179,6 +181,10 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     else delete base.customTokens;
 
     base.components = getComponentsFromUI();
+
+    // Visual tabs own their state in Svelte, so they hand their slice of the
+    // template over here rather than being read back out of the DOM.
+    Object.assign(base, templatePatch?.(base) ?? {});
 
     return JSON.stringify(base, null, 2);
   }
@@ -349,10 +355,23 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     applyLivePreviewCss();
   });
 
-  formElement.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
+  /**
+   * Persist the current state as a draft revision.
+   *
+   * Returns the new revision id so a caller can publish it — Publish is
+   * save-then-publish, never a separate serialisation of the same state.
+   * Returns null if the save failed; the status line has already said so.
+   */
+  async function save(): Promise<number | null> {
     setSaveStatus("saving");
+
+    try {
+      await beforeSave?.();
+    } catch (error) {
+      setSaveStatus("error");
+      console.error("Pre-save step failed:", error);
+      return null;
+    }
 
     const templateJson = buildTemplateJson();
     templateHidden.value = templateJson;
@@ -365,6 +384,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
         method: formElement.method || "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          Accept: "application/json",
         },
         credentials: "same-origin",
         body,
@@ -372,7 +392,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
       if (response.redirected && response.url.includes("/admin/login")) {
         window.location.assign(response.url);
-        return;
+        return null;
       }
 
       if (!response.ok) {
@@ -386,25 +406,37 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
               saveStatus.title = data.error;
             }
             console.error("Save error:", data.error);
-            return;
+            return null;
           }
         }
         throw new Error(`Save failed: ${response.status}`);
       }
 
+      const data = (await response.json().catch(() => ({}))) as { revisionId?: number };
+
       isDirty = false;
       setSaveStatus("saved");
       refreshPreview(true);
+      return typeof data.revisionId === "number" ? data.revisionId : null;
     } catch (error) {
       setSaveStatus("error");
       console.error(error);
+      return null;
     }
+  }
+
+  formElement.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void save();
   });
 
   setSaveStatus("ready");
   activateTab("html");
 
   return {
+    markDirty,
+    save,
+    refreshPreviewCss: scheduleLivePreview,
     destroy() {
       if (previewDebounce) window.clearTimeout(previewDebounce);
       document.removeEventListener("click", onRemoveToken);

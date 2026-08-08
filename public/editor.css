@@ -3684,3 +3684,368 @@
 .nr-admin .nbr-image.has-no-alt .nbr-image-nudge {
 	display: block;
 }
+
+/* ========================================
+   Design screen (docs/designs/admin-editor.md §7)
+   ----------------------------------------
+   One shell reused by every tab: controls on the left, one live preview on the
+   right. Visual edits and hand-written template code both render into the same
+   preview, so cause and effect stay visible either way.
+   ======================================== */
+
+.nr-admin-content:has(.nbr-design) {
+	overflow: hidden;
+	padding: 0;
+}
+
+/* The shell sizes itself off the content area, so every wrapper between the
+   two has to pass the height through or the columns stop short. */
+.nr-admin-content:has(.nbr-design) > * {
+	height: 100%;
+	min-height: 0;
+}
+
+.nr-admin .nbr-design {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-design-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	padding: 24px 28px 18px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-design-sub {
+	margin-top: 5px;
+	font-size: 14px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-design-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* ----- Tab bar ----- */
+.nr-admin .nbr-design-tabbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 0 28px;
+	border-bottom: 1px solid var(--nr-border);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-tabs {
+	display: flex;
+	gap: 4px;
+}
+
+.nr-admin .nbr-design-tab {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	padding: 10px 16px;
+	border-radius: var(--nr-radius-control) var(--nr-radius-control) 0 0;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--nr-muted);
+	cursor: pointer;
+	text-decoration: none;
+	line-height: 1.4;
+	display: inline-flex;
+	align-items: center;
+}
+
+.nr-admin .nbr-design-tab:hover {
+	color: var(--nr-text);
+	background: var(--nr-hover);
+	text-decoration: none;
+}
+
+.nr-admin .nbr-design-tab.is-active {
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .nbr-design-code-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	margin: 6px 0;
+}
+
+.nr-admin .nbr-design-code-toggle svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nbr-design-code-toggle.is-active {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+/* ----- Two-pane body ----- */
+.nr-admin .nbr-design-body {
+	display: grid;
+	grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+	flex: 1;
+	min-height: 0;
+}
+
+/* Code needs the room prose does not. */
+.nr-admin .nbr-design-body.is-code {
+	grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+}
+
+.nr-admin .nbr-design-controls {
+	min-width: 0;
+	overflow-y: auto;
+	padding: 22px 24px 40px;
+	border-right: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+}
+
+.nr-admin .nbr-design-preview {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-design-preview-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 18px 10px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-preview iframe {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	margin: 0 18px 18px;
+	width: calc(100% - 36px);
+}
+
+/* ----- Controls ----- */
+.nr-admin .nbr-control {
+	margin-bottom: 26px;
+}
+
+.nr-admin .nbr-control > .nr-eyebrow,
+.nr-admin .nbr-control > label.nr-eyebrow {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 9px;
+}
+
+.nr-admin .nbr-control-value {
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-control input[type="text"] {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-control input[type="text"]:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-control input[type="range"] {
+	width: 100%;
+	accent-color: var(--nr-accent-strong);
+}
+
+.nr-admin .nbr-control .hint {
+	margin-top: 7px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-control .nbr-check {
+	padding: 7px 0;
+}
+
+/* Metadata chips — on/off, shown all at once. */
+.nr-admin .nbr-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.nr-admin .nbr-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 14px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-pill);
+	background: var(--nr-card);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-chip input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.nr-admin .nbr-chip:has(input:checked) {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-chip:has(input:checked)::before {
+	content: "✓";
+	font-size: 11px;
+}
+
+.nr-admin .nbr-chip:has(input:focus-visible) {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+/* ----- Brand ----- */
+.nr-admin .nbr-logo-row {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+
+.nr-admin .nbr-logo-thumb {
+	width: 68px;
+	height: 68px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px dashed var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	color: var(--nr-faint);
+	overflow: hidden;
+}
+
+.nr-admin .nbr-logo-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.nr-admin .nbr-logo-thumb svg {
+	width: 24px;
+	height: 24px;
+}
+
+.nr-admin .nbr-logo-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.nr-admin .nbr-logo-actions .hint {
+	flex-basis: 100%;
+	margin-top: 0;
+}
+
+/* A pointer, not a warning — where something moved to. */
+.nr-admin .nbr-note {
+	padding: 12px 14px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-accent-tint);
+	border: 1px solid var(--nr-accent-soft);
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-note--code {
+	margin-bottom: 14px;
+	background: var(--nr-codebg);
+	border-color: var(--nr-border);
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-components .component-card {
+	margin-bottom: 8px;
+}
+
+.nr-admin .nbr-design-code .editor-tabs--site {
+	margin-bottom: 14px;
+}
+
+@media (max-width: 1080px) {
+	.nr-admin .nbr-design-body,
+	.nr-admin .nbr-design-body.is-code {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(320px, 1fr);
+	}
+
+	.nr-admin .nbr-design-controls {
+		border-right: 0;
+		border-bottom: 1px solid var(--nr-border);
+	}
+}
+
+/* History and the theme file live in code mode: reachable, but not in the way
+   of someone who only wants to change a colour. */
+.nr-admin .nbr-design-history {
+	margin-top: 28px;
+	padding-top: 22px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-history-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 8px;
+}

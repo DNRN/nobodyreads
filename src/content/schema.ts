@@ -44,7 +44,7 @@ export const page = sqliteTable(
   ]
 );
 
-// --- Content views (embeddable via {{view:slug}}) ---
+// --- Content views (embeddable via {{collection:slug}}) ---
 
 export const contentView = sqliteTable(
   "content_view",

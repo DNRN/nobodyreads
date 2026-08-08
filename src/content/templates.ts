@@ -213,7 +213,7 @@ ${affordance}
 </section>`;
 }
 
-/** Render a list of posts as HTML (used by {{view:slug}} content views). */
+/** Render a list of posts as HTML (used by {{collection:slug}} embeds). */
 export function renderPostListView(
   posts: PageSummary[],
   options: PostListRenderOptions = {},

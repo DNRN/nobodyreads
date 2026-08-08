@@ -2,7 +2,7 @@
  * Safety validation for author-written custom view SQL.
  *
  * A custom view lets a plot author write a raw `SELECT` that is executed
- * server-side and rendered into a **public** page via `{{view:slug}}`. That
+ * server-side and rendered into a **public** page via `{{collection:slug}}`. That
  * makes this file a security boundary, not a convenience check: whatever a
  * query can read, an anonymous visitor can read.
  *

@@ -34,7 +34,7 @@ export function buildDefaultHomeContent(adminHref = "/admin"): string {
     "",
     "Nobody reads it anyway. So write for yourself.",
     "",
-    "{{view:latest-posts}}",
+    "{{collection:latest-posts}}",
   ].join("\n");
 }
 

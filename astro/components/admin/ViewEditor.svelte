@@ -4,6 +4,7 @@
   import { sql, SQLite } from "@codemirror/lang-sql";
   import { javascript } from "@codemirror/lang-javascript";
   import { replaceTextarea, type EditorInstance } from "nobodyreads/editor";
+  import { embedToken } from "nobodyreads";
   import type { ContentView, CustomViewConfig, PostListViewConfig } from "nobodyreads";
 
   interface Props {
@@ -59,7 +60,7 @@ return rows.map(row => \`
   let template = $state(customConfig.template || defaultTemplate);
 
   const isCustom = $derived(kind === "custom");
-  const embedToken = $derived(`{{view:${slug || "your-view-slug"}}}`);
+  const token = $derived(embedToken(slug || "your-collection-slug"));
 
   let queryEl: HTMLTextAreaElement;
   let templateEl: HTMLTextAreaElement;
@@ -148,7 +149,7 @@ return rows.map(row => \`
 
       <div class="field">
         <label for="embed_token">Embed token</label>
-        <input type="text" id="embed_token" value={embedToken} readonly />
+        <input type="text" id="embed_token" value={token} readonly />
         <div class="hint">Use this token in any page markdown. You can add more than one per page.</div>
       </div>
 

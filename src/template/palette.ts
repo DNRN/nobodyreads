@@ -134,7 +134,9 @@ export const PALETTE: { light: Palette; dark: Palette } = {
     success: "#4e8a6b",
     successSoft: "#e7f0ea",
     danger: "#b4443a",
-    warning: "#b07a2e",
+    // Dark enough to clear 4.5:1 on `bg` as running text — a caution nobody can
+    // read is not a caution. `warningBright` carries the eye-catching end.
+    warning: "#a06a1f",
     warningBright: "#d79a2b",
     codeBg: "#f2f5f1",
     overlay: "#1c2621",

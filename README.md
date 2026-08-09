@@ -8,7 +8,7 @@ A minimal, self-hosted plot engine. Markdown-first, server-rendered, zero client
 - **Server-rendered** — Hono API server with Astro SSR for the public site
 - **Built-in admin** — browser-based editors for pages, views, site template, and media
 - **Template system** — design tokens, section-based layouts, CSS/HTML generation with live preview
-- **Reusable content views** — define list views once and embed with `{{view:slug}}`
+- **Reusable collections** — define a list of posts once and embed it anywhere with `{{collection:slug}}`
 - **Wiki-style links** — use `[[page-id]]` to link between pages
 - **Media uploads** — local filesystem or Google Cloud Storage
 - **Email subscriptions** — built-in subscriber management with pluggable providers (Mailjet included)
@@ -49,10 +49,11 @@ Your plot starts at `http://localhost:3000`. The admin area lives under `/admin`
 | `/admin` | Home (dashboard) |
 | `/admin/editor` | Page/post editor |
 | `/admin/media` | Media library |
-| `/admin/layout` | Site template / design editor |
-| `/admin/views` | Content views |
+| `/admin/layout` | Design — brand, AI, theme, layout, components |
+| `/admin/collections` | Collections |
 | `/admin/community` | Subscribers (audience) |
-| `/admin/settings` | Site identity & settings |
+| `/admin/moderation` | Comment moderation |
+| `/admin/settings` | Sharing & SEO, email, AI provider |
 | `/admin/login` | Auth (when password is set) |
 
 ### Development with Astro
@@ -243,15 +244,51 @@ nav:
   order: 1
 ```
 
-### Content views
+### Collections
 
-Create reusable views in **Admin > Views**, then embed them in any page:
+A collection is a reusable list of posts you can drop into any page. Make one in
+**Admin → Collections**, then embed it as many times as you like:
 
 ```markdown
 Welcome to my plot.
 
-{{view:latest-posts}}
+{{collection:latest-posts}}
 ```
+
+A collection is two halves you control: a SQL query that chooses the rows, and a
+template that renders them.
+
+```sql
+SELECT slug, title, excerpt, date
+FROM page_public
+WHERE published = 1 AND kind = 'post' AND tenant_id = :tenant_id
+ORDER BY date DESC
+LIMIT 10
+```
+
+```html
+{{#each rows}}
+  <article class="post-preview">
+    <time class="post-date">{{date date}}</time>
+    <h2 class="post-title"><a href="{{postUrl slug}}">{{title}}</a></h2>
+    {{#if excerpt}}<p class="post-excerpt">{{excerpt}}</p>{{/if}}
+  </article>
+{{/each}}
+```
+
+The template is **not** JavaScript — it is your markup plus `{{field}}`,
+`{{#each rows}}`, `{{#if field}}` and the helpers `{{url path}}`,
+`{{postUrl slug}}` and `{{date date}}`. Values are HTML-escaped for you and
+nothing in it executes, so collections work on every deployment with no flag to
+set.
+
+Queries are read-only and scoped to your plot automatically: a query may read
+`page_public`, `post_like`, `comment`, `content_view` and `media`, must include
+`:tenant_id`, and must be a single `SELECT`.
+
+Start from a preset (All posts, By tag, Most liked, A series), or describe what
+you want and let the AI write both halves for you if you have a provider
+configured.
 
 ### SEO frontmatter
 

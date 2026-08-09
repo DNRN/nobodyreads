@@ -37,8 +37,8 @@
     componentRegistry: RegistryComponent[];
     componentConfigs: ComponentMap;
     previewUrl: string;
-    /** Link to the AI theming screen, or null when no provider is configured. */
-    aiHref?: string | null;
+    /** Whether the host has an AI provider configured. */
+    aiEnabled?: boolean;
     /** Current site identity, for the Brand tab. */
     siteName?: string;
     siteTagline?: string;
@@ -65,7 +65,7 @@
     componentRegistry,
     componentConfigs,
     previewUrl,
-    aiHref = null,
+    aiEnabled = false,
     siteName = "",
     siteTagline = "",
     siteLogo = "",
@@ -86,10 +86,11 @@
   // --- Tabs ----------------------------------------------------------------
   // Only tabs with something behind them are listed; the rest arrive as they
   // are built rather than shipping as empty panels.
-  type TabId = "brand" | "theme" | "layout" | "components";
+  type TabId = "brand" | "ai" | "theme" | "layout" | "components";
 
   const tabs: { id: TabId; label: string; hint: string }[] = [
     { id: "brand", label: "Brand", hint: "your site" },
+    ...(aiEnabled ? [{ id: "ai" as TabId, label: "AI", hint: "the proposal" }] : []),
     { id: "theme", label: "Theme", hint: "your site" },
     { id: "layout", label: "Layout", hint: "your home page" },
     { id: "components", label: "Components", hint: "your home page" },
@@ -155,6 +156,112 @@
     } as Partial<TokenSet>;
   }
 
+  // --- AI ------------------------------------------------------------------
+  const STARTERS = [
+    "warm and literary",
+    "brutalist zine",
+    "calm podcast landing page",
+    "minimal mono",
+  ];
+
+  /** Which part of the theme a changed token belongs to, for the proposal. */
+  const TOKEN_GROUPS: Record<string, "palette" | "type" | "layout"> = {
+    bg: "palette", text: "palette", bodyText: "palette", muted: "palette",
+    border: "palette", accent: "palette", accentText: "palette", link: "palette",
+    linkHover: "palette", brandInk: "palette", brandAccent: "palette",
+    brandFont: "type", logoWeight: "type", logoTracking: "type", font: "type",
+    fontMono: "type", fontSize: "type", lineHeight: "type",
+    maxWidth: "layout", containerPadding: "layout", radius: "layout",
+  };
+
+  interface ProposalGroup {
+    id: "palette" | "type" | "layout";
+    label: string;
+    /** Which tab its Tweak pill opens. */
+    tab: TabId;
+    changes: string[];
+  }
+
+  let prompt = $state("");
+  let generating = $state(false);
+  let aiError = $state("");
+  /** The proposed template, held client-side until applied. Never saved here. */
+  let proposal = $state<SiteTemplateDefinition | null>(null);
+  let proposalGroups = $state<ProposalGroup[]>([]);
+
+  /**
+   * Turn a theme diff into the three groups §7 asks for.
+   *
+   * Only what the model actually changed is listed — a proposal that claims to
+   * have touched everything is not reviewable.
+   */
+  function summariseDiff(diff: any): ProposalGroup[] {
+    const buckets: Record<string, string[]> = { palette: [], type: [], layout: [] };
+
+    for (const [key, value] of Object.entries(diff?.tokens?.light ?? {})) {
+      if (value == null) continue;
+      const group = TOKEN_GROUPS[key];
+      if (group) buckets[group]!.push(key);
+    }
+    for (const [name, cfg] of Object.entries(diff?.components ?? {})) {
+      if ((cfg as { variant?: string | null } | null)?.variant) buckets.layout!.push(name);
+    }
+    if (diff?.sections) {
+      for (const [name, cfg] of Object.entries(diff.sections)) {
+        if (cfg && Object.values(cfg).some((v) => v != null)) buckets.layout!.push(name);
+      }
+    }
+
+    return [
+      { id: "palette", label: "Palette", tab: "theme" as TabId, changes: buckets.palette! },
+      { id: "type", label: "Type", tab: "theme" as TabId, changes: buckets.type! },
+      { id: "layout", label: "Layout", tab: "layout" as TabId, changes: buckets.layout! },
+    ].filter((g) => g.changes.length > 0) as ProposalGroup[];
+  }
+
+  async function generate() {
+    const text = prompt.trim();
+    if (!text || generating) return;
+    generating = true;
+    aiError = "";
+    try {
+      const res = await fetch(`${adminBase}/ai/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        // Refining works from the current proposal, so follow-up prompts build
+        // on what is on screen rather than starting over.
+        body: JSON.stringify(proposal ? { prompt: text, base: proposal } : { prompt: text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.template) throw new Error(data.error || `Generation failed (${res.status})`);
+      proposal = data.template as SiteTemplateDefinition;
+      proposalGroups = summariseDiff(data.diff);
+      // Review it by looking at it. The editor's own state stays untouched
+      // until Apply, so nothing has changed yet.
+      editor?.previewTemplate(proposal);
+    } catch (err) {
+      aiError = err instanceof Error ? err.message : "Generation failed";
+    } finally {
+      generating = false;
+    }
+  }
+
+  /**
+   * Drop the proposal into the visual controls as unsaved work.
+   *
+   * Nothing reaches the live site until the author saves and publishes — the
+   * same path a saved trial takes, deliberately.
+   */
+  function applyProposal(goTo: TabId = "theme") {
+    if (!proposal) return;
+    applyTemplate(proposal);
+    // It is the editor's state now, not a suggestion sitting beside it.
+    proposal = null;
+    proposalGroups = [];
+    activeTab = goTo;
+  }
+
   // --- Saved trials --------------------------------------------------------
   interface TrialSummary {
     trialId: string;
@@ -205,8 +312,16 @@
     });
     if (!res.ok) return;
     const { trial } = await res.json();
-    const t = trial.template as SiteTemplateDefinition;
+    applyTemplate(trial.template as SiteTemplateDefinition);
+  }
 
+  /**
+   * Load a whole template into the editor as unsaved work.
+   *
+   * Shared by saved trials and AI proposals: both replace the look wholesale,
+   * and both must leave the decision to save or publish with the author.
+   */
+  function applyTemplate(t: SiteTemplateDefinition) {
     colors = Object.fromEntries(
       COLOR_SLOTS.map((slot) => [slot.key, String(t.tokens?.light?.[slot.key] ?? "")]),
     );
@@ -317,6 +432,16 @@
 
   let editor: SiteEditorInstance | null = null;
   let publishing = $state(false);
+
+  /**
+   * The AI tab previews its proposal rather than the editor's state, so moving
+   * away has to restore the preview or another tab shows a theme it is not
+   * editing.
+   */
+  function onTabChange(next: TabId) {
+    if (next !== "ai" && proposal) editor?.refreshPreviewCss();
+    if (next === "ai" && proposal) editor?.previewTemplate(proposal);
+  }
 
   /** Any visual control changed: flag the work and re-render the preview. */
   function touched() {
@@ -453,13 +578,9 @@
           class="nbr-design-tab"
           class:is-active={!codeMode && activeTab === tab.id}
           aria-selected={!codeMode && activeTab === tab.id}
-          onclick={() => { activeTab = tab.id; codeMode = false; }}
+          onclick={() => { activeTab = tab.id; codeMode = false; onTabChange(tab.id); }}
         >{tab.label}</button>
       {/each}
-      {#if aiHref}
-        <!-- Still its own screen until the AI tab lands; Design owns the way in. -->
-        <a class="nbr-design-tab" href={aiHref}>AI</a>
-      {/if}
     </div>
 
     <button
@@ -545,6 +666,85 @@
           <a href={`${adminBase}/settings`}>Settings · Sharing &amp; SEO</a> — they are about how
           your site looks <em>elsewhere</em>, not on the page.
         </p>
+      {/if}
+
+      {#if !codeMode && activeTab === "ai"}
+        <div class="nbr-control">
+          <label class="nr-eyebrow" for="ai-prompt">Describe your space</label>
+          <textarea
+            id="ai-prompt"
+            class="nbr-ai-prompt"
+            rows="3"
+            bind:value={prompt}
+            disabled={generating}
+            placeholder="deep green, serif body, generous whitespace, minimal header"
+          ></textarea>
+
+          <div class="nbr-chips nbr-starters">
+            {#each STARTERS as starter}
+              <button
+                type="button"
+                class="nbr-starter"
+                disabled={generating}
+                onclick={() => { prompt = starter; generate(); }}
+              >{starter}</button>
+            {/each}
+          </div>
+
+          <div class="nbr-ai-actions">
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              onclick={generate}
+              disabled={generating || !prompt.trim()}
+            >
+              {generating ? "Thinking…" : proposal ? "Regenerate" : "Generate"}
+            </button>
+            {#if proposal}
+              <button type="button" class="btn btn-sm" onclick={() => applyProposal()}>
+                Apply to Design
+              </button>
+            {/if}
+          </div>
+
+          {#if aiError}
+            <p class="nbr-nudge">{aiError}</p>
+          {/if}
+        </div>
+
+        {#if proposal}
+          <!--
+            A proposal to review, not a change already made. Nothing reaches the
+            live site — or even the visual controls — until it is applied.
+          -->
+          <div class="nbr-control">
+            <span class="nr-eyebrow">The proposal</span>
+            <div class="nbr-proposal">
+              {#each proposalGroups as group}
+                <div class="nbr-proposal-group">
+                  <div>
+                    <span class="nbr-proposal-label">{group.label}</span>
+                    <span class="nbr-proposal-changes">{group.changes.join(" · ")}</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="nbr-tweak"
+                    onclick={() => applyProposal(group.tab)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14M5 16h14"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>
+                    Tweak
+                  </button>
+                </div>
+              {/each}
+              {#if proposalGroups.length === 0}
+                <p class="hint">The model proposed no changes. Try describing the mood differently.</p>
+              {/if}
+            </div>
+            <p class="hint">
+              Applying loads it into the visual controls as unsaved work — publish when you're sure.
+            </p>
+          </div>
+        {/if}
       {/if}
 
       {#if !codeMode && activeTab === "theme"}

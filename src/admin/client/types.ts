@@ -1,3 +1,4 @@
+import type { SiteTemplateDefinition } from "../../template/types.js";
 import type { EditorView } from "@codemirror/view";
 
 export interface EditorInstance {
@@ -105,6 +106,8 @@ export interface SiteEditorInstance {
   save(): Promise<number | null>;
   /** Replace the code panes and hidden template with a stored template. */
   loadTemplate(template: Record<string, unknown>): void;
+  /** Render a template into the preview without adopting it. */
+  previewTemplate(template: SiteTemplateDefinition): void;
   /** Re-generate and inject the preview stylesheet now. */
   refreshPreviewCss(): void;
 }

@@ -99,7 +99,7 @@ function formatDateTime(iso: string): string {
       componentRegistry={componentRegistry}
       componentConfigs={componentConfigs}
       previewUrl={previewUrl}
-      aiHref={ctx.aiEnabled ? `${ctx.adminBase}/ai` : null}
+      aiEnabled={ctx.aiEnabled}
       siteName={settings[SETTING_SITE_NAME] ?? ""}
       siteTagline={settings[SETTING_SITE_TAGLINE] ?? ""}
       siteLogo={siteLogo}

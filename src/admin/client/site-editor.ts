@@ -204,6 +204,23 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     }
   }
 
+  /**
+   * Render an arbitrary template into the preview without adopting it.
+   *
+   * How an AI proposal is reviewed: the author sees the thing before deciding,
+   * and the editor's own state is untouched until they apply it.
+   */
+  function previewTemplate(template: SiteTemplateDefinition) {
+    ensurePreviewLoaded();
+    try {
+      const doc = preview.contentDocument;
+      const styleEl = doc?.getElementById("nr-generated-css");
+      if (styleEl) styleEl.textContent = generateCss(template);
+    } catch (error) {
+      console.error("Proposal preview failed:", error);
+    }
+  }
+
   function scheduleLivePreview() {
     ensurePreviewLoaded();
     if (previewDebounce) window.clearTimeout(previewDebounce);
@@ -462,6 +479,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   return {
     markDirty,
     loadTemplate,
+    previewTemplate,
     save,
     refreshPreviewCss: scheduleLivePreview,
     destroy() {

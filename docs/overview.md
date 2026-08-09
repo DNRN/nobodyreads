@@ -190,6 +190,8 @@ site-template editor iframe, which render *saved* content from the DB.
 
 ### Collections (`content_view`)
 
+A custom collection is two halves: a SQL query (validated against a table allowlist and forced to be tenant-scoped — `custom-view-sql.ts`) and a **template** (`src/content/collection-template.ts`). The template is literal HTML plus `{{field}}`, `{{#each rows}}`, `{{#if field}}` and a fixed helper set (`url`, `postUrl`, `date`); values are HTML-escaped and there is no raw-output form. It replaced a JavaScript function body run through `new Function(...)` on the server, which had `process.env` in scope and so had to be disabled behind `CUSTOM_VIEW_JS_TEMPLATES`. Nothing executes now, so that flag is gone and custom collections work on every deployment, multi-tenant included. Templates are parse-checked at save time as well as at render.
+
 Collections are defined in the admin UI at `/admin/collections` or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---

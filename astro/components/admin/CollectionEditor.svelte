@@ -2,8 +2,9 @@
   import { onMount } from "svelte";
   import { EditorView } from "@codemirror/view";
   import { sql, SQLite } from "@codemirror/lang-sql";
-  import { javascript } from "@codemirror/lang-javascript";
+  import { html } from "@codemirror/lang-html";
   import { replaceTextarea, type EditorInstance } from "nobodyreads/editor";
+  import { DEFAULT_COLLECTION_TEMPLATE } from "nobodyreads/collection-template";
   import { embedToken } from "nobodyreads/embed-token";
   import type { ContentView, CustomViewConfig, PostListViewConfig } from "nobodyreads";
 
@@ -36,20 +37,6 @@ WHERE published = 1
 ORDER BY date DESC
 LIMIT 5`;
 
-  const defaultTemplate = `// rows: array of objects from your SQL query
-// urlPrefix: URL prefix for building links (e.g. "" or "/dennis")
-// escapeHtml: utility to escape HTML entities
-
-return rows.map(row => \`
-  <article class="post-preview">
-    <time class="post-date">\${row.date}</time>
-    <h2 class="post-title">
-      <a href="\${urlPrefix}/posts/\${row.slug}">\${escapeHtml(String(row.title))}</a>
-    </h2>
-    <p class="post-excerpt">\${escapeHtml(String(row.excerpt || ''))}</p>
-  </article>
-\`).join('\\n');`;
-
   // --- Form state ---
   let title = $state(v.title);
   let slug = $state(v.slug);
@@ -57,7 +44,7 @@ return rows.map(row => \`
   let limit = $state(typeof postListConfig.limit === "number" ? String(postListConfig.limit) : "");
   let published = $state(v.published);
   let query = $state(customConfig.query || defaultQuery);
-  let template = $state(customConfig.template || defaultTemplate);
+  let template = $state(customConfig.template || DEFAULT_COLLECTION_TEMPLATE);
 
   const isCustom = $derived(kind === "custom");
   const token = $derived(embedToken(slug || "your-collection-slug"));
@@ -76,7 +63,7 @@ return rows.map(row => \`
       EditorView.updateListener.of((u) => { if (u.docChanged) query = queryEditor!.getValue(); }),
     ]);
     templateEditor = replaceTextarea(templateEl, [
-      javascript(),
+      html(),
       EditorView.updateListener.of((u) => { if (u.docChanged) template = templateEditor!.getValue(); }),
     ]);
   }
@@ -189,7 +176,7 @@ return rows.map(row => \`
       </div>
 
       <div class="field">
-        <label for="template">Template <span class="hint">(JavaScript function body)</span></label>
+        <label for="template">Template</label>
         <textarea
           bind:this={templateEl}
           id="template"
@@ -200,11 +187,11 @@ return rows.map(row => \`
           bind:value={template}
         ></textarea>
         <div class="hint">
-          Function signature: <code>(rows, urlPrefix, escapeHtml) =&gt; string</code><br />
-          <code>rows</code> is an array of objects with columns from your query.
-          Return an HTML string.<br />
-          Templates run as server-side JavaScript and are disabled unless the operator sets
-          <code>CUSTOM_VIEW_JS_TEMPLATES=1</code> (single-tenant self-hosting only).
+          Your own markup, plus <code>{"{{field}}"}</code> for a column,
+          <code>{"{{#each rows}}…{{/each}}"}</code> to repeat and
+          <code>{"{{#if field}}…{{/if}}"}</code> to branch. Helpers:
+          <code>{"{{postUrl slug}}"}</code>, <code>{"{{url path}}"}</code>,
+          <code>{"{{date date}}"}</code>. Values are escaped for you.
         </div>
       </div>
     </div>

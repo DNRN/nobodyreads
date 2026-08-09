@@ -7,6 +7,7 @@ import {
   upsertContentView,
   validateCustomQuery,
 } from "../../../content/db.js";
+import { validateCollectionTemplate } from "../../../content/collection-template.js";
 import type { ContentView, ContentViewKind } from "../../../content/types.js";
 import type { AdminModuleContext } from "./types.js";
 
@@ -42,6 +43,14 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
       const queryError = validateCustomQuery(data.query ?? "");
       if (queryError) {
         return c.json({ error: "Validation failed", details: [{ message: queryError }] }, 400);
+      }
+
+      // Same reasoning for the other half: a template that does not parse
+      // renders as an error box on a public page, so it is refused here rather
+      // than discovered by a reader.
+      const templateError = validateCollectionTemplate(data.template ?? "");
+      if (templateError) {
+        return c.json({ error: "Validation failed", details: [{ message: templateError }] }, 400);
       }
 
       config = {

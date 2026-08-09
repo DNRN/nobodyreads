@@ -31,6 +31,12 @@ export interface FontFamily {
    */
   googleSpec: string | null;
   role: FontRole;
+  /**
+   * One line of character, used only in the AI prompt. The model chooses from
+   * raw CSS stacks, which say nothing about how a face looks — without this it
+   * picks the blandest option for every mood.
+   */
+  note: string;
 }
 
 /**
@@ -45,6 +51,7 @@ export const FONT_CATALOGUE: FontFamily[] = [
     stack: "'Newsreader', Georgia, 'Times New Roman', serif",
     googleSpec: "Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500",
     role: "serif",
+    note: "warm literary serif, easy for long reading",
   },
   {
     id: "hanken-grotesk",
@@ -53,6 +60,7 @@ export const FONT_CATALOGUE: FontFamily[] = [
       "'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     googleSpec: "Hanken+Grotesk:wght@400;500;600;700;800",
     role: "sans",
+    note: "friendly humanist sans, calm and neutral",
   },
   {
     id: "ibm-plex-mono",
@@ -60,6 +68,39 @@ export const FONT_CATALOGUE: FontFamily[] = [
     stack: "'IBM Plex Mono', 'Menlo', 'Consolas', ui-monospace, monospace",
     googleSpec: "IBM+Plex+Mono:wght@400;500",
     role: "mono",
+    note: "even technical monospace",
+  },
+  {
+    id: "fraunces",
+    label: "Fraunces",
+    stack: "'Fraunces', Georgia, 'Times New Roman', serif",
+    googleSpec: "Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400",
+    role: "serif",
+    note: "characterful display serif with high contrast and a little wonk",
+  },
+  {
+    id: "eb-garamond",
+    label: "EB Garamond",
+    stack: "'EB Garamond', Georgia, 'Times New Roman', serif",
+    googleSpec: "EB+Garamond:ital,wght@0,400;0,600;1,400",
+    role: "serif",
+    note: "old-style bookish serif, low contrast and quiet",
+  },
+  {
+    id: "space-grotesk",
+    label: "Space Grotesk",
+    stack: "'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    googleSpec: "Space+Grotesk:wght@400;500;700",
+    role: "sans",
+    note: "squared grotesque with hard terminals; the brutalist or zine choice",
+  },
+  {
+    id: "jetbrains-mono",
+    label: "JetBrains Mono",
+    stack: "'JetBrains Mono', 'Menlo', 'Consolas', ui-monospace, monospace",
+    googleSpec: "JetBrains+Mono:wght@400;500",
+    role: "mono",
+    note: "monospace with more personality than Plex",
   },
   {
     id: "system-serif",
@@ -67,6 +108,7 @@ export const FONT_CATALOGUE: FontFamily[] = [
     stack: "Georgia, 'Times New Roman', serif",
     googleSpec: null,
     role: "serif",
+    note: "the reader's own serif; loads nothing",
   },
   {
     id: "system-sans",
@@ -74,6 +116,7 @@ export const FONT_CATALOGUE: FontFamily[] = [
     stack: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     googleSpec: null,
     role: "sans",
+    note: "the reader's own sans; loads nothing",
   },
   {
     id: "system-mono",
@@ -81,6 +124,7 @@ export const FONT_CATALOGUE: FontFamily[] = [
     stack: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
     googleSpec: null,
     role: "mono",
+    note: "the reader's own monospace; loads nothing",
   },
 ];
 
@@ -96,6 +140,16 @@ export const CATALOGUE_STACKS = FONT_CATALOGUE.map((family) => family.stack);
  * code block on the site, so the choices offered for each slot are narrowed to
  * the families that belong in it.
  */
+/**
+ * The catalogue as prompt text: what each choice looks like, so a model can
+ * match a mood to a face instead of defaulting to the safest-looking string.
+ */
+export function fontGuide(roles?: FontRole[]): string {
+  return FONT_CATALOGUE.filter((f) => !roles || roles.includes(f.role))
+    .map((f) => `- ${f.label} (${f.role}) — ${f.note}\n  ${f.stack}`)
+    .join("\n");
+}
+
 export function stacksForRoles(...roles: FontRole[]): string[] {
   return FONT_CATALOGUE.filter((family) => roles.includes(family.role)).map((f) => f.stack);
 }

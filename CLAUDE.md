@@ -113,7 +113,8 @@ time, at preview time and on AI output — same validators every time.
 Fonts spec, or `null` for a system stack. `SiteLayout` builds its `<link>` from the theme's
 own tokens, so **do not hardcode a font request anywhere**; call `fontLinkHref`. Type
 pairings and the AI theme diff both draw from the catalogue (the AI's is role-scoped, so
-`fontMono` can only be a monospace family). Adding a family is one entry here.
+`fontMono` can only be a monospace family; a mono *body* is allowed). Adding a family is one
+entry here — including its `note`, which is what lets the model match a mood to a face.
 
 ### Site template system
 

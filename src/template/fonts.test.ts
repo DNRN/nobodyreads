@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   CATALOGUE_STACKS,
+  fontGuide,
   stacksForRoles,
   FONT_CATALOGUE,
   familyForStack,
@@ -114,8 +115,8 @@ describe("the AI may only name a family the site can load", () => {
     });
   }
 
-  it("accepts any reading face for the body and brand slots", () => {
-    for (const stack of stacksForRoles("serif", "sans")) {
+  it("accepts any catalogue face for the body and brand slots", () => {
+    for (const stack of stacksForRoles("serif", "sans", "mono")) {
       expect(diffWith({ font: stack }).success, stack).toBe(true);
       expect(diffWith({ brandFont: stack }).success, stack).toBe(true);
     }
@@ -131,9 +132,12 @@ describe("the AI may only name a family the site can load", () => {
     }
   });
 
-  it("does not let a monospace family into a reading slot", () => {
+  // The constraint is one-directional on purpose: a monospace body is a real
+  // style — and the only way the "minimal mono" starter can be satisfied.
+  it("allows a monospace family in a reading slot", () => {
     for (const stack of stacksForRoles("mono")) {
-      expect(diffWith({ font: stack }).success, stack).toBe(false);
+      expect(diffWith({ font: stack }).success, stack).toBe(true);
+      expect(diffWith({ brandFont: stack }).success, stack).toBe(true);
     }
   });
 
@@ -185,6 +189,59 @@ describe("every type pairing resolves to the catalogue", () => {
     for (const pairing of TYPE_PAIRINGS) {
       expect(CATALOGUE_STACKS).toContain(pairing.font);
       expect(CATALOGUE_STACKS).toContain(pairing.brandFont);
+    }
+  });
+});
+
+/**
+ * The AI advertises four starting moods. The catalogue has to be able to serve
+ * each of them, or a starter chip is a promise the engine cannot keep.
+ */
+describe("the catalogue covers the moods the AI offers", () => {
+  it("has a webfont for each role, not only a system fallback", () => {
+    for (const role of ["serif", "sans", "mono"] as const) {
+      const webfonts = FONT_CATALOGUE.filter((f) => f.role === role && f.googleSpec);
+      expect(webfonts.length, `${role} webfonts`).toBeGreaterThan(0);
+    }
+  });
+
+  it("offers a choice in every role rather than a single option", () => {
+    for (const role of ["serif", "sans", "mono"] as const) {
+      expect(stacksForRoles(role).length, role).toBeGreaterThan(1);
+    }
+  });
+
+  it("can express a mono-bodied theme", () => {
+    const mono = stacksForRoles("mono")[0]!;
+    expect(fontLinkHref([mono])).not.toBeUndefined();
+    expect(familyForStack(mono)?.role).toBe("mono");
+  });
+});
+
+/**
+ * The model chooses from raw CSS stacks, which say nothing about how a face
+ * looks. Without the guide it defaulted to a system stack for every mood, so
+ * the catalogue's character notes are load-bearing, not decoration.
+ */
+describe("the font guide handed to the model", () => {
+  it("names every family with its role and character", () => {
+    const guide = fontGuide();
+    for (const family of FONT_CATALOGUE) {
+      expect(guide, family.id).toContain(family.label);
+      expect(guide, family.id).toContain(family.note);
+      expect(guide, family.id).toContain(family.stack);
+    }
+  });
+
+  it("can be narrowed to a role", () => {
+    const mono = fontGuide(["mono"]);
+    expect(mono).toContain("JetBrains Mono");
+    expect(mono).not.toContain("Newsreader");
+  });
+
+  it("gives every family a note worth reading", () => {
+    for (const family of FONT_CATALOGUE) {
+      expect(family.note.trim().length, family.id).toBeGreaterThan(10);
     }
   });
 });

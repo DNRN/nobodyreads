@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_TEMPLATE } from "./defaults.js";
 import { generateCss } from "./generate.js";
-import { FONTS } from "./palette.js";
+import { familyForStack } from "./fonts.js";
 import {
   CORNER_STEPS,
   COLOR_SLOTS,
@@ -62,19 +62,20 @@ describe("the shipped default is expressible in the visual controls", () => {
   });
 });
 
-describe("type pairings only offer faces the site loads", () => {
+describe("type pairings only offer faces the site can render", () => {
   // Offering a family nobody requests renders as a silent fallback, which looks
-  // like a bug rather than a choice.
-  const LOADED = [FONTS.serif, FONTS.sans];
-  const SYSTEM = ["Georgia", "system-ui"];
-
-  it("uses a loaded webfont or a system stack for every slot", () => {
+  // like a bug rather than a choice. The catalogue is the authority on what can
+  // be rendered, so this checks against it instead of a second hand-kept list.
+  it("names only catalogue families", () => {
     for (const pairing of TYPE_PAIRINGS) {
-      for (const stack of [pairing.font, pairing.brandFont]) {
-        const ok = LOADED.includes(stack) || SYSTEM.some((s) => stack.startsWith(s));
-        expect(ok, `${pairing.id} uses an unloaded stack: ${stack}`).toBe(true);
-      }
+      expect(familyForStack(pairing.font), `${pairing.id} font`).toBeDefined();
+      expect(familyForStack(pairing.brandFont), `${pairing.id} brandFont`).toBeDefined();
     }
+  });
+
+  it("gives every pairing a distinct id and label", () => {
+    expect(new Set(TYPE_PAIRINGS.map((p) => p.id)).size).toBe(TYPE_PAIRINGS.length);
+    expect(new Set(TYPE_PAIRINGS.map((p) => p.label)).size).toBe(TYPE_PAIRINGS.length);
   });
 });
 

@@ -34,8 +34,12 @@ function pairing(id: string, label: string, fontId: string, brandFontId: string)
 
 export const TYPE_PAIRINGS: TypePairing[] = [
   pairing("newsreader-hanken", "Newsreader + Hanken Grotesk", "newsreader", "hanken-grotesk"),
+  pairing("fraunces-hanken", "Fraunces + Hanken Grotesk", "fraunces", "hanken-grotesk"),
+  pairing("garamond-hanken", "EB Garamond + Hanken Grotesk", "eb-garamond", "hanken-grotesk"),
+  pairing("space-grotesk", "Space Grotesk throughout", "space-grotesk", "space-grotesk"),
   pairing("hanken", "Hanken Grotesk throughout", "hanken-grotesk", "hanken-grotesk"),
   pairing("newsreader", "Newsreader throughout", "newsreader", "newsreader"),
+  pairing("jetbrains-mono", "JetBrains Mono throughout", "jetbrains-mono", "jetbrains-mono"),
   pairing("system-serif", "System serif", "system-serif", "system-sans"),
   pairing("system-sans", "System sans", "system-sans", "system-sans"),
 ];

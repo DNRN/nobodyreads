@@ -35,9 +35,15 @@ import { normalizeComponents } from "./theme-io.js";
  * the engine can actually render. Each slot is narrowed further to the families
  * that belong in it, so `fontMono` cannot end up holding a serif.
  */
+/**
+ * The constraint is one-directional. `fontMono` must be monospace or every code
+ * block on the site loses its alignment; a *reading* slot holding a monospace
+ * face is a deliberate style, not a mistake — and it is the only way a
+ * "minimal mono" theme can exist at all.
+ */
 const FONT_TOKEN_ROLES: Record<string, FontRole[]> = {
-  font: ["serif", "sans"],
-  brandFont: ["serif", "sans"],
+  font: ["serif", "sans", "mono"],
+  brandFont: ["serif", "sans", "mono"],
   fontMono: ["mono"],
 };
 

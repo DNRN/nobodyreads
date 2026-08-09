@@ -1,4 +1,5 @@
 import type { ThemeDiff } from "../../../template/ai-theme.js";
+import { fontGuide } from "../../../template/fonts.js";
 
 /**
  * Instruction shared by every AI theme adapter. The task is the same regardless
@@ -13,7 +14,13 @@ export const SYSTEM_PROMPT =
   "light background; dark mode: light text on a dark background) so the theme looks right " +
   "whichever mode a visitor uses — never leave one mode's colors null while changing the " +
   "other. Only set fields defined by the schema, and leave section/component fields null " +
-  "unless the mood clearly calls for a structural change.";
+  "unless the mood clearly calls for a structural change.\n\n" +
+  "Typefaces must be chosen from the list below — they are the only ones the site " +
+  "loads, and anything else is rejected. Copy the CSS stack exactly. `font` and " +
+  "`brandFont` may be any of them (a monospace body is a legitimate style); " +
+  "`fontMono` must be a monospace. Pick for the mood rather than defaulting to a " +
+  "system stack:\n" +
+  fontGuide();
 
 /**
  * Headroom for the completion. Reasoning models (e.g. Kimi, DeepSeek-R1) emit a

@@ -35,6 +35,7 @@ export default defineConfig({
         { find: /^nobodyreads\/image-markdown$/, replacement: r("./src/shared/image-markdown.ts") },
         { find: /^nobodyreads\/embed-token$/, replacement: r("./src/shared/embed-token.ts") },
         { find: /^nobodyreads\/collection-template$/, replacement: r("./src/content/collection-template.ts") },
+        { find: /^nobodyreads\/collection-presets$/, replacement: r("./src/content/collection-presets.ts") },
         { find: /^nobodyreads\/storage$/, replacement: r("./src/media/storage.ts") },
         { find: /^nobodyreads\/schema$/, replacement: r("./src/db/schema.ts") },
         { find: /^nobodyreads$/, replacement: r("./src/index.ts") },

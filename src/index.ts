@@ -244,6 +244,14 @@ export type { DefaultHomePageOptions } from "./content/defaults.js";
 export { renderPostListView, heroMetaLine } from "./content/templates.js";
 export type { PostListVariant, PostListRenderOptions } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
+export { describeCollection } from "./content/describe-collection.js";
+export {
+  renderCollectionTemplate,
+  validateCollectionTemplate,
+  parseCollectionTemplate,
+  DEFAULT_COLLECTION_TEMPLATE,
+  TEMPLATE_HELPERS,
+} from "./content/collection-template.js";
 export type { RenderMarkdownOptions, RenderContentOptions } from "./content/render.js";
 
 // SEO

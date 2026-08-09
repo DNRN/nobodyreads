@@ -11,5 +11,5 @@ const collectionsBase = `${ctx.adminBase}/collections`;
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <CollectionEditor client:load collectionsBase={collectionsBase} />
+  <CollectionEditor client:load collectionsBase={collectionsBase} adminBase={ctx.adminBase} />
 </AdminLayout>

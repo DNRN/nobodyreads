@@ -4821,3 +4821,237 @@
 .nr-admin .nbr-build-row .hint {
 	margin-top: 0;
 }
+
+/* ========================================
+   Settings (docs/designs/admin-editor.md §9, comp 12)
+   ======================================== */
+.nr-admin .nbr-settings-head {
+	margin-bottom: 22px;
+}
+
+.nr-admin .nbr-settings-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-settings-sub {
+	margin-top: 6px;
+	font-size: 14px;
+	color: var(--nr-muted);
+}
+
+/* Not a warning — a signpost to where something moved. */
+.nr-admin .nbr-settings-pointer {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 30px;
+	text-decoration: none;
+}
+
+.nr-admin .nbr-settings-pointer:hover {
+	border-color: var(--nr-accent);
+	text-decoration: none;
+}
+
+.nr-admin .nbr-settings-section {
+	margin-bottom: 30px;
+}
+
+.nr-admin .nbr-settings-card {
+	margin-top: 9px;
+	padding: 20px;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+}
+
+.nr-admin .nbr-settings-row-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-settings-row-sub {
+	margin-top: 3px;
+	font-size: 13px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-token-form input[type="text"],
+.nr-admin .nbr-token-form input[type="password"],
+.nr-admin .nbr-token-form textarea,
+.nr-admin .nbr-token-form select {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-token-form input:focus,
+.nr-admin .nbr-token-form textarea:focus,
+.nr-admin .nbr-token-form select:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+/* ----- Sharing & SEO ----- */
+.nr-admin .nbr-sharing {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+	gap: 28px;
+	align-items: start;
+}
+
+.nr-admin .nbr-favicon-thumb {
+	width: 46px;
+	height: 46px;
+}
+
+.nr-admin .nbr-og-drop {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1200 / 630;
+	max-height: 200px;
+	border: 1px dashed var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-bg);
+	color: var(--nr-muted);
+	font-family: var(--nr-font);
+	font-size: 13.5px;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-og-drop:hover {
+	border-color: var(--nr-accent);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-og-set img {
+	width: 100%;
+	max-height: 200px;
+	object-fit: cover;
+	border-radius: var(--nr-radius-control);
+	border: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-og-set-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+/* Neither of these appears on the site, so the only way to judge them is to
+   see where they actually turn up. */
+.nr-admin .nbr-sharing-preview {
+	position: sticky;
+	top: 0;
+}
+
+.nr-admin .nbr-tabchrome {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 9px;
+	padding: 9px 11px;
+	border: 1px solid var(--nr-border);
+	border-radius: 10px 10px 0 0;
+	background: var(--nr-bar);
+}
+
+.nr-admin .nbr-tabchrome-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	border-radius: 4px;
+	background: var(--nr-accent-soft);
+	overflow: hidden;
+	display: inline-flex;
+}
+
+.nr-admin .nbr-tabchrome-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.nr-admin .nbr-tabchrome-title {
+	flex: 1;
+	min-width: 0;
+	font-size: 12.5px;
+	color: var(--nr-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.nr-admin .nbr-tabchrome-close {
+	color: var(--nr-faint);
+	font-size: 14px;
+	line-height: 1;
+}
+
+.nr-admin .nbr-sharecard {
+	border: 1px solid var(--nr-border);
+	border-top: 0;
+	border-radius: 0 0 10px 10px;
+	overflow: hidden;
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-sharecard-img {
+	aspect-ratio: 1200 / 630;
+	background: var(--nr-accent-tint);
+	display: flex;
+}
+
+.nr-admin .nbr-sharecard-img img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.nr-admin .nbr-sharecard-body {
+	padding: 11px 13px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.nr-admin .nbr-sharecard-host {
+	font-family: var(--nr-font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-sharecard-title {
+	font-size: 14px;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-sharecard-desc {
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+@media (max-width: 860px) {
+	.nr-admin .nbr-sharing {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

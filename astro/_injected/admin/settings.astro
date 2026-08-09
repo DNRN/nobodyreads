@@ -1,79 +1,94 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
+import SharingSettings from "../../components/admin/SharingSettings.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { isEmailEnabled } from "nobodyreads";
+import {
+  initDb,
+  isEmailEnabled,
+  getSiteSettings,
+  getSiteTemplate,
+  resolveMediaValue,
+  DEFAULT_TEMPLATE,
+  SETTING_SITE_NAME,
+  SETTING_SITE_TAGLINE,
+  SETTING_SITE_FAVICON,
+  SETTING_SITE_OG_IMAGE,
+} from "nobodyreads";
+import type { CustomToken } from "nobodyreads";
+import { createMediaStorage } from "nobodyreads/storage";
 
 const ctx = requireAdminContext(Astro.locals);
-
 const emailEnabled = isEmailEnabled();
+
+const db = await initDb();
+const storage = createMediaStorage();
+const mediaUrl = (key: string) => storage.url(key);
+
+const settings = await getSiteSettings(db, ctx.tenantId);
+const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
+
+const favicon = settings[SETTING_SITE_FAVICON] ?? "";
+const ogImage = settings[SETTING_SITE_OG_IMAGE] ?? "";
+
+// Custom token *values* used to live on the retired site-identity page. They
+// are site-wide text slots rather than theme structure, so they land here —
+// the keys are still defined in Design's template code.
+const customTokens: CustomToken[] = template.customTokens ?? [];
+const tokenValues: Record<string, string> = {};
+for (const token of customTokens) {
+  tokenValues[token.key] = settings[`custom_token:${token.key}`] ?? token.defaultValue;
+}
+
+const siteHost = (() => {
+  try {
+    return new URL(process.env.SITE_URL ?? "https://example.com").host;
+  } catch {
+    return "your-site.example";
+  }
+})();
+
+const saved = Astro.url.searchParams.has("saved");
 ---
 <AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
-    <div class="editor-list">
-      <div class="editor-list-header">
-        <div>
-          <h2>Settings</h2>
-          <p class="home-substat" style="margin-top:6px">The essentials. Nothing you don't need.</p>
-        </div>
-      </div>
+    <div class="nbr-settings">
+      <header class="nbr-settings-head">
+        <h2 class="nr-title nbr-settings-title">Settings</h2>
+        <p class="nbr-settings-sub">The essentials. Nothing you don't need.</p>
+      </header>
 
-      <section class="settings-card" aria-label="Site identity">
-        <div>
-          <span class="settings-eyebrow">Site identity</span>
-          <a href={`${ctx.editorBase}/site`} class="settings-card-title">
-            Name, tagline, logo, favicon &amp; social image
-          </a>
+      <a class="nbr-note nbr-settings-pointer" href={`${ctx.adminBase}/layout`}>
+        <span aria-hidden="true">→</span>
+        <!-- One span, not loose text: the row is a flex container, so every
+             element inside would otherwise become its own flex item and pick up
+             the gap — leaving a space before the full stop. -->
+        <span>Looking for name, tagline &amp; logo? They moved to <strong>Design · Brand</strong>.</span>
+      </a>
+
+      <section class="nbr-settings-section">
+        <span class="nr-eyebrow">Sharing &amp; SEO</span>
+        <div class="nbr-settings-card">
+          <SharingSettings
+            client:load
+            adminBase={ctx.adminBase}
+            favicon={favicon}
+            faviconUrl={resolveMediaValue(favicon, mediaUrl)}
+            ogImage={ogImage}
+            ogImageUrl={resolveMediaValue(ogImage, mediaUrl)}
+            siteName={settings[SETTING_SITE_NAME] ?? process.env.SITE_NAME ?? ""}
+            siteTagline={settings[SETTING_SITE_TAGLINE] ?? process.env.SITE_TAGLINE ?? ""}
+            siteHost={siteHost}
+          />
         </div>
-        <a href={`${ctx.editorBase}/site`} class="btn btn-sm">Edit</a>
       </section>
 
-      {ctx.aiEnabled && (
-        <div class="editor-list-section" style="margin-top:2rem">
-          <h3>AI theming provider</h3>
-          <p class="hint" style="margin-top:0">
-            By default your plot uses the free built-in model. Bring your own
-            provider and key to use your own quota instead. Your key is encrypted
-            and never shown again.
-          </p>
-          <form id="ai-provider-form" data-admin-base={ctx.adminBase} class="ai-provider-form">
-            <label class="env-label" for="ai-provider">Provider</label>
-            <select id="ai-provider" name="provider" class="editor-input">
-              <option value="openai-compatible">OpenAI-compatible (OpenAI, OpenRouter, Together, Groq, vLLM…)</option>
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="gemini">Google (Gemini)</option>
-              <option value="local">Local (Ollama / llama.cpp)</option>
-            </select>
-
-            <label class="env-label" for="ai-model">Model</label>
-            <input id="ai-model" name="model" type="text" class="editor-input" placeholder="e.g. gpt-4o-mini, claude-haiku-4-5, qwen2.5" autocomplete="off" />
-
-            <label class="env-label" for="ai-base-url">Base URL <span class="hint">(optional)</span></label>
-            <input id="ai-base-url" name="baseURL" type="text" class="editor-input" placeholder="Override endpoint (required for local / custom gateways)" autocomplete="off" />
-
-            <label class="env-label" for="ai-api-key">API key</label>
-            <input id="ai-api-key" name="apiKey" type="password" class="editor-input" placeholder="Leave blank to keep the current key" autocomplete="off" />
-            <p id="ai-key-status" class="hint" style="margin-top:2px"></p>
-
-            <div style="display:flex; gap:8px; margin-top:10px">
-              <button type="submit" class="btn btn-sm">Save provider</button>
-              <button type="button" id="ai-clear" class="btn btn-sm">Use free model</button>
-            </div>
-            <p id="ai-provider-msg" class="hint" role="status" aria-live="polite"></p>
-          </form>
-        </div>
-      )}
-
-      <div class="editor-list-section" style="margin-top:2rem">
-        <h3>Email subscriptions</h3>
-
-        <div class="settings-toggle-row">
+      <section class="nbr-settings-section">
+        <span class="nr-eyebrow">Email subscriptions</span>
+        <div class="nbr-settings-card nbr-settings-row">
           <div>
-            <div class="env-label">Send new posts to subscribers</div>
-            <div class="env-value">
-              Currently
-              <span class={emailEnabled ? "env-on" : "env-off"}>
-                {emailEnabled ? "Enabled" : "Disabled"}
-              </span>
+            <div class="nbr-settings-row-title">Send new posts to subscribers</div>
+            <div class="nbr-settings-row-sub">
+              Currently <strong>{emailEnabled ? "enabled" : "disabled"}</strong>
             </div>
           </div>
           <span
@@ -83,9 +98,88 @@ const emailEnabled = isEmailEnabled();
           ></span>
         </div>
         <p class="hint">
-          Subscriber numbers live under <a href={`${ctx.adminBase}/community`}>Community</a>.
+          Configured by the operator in <code>config/email.config.json</code>. Subscriber numbers
+          live under <a href={`${ctx.adminBase}/community`}>Community</a>.
         </p>
-      </div>
+      </section>
+
+      {customTokens.length > 0 && (
+        <section class="nbr-settings-section">
+          <span class="nr-eyebrow">Custom tokens</span>
+          <div class="nbr-settings-card">
+            <p class="hint" style="margin-top:0">
+              Text slots your template uses. Keys are defined in
+              <a href={`${ctx.adminBase}/layout`}>Design → Edit template code</a>.
+            </p>
+            <form method="POST" action={`${ctx.adminBase}/editor/site/save`} class="nbr-token-form">
+              {customTokens.map((token) => (
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for={`token-${token.key}`}>
+                    {token.label} <code>{`{{${token.key}}}`}</code>
+                  </label>
+                  {token.type === "html" ? (
+                    <textarea id={`token-${token.key}`} name={`token:${token.key}`} rows="3">{tokenValues[token.key]}</textarea>
+                  ) : (
+                    <input
+                      id={`token-${token.key}`}
+                      type="text"
+                      name={`token:${token.key}`}
+                      value={tokenValues[token.key]}
+                    />
+                  )}
+                </div>
+              ))}
+              <button type="submit" class="btn btn-primary btn-sm">Save tokens</button>
+              {saved ? <span class="nr-status is-saved"><i class="nr-status-dot"></i>Saved</span> : null}
+            </form>
+          </div>
+        </section>
+      )}
+
+      {ctx.aiEnabled && (
+        <section class="nbr-settings-section">
+          <span class="nr-eyebrow">AI provider</span>
+          <div class="nbr-settings-card">
+            <p class="hint" style="margin-top:0">
+              By default your plot uses the free built-in model. Bring your own provider and key to
+              use your own quota instead. Your key is encrypted and never shown again.
+            </p>
+            <form id="ai-provider-form" data-admin-base={ctx.adminBase} class="nbr-token-form">
+              <div class="nbr-control">
+                <label class="nr-eyebrow" for="ai-provider">Provider</label>
+                <select id="ai-provider" name="provider">
+                  <option value="openai-compatible">OpenAI-compatible (OpenAI, OpenRouter, Together, Groq, vLLM…)</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="gemini">Google (Gemini)</option>
+                  <option value="local">Local (Ollama / llama.cpp)</option>
+                </select>
+              </div>
+
+              <div class="nbr-control">
+                <label class="nr-eyebrow" for="ai-model">Model</label>
+                <input id="ai-model" name="model" type="text" placeholder="e.g. gpt-4o-mini, claude-haiku-4-5, qwen2.5" autocomplete="off" />
+              </div>
+
+              <div class="nbr-control">
+                <label class="nr-eyebrow" for="ai-base-url">Base URL <span class="hint">(optional)</span></label>
+                <input id="ai-base-url" name="baseURL" type="text" placeholder="Override endpoint (required for local / custom gateways)" autocomplete="off" />
+              </div>
+
+              <div class="nbr-control">
+                <label class="nr-eyebrow" for="ai-api-key">API key</label>
+                <input id="ai-api-key" name="apiKey" type="password" placeholder="Leave blank to keep the current key" autocomplete="off" />
+                <p id="ai-key-status" class="hint"></p>
+              </div>
+
+              <div style="display:flex; gap:8px">
+                <button type="submit" class="btn btn-primary btn-sm">Save provider</button>
+                <button type="button" id="ai-clear" class="btn btn-sm">Use free model</button>
+              </div>
+              <p id="ai-provider-msg" class="hint" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+        </section>
+      )}
     </div>
   </main>
 </AdminLayout>
@@ -103,9 +197,7 @@ const emailEnabled = isEmailEnabled();
 
     async function load() {
       try {
-        const res = await fetch(`${adminBase}/ai/settings`, {
-          headers: { accept: "application/json" },
-        });
+        const res = await fetch(`${adminBase}/ai/settings`, { headers: { accept: "application/json" } });
         if (!res.ok) return;
         const s = await res.json();
         if (s.provider) providerEl.value = s.provider;

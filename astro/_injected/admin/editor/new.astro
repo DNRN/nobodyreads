@@ -5,6 +5,7 @@ import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, findPageByKind, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const requested = Astro.url.searchParams.get("kind");
 const kind: PageKind =
@@ -24,5 +25,11 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <PageEditor client:load editorBase={ctx.editorBase} adminBase={ctx.adminBase} kind={kind} />
+  <PageEditor
+    client:load
+    editorBase={ctx.editorBase}
+    adminBase={ctx.adminBase}
+    previewBase={previewBase}
+    kind={kind}
+  />
 </AdminLayout>

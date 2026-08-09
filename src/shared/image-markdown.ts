@@ -62,6 +62,68 @@ const SIZE_RE = /^\d+(?:px|%|em|rem|vw)$/;
 const DIM_RE = /^(\d+)x(\d+)$/;
 const ALIGNMENTS = new Set(["left", "right", "center"]);
 
+export type ImageAlign = "left" | "center" | "right";
+
+/** The alt slot, taken apart. */
+export interface ParsedImageAlt {
+  /** The alt text proper — the first segment, and the only one a reader hears. */
+  alt: string;
+  /** A width (`600px`, `50%`) or fixed dimensions (`300x200`). */
+  size?: string;
+  align?: ImageAlign;
+  /**
+   * Segments that matched no known hint. `renderImage` ignores them, but they
+   * are kept so an editor can round-trip an alt slot it did not author without
+   * quietly dropping something.
+   */
+  extra: string[];
+}
+
+/**
+ * Parse an alt slot into its parts.
+ *
+ * This is the one reader of the hint grammar: the server renderer and the
+ * editor's image controls both go through it, so a change to the syntax cannot
+ * land in one and not the other.
+ */
+export function parseImageAlt(text: string): ParsedImageAlt {
+  const segments = text.split("|").map((s) => s.trim());
+  const parsed: ParsedImageAlt = { alt: segments[0] ?? "", extra: [] };
+
+  for (const hint of segments.slice(1)) {
+    if (!hint) continue;
+    if (DIM_RE.test(hint) || SIZE_RE.test(hint)) {
+      // First size hint wins, matching the renderer's last-write-wins CSS.
+      parsed.size ??= hint;
+      continue;
+    }
+    const align = hint.toLowerCase();
+    if (ALIGNMENTS.has(align)) {
+      parsed.align = align as ImageAlign;
+      continue;
+    }
+    parsed.extra.push(hint);
+  }
+
+  return parsed;
+}
+
+/**
+ * Rebuild an alt slot from its parts.
+ *
+ * Emits the canonical order `alt|size|align|…extra`, so a slot whose hints were
+ * written in another order comes back normalised. The renderer treats hints as
+ * order-independent, so this loses nothing — and a second pass is stable.
+ */
+export function formatImageAlt({ alt, size, align, extra = [] }: Partial<ParsedImageAlt> & { alt: string }): string {
+  const hints = [size, align, ...extra].filter(Boolean);
+  // The alt slot has to be held open even when it is empty: dropping it would
+  // shift the first hint into the alt position, so `![|600px]` would come back
+  // as `![600px]` — an unlabelled image silently acquiring "600px" as its
+  // description, and losing its width.
+  return hints.length ? [alt, ...hints].join("|") : alt;
+}
+
 export interface ImageToken {
   href: string;
   title?: string | null;
@@ -81,27 +143,20 @@ function escapeAttr(value: string): string {
  * applying any size/alignment hints found in the alt text.
  */
 export function renderImage({ href, title, text }: ImageToken): string {
-  const segments = text.split("|").map((s) => s.trim());
-  const alt = segments[0] ?? "";
+  const { alt, size, align } = parseImageAlt(text);
 
   const styles: string[] = [];
   const classes: string[] = [];
 
-  for (const hint of segments.slice(1)) {
-    const dim = hint.match(DIM_RE);
+  if (size) {
+    const dim = size.match(DIM_RE);
     if (dim) {
       styles.push(`width: ${dim[1]}px`, `height: ${dim[2]}px`, "object-fit: cover");
-      continue;
-    }
-    if (SIZE_RE.test(hint)) {
-      styles.push(`max-width: ${hint}`);
-      continue;
-    }
-    const align = hint.toLowerCase();
-    if (ALIGNMENTS.has(align)) {
-      classes.push(`nbr-img-${align}`);
+    } else {
+      styles.push(`max-width: ${size}`);
     }
   }
+  if (align) classes.push(`nbr-img-${align}`);
 
   const altAttr = ` alt="${escapeAttr(alt)}"`;
   const titleAttr = title ? ` title="${escapeAttr(title)}"` : "";

@@ -110,6 +110,22 @@ const BASE_CSS = `.post-list {
   display: none;
 }
 
+/* --- Grid: the reading rows, laid out in columns --- */
+
+.post-list--grid .post-list__items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1.375rem 2.25rem;
+}
+
+/* The row's divider is a horizontal rule between stacked items; in columns it
+   would draw an arbitrary line under every other post. */
+.post-list--grid .post-preview + .post-preview {
+  border-top: 0;
+  padding-top: 0;
+}
+
 /* --- Cards: enough posts that scanning beats reading --- */
 
 .post-list--card .post-list__items {
@@ -312,7 +328,8 @@ const BASE_CSS = `.post-list {
 }
 
 @media (max-width: 720px) {
-  .post-list--card .post-list__items {
+  .post-list--card .post-list__items,
+  .post-list--grid .post-list__items {
     grid-template-columns: minmax(0, 1fr);
   }
 }`;
@@ -362,8 +379,19 @@ export const postPreviewComponent = defineComponent({
     auto: { label: "Automatic", css: "" },
     default: { label: "Rows", css: "" },
     compact: { label: "Compact", css: "" },
+    grid: { label: "Grid", css: "" },
     card: { label: "Cards", css: "" },
   },
+  specimen: `<section class="post-list post-list--default">
+  <div class="post-list__items">
+    <article class="post-preview">
+      <time class="post-date">2 Aug 2026</time>
+      <h2 class="post-title"><a href="#">Reeling In the Right Gear</a></h2>
+      <p class="post-excerpt">So you have decided to take up fishing. Before the legend, though, we need to talk about gear.</p>
+      <a href="#" class="read-more">read more &rarr;</a>
+    </article>
+  </div>
+</section>`,
   baseCss: BASE_CSS,
 });
 

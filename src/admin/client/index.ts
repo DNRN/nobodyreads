@@ -25,7 +25,22 @@ export { renderImage, DEFAULT_IMAGE_WIDTH } from "../../shared/image-markdown.js
 
 // Client-safe template helpers for admin islands (no server/node deps).
 export { generateCss } from "../../template/generate.js";
-export type { SiteTemplateDefinition } from "../../template/types.js";
+export {
+  TYPE_PAIRINGS,
+  DENSITY_STEPS,
+  CORNER_STEPS,
+  COLOR_SLOTS,
+  matchTypePairing,
+  matchDensityStep,
+  matchCornerStep,
+} from "../../template/presets.js";
+export type {
+  TypePairing,
+  DensityStep,
+  CornerStep,
+  ColorSlot,
+} from "../../template/presets.js";
+export type { SiteTemplateDefinition, TokenSet } from "../../template/types.js";
 
 export type {
   EditorInstance,

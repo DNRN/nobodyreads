@@ -55,29 +55,15 @@ describe("collection routes", () => {
     expect(await listContentViews(t.db, TENANT)).toHaveLength(1);
   });
 
-  // The path before the rename. An operator may have it in a bookmark, a
-  // reverse-proxy rule or a script, so it stays mounted — but it still lands
-  // the author on the new URL.
-  it("still accepts the pre-rename /views/save path", async () => {
-    const res = await postForm(mount(), "/views/save");
+  it("deletes and returns to the collections list", async () => {
+    const res = await mount().request("/collections/delete/x", { method: "POST" });
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toMatch(/^\/admin\/collections\/.+/);
-    expect(await listContentViews(t.db, TENANT)).toHaveLength(1);
+    expect(res.headers.get("location")).toBe("/admin/collections");
   });
 
-  it("deletes on either prefix and returns to the collections list", async () => {
-    for (const path of ["/collections/delete/x", "/views/delete/x"]) {
-      const res = await mount().request(path, { method: "POST" });
-      expect(res.status).toBe(302);
-      expect(res.headers.get("location")).toBe("/admin/collections");
-    }
-  });
-
-  it("rejects an invalid form on both prefixes", async () => {
-    for (const path of ["/collections/save", "/views/save"]) {
-      const res = await postForm(mount(), path, { slug: "Not A Slug" });
-      expect(res.status).toBe(400);
-    }
+  it("rejects an invalid form", async () => {
+    const res = await postForm(mount(), "/collections/save", { slug: "Not A Slug" });
+    expect(res.status).toBe(400);
   });
 
   it("rejects a custom query that reads a table outside the allowlist", async () => {

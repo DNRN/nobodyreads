@@ -10,7 +10,13 @@
 //   3. migrateColumns() in shared/db.ts — an ALTER so existing databases catch up
 // Drizzle Kit is configured but not used to generate/run migrations.
 
-export { tenant, siteTemplate, siteTemplateRevision, siteSettings } from "../../shared/schema.js";
+export {
+  tenant,
+  siteTemplate,
+  siteTemplateRevision,
+  siteTemplateTrial,
+  siteSettings,
+} from "../../shared/schema.js";
 export { page, contentView } from "../../content/schema.js";
 export { media } from "../../media/schema.js";
 export { member, plotMembership, postLike } from "../../community/schema.js";

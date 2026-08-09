@@ -137,7 +137,8 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 |-------|---------|
 | `tenant` | Platform-mode user accounts (not used in default single-tenant setup) |
 | `page` | All content: posts, static pages, and the home page |
-| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` (legacy `{{view:slug}}` still parses) |
+| `site_template_trial` | Named theme trials — a look banked deliberately, separate from revision history |
+| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |
 | `site_settings` | Key-value settings per tenant (site name, logo, favicon, etc.) |
@@ -170,7 +171,7 @@ Content can be created two ways:
 `src/content/render.ts` is the core renderer:
 
 1. **`resolveLinks`** — replaces `[[page-id]]` and `[[page-id|label]]` wiki-style links with Markdown links, resolved against the DB at render time.
-2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). The original `{{view:slug}}` spelling is a permanent alias; `src/shared/embed-token.ts` is the single source for both.
+2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). `src/shared/embed-token.ts` is the single source of the token's syntax.
 3. **`renderMarkdown`** — GFM Markdown to HTML via `marked`, with a custom image renderer for size/alignment hints in alt text.
 
 Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLayout.astro` wraps output in the generated site template (CSS + section HTML).
@@ -189,7 +190,7 @@ site-template editor iframe, which render *saved* content from the DB.
 
 ### Collections (`content_view`)
 
-Collections are defined in the admin UI at `/admin/collections` (the pre-rename `/admin/views` 301s there) or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
+Collections are defined in the admin UI at `/admin/collections` or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---
 
@@ -215,6 +216,14 @@ The admin UI is split across **two layers** by design:
 ### Astro pages (read-mostly shell)
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
+
+Design (`/admin/layout`) is one shell reused by every tab: controls on the left, a single live preview on the right. Visual edits and hand-written template code render into the same preview. `Edit template code` swaps the visual tabs for the raw HTML/CSS/JS/tokens/JSON panes, which also hold revision history and theme import/export. `createSiteEditor` (`src/admin/client/site-editor.ts`) still owns serialisation, saving and the preview; tabs whose state lives in Svelte contribute through its `templatePatch` hook, and Brand saves its site settings through `beforeSave` so one Save button means one save.
+
+Components is a gallery: a list rail, the selected component's controls, and its specimen rendered in the preview pane with the site's own generated CSS. Sample markup lives on the component definition (`specimen`, beside its CSS) so it cannot drift from the classes it demonstrates; components without one — `base`, `responsive`, `platform` — are global rules with nothing to frame and sit behind a disclosure.
+
+AI is Design's second tab. A generation returns a proposal held client-side and previewed via `previewTemplate` — the editor's own state is untouched until *Apply to Design*, which loads it into the visual controls as unsaved work through the same path saved trials use. `{admin}/ai` redirects to Design.
+
+Theme's named choices — type pairings, density steps, corner steps and which colours lead — are data in `src/template/presets.ts`, shared by the visual controls and (later) the AI proposal so both mean the same thing by "Spacious". Type pairings are limited to faces `SiteLayout.astro` actually loads plus system stacks; offering anything else renders as a silent fallback. Saved trials load into the editor as unsaved work via `loadTemplate`, so banking a look never saves or publishes it.
 
 The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
@@ -252,7 +261,7 @@ The host Astro app must populate this via middleware before any admin page rende
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
 | `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
-| `views` | `/collections/save`, `/collections/delete` (also mounted at the pre-rename `/views/*`) | Collection CRUD |
+| `views` | `/collections/save`, `/collections/delete` | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
 

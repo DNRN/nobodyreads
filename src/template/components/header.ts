@@ -48,6 +48,14 @@ export const headerComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<header class="site-header">
+  <div class="container">
+    <div class="nav-bar">
+      <a class="site-logo" href="#"><span class="wordmark wordmark--md">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span></a>
+      <nav class="site-nav-inline" aria-label="Main"><a href="#">home</a><a href="#">about</a></nav>
+    </div>
+  </div>
+</header>`,
   baseCss: BASE_CSS,
 });
 

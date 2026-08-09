@@ -48,6 +48,11 @@ export const footerComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<footer class="site-footer">
+  <div class="container">
+    <p>&copy; 2026 <span class="wordmark wordmark--md">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span></p>
+  </div>
+</footer>`,
   baseCss: BASE_CSS,
 });
 

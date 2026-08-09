@@ -144,6 +144,7 @@ export {
   contentView,
   siteTemplate,
   siteTemplateRevision,
+  siteTemplateTrial,
   siteSettings,
   media,
   subscriber,
@@ -258,8 +259,16 @@ export {
   addSiteTemplateRevision,
   setCurrentSiteTemplateRevision,
   deleteSiteTemplateRevision,
+  listSiteTemplateTrials,
+  getSiteTemplateTrial,
+  saveSiteTemplateTrial,
+  deleteSiteTemplateTrial,
 } from "./shared/site-bundle.js";
-export type { SiteTemplateRecord, SiteTemplateRevisionRecord } from "./shared/site-bundle.js";
+export type {
+  SiteTemplateRecord,
+  SiteTemplateRevisionRecord,
+  SiteTemplateTrial,
+} from "./shared/site-bundle.js";
 
 // Site settings
 export {

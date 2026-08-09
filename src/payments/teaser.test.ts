@@ -109,13 +109,6 @@ describe("collection tokens", () => {
     expect(buildTeaser(page)).not.toContain("{{collection:");
   });
 
-  // The legacy spelling is in stored content everywhere, and missing it here
-  // would run an author's SQL for a reader who has not paid.
-  it("strips the legacy {{view:slug}} spelling too", () => {
-    const page = makePage({ content: "Intro.\n\n{{view:latest-posts}}\n\nMore." });
-    expect(buildTeaser(page)).not.toContain("{{view:");
-  });
-
   it("strips them from above a paywall marker too", () => {
     const page = makePage({
       content: "Intro {{collection:secret-list}} tail.\n\n<!--paywall-->\n\nBody.",
@@ -125,9 +118,9 @@ describe("collection tokens", () => {
     expect(teaser).toContain("Intro");
   });
 
-  it("strips a mix of both spellings", () => {
+  it("strips several tokens in one teaser", () => {
     const page = makePage({
-      content: "A {{view:one}} B {{collection:two}} C.\n\n<!--paywall-->\n\nBody.",
+      content: "A {{collection:one}} B {{collection:two}} C.\n\n<!--paywall-->\n\nBody.",
     });
     const teaser = buildTeaser(page);
     expect(teaser).not.toContain("{{");

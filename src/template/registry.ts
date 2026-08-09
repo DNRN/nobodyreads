@@ -48,6 +48,7 @@ export function serializeRegistry(): import("./component-definition.js").Seriali
       label: variant.label,
     })),
     tokens: component.tokens,
+    specimen: component.specimen,
   }));
 }
 

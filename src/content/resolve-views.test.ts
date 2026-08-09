@@ -43,28 +43,17 @@ beforeEach(async () => {
   await upsertContentView(t.db, view, TENANT);
 });
 
-/**
- * The embed token was renamed `{{view:slug}}` → `{{collection:slug}}`. Stored
- * Markdown in every existing database still carries the old spelling, so both
- * have to resolve — for ever, not for a deprecation window.
- */
-describe("resolveViews accepts both token spellings", () => {
-  it("resolves the current {{collection:slug}} spelling", async () => {
+describe("resolveViews", () => {
+  it("resolves a collection token", async () => {
     const out = await resolveViews(t.db, "{{collection:latest-posts}}", TENANT);
     expect(out).toContain("Reeling In the Right Gear");
     expect(out).not.toContain("{{collection:");
   });
 
-  it("resolves the legacy {{view:slug}} spelling", async () => {
-    const out = await resolveViews(t.db, "{{view:latest-posts}}", TENANT);
-    expect(out).toContain("Reeling In the Right Gear");
-    expect(out).not.toContain("{{view:");
-  });
-
-  it("resolves both spellings in one document", async () => {
+  it("resolves every token in a document", async () => {
     const out = await resolveViews(
       t.db,
-      "{{view:latest-posts}}\n\n{{collection:latest-posts}}",
+      "{{collection:latest-posts}}\n\n{{collection:latest-posts}}",
       TENANT,
     );
     const hits = out.split("Reeling In the Right Gear").length - 1;

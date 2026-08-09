@@ -241,6 +241,9 @@ export const navComponent = defineComponent({
     inline: { label: "Inline", css: INLINE_CSS },
     dropdown: { label: "Dropdown", css: DROPDOWN_CSS },
   },
+  specimen: `<nav class="site-nav-inline" aria-label="Main">
+  <a href="#" class="active">home</a><a href="#">about</a><a href="#">archive</a>
+</nav>`,
   baseCss: BASE_CSS,
 });
 

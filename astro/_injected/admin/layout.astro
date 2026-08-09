@@ -7,12 +7,18 @@ import {
   DEFAULT_TEMPLATE,
   generateHtml,
   getSiteTemplate,
+  getSiteSettings,
+  resolveMediaValue,
+  SETTING_SITE_NAME,
+  SETTING_SITE_TAGLINE,
+  SETTING_SITE_LOGO,
   listSiteTemplateRevisions,
   getCurrentSiteTemplateRevisionId,
   serializeRegistry,
   normalizeComponents,
 } from "nobodyreads";
 import type { ComponentMap } from "nobodyreads";
+import { createMediaStorage } from "nobodyreads/storage";
 
 const ctx = requireAdminContext(Astro.locals);
 const layoutBase = `${ctx.adminBase}/layout`;
@@ -22,6 +28,13 @@ const previewUrl = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 const db = await initDb();
 const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
 const revisions = await listSiteTemplateRevisions(db, ctx.tenantId);
+
+// Brand edits the site's identity, which lives in site_settings rather than the
+// theme — the two save together behind one button.
+const settings = await getSiteSettings(db, ctx.tenantId);
+const storage = createMediaStorage();
+const siteLogo = settings[SETTING_SITE_LOGO] ?? "";
+const siteLogoUrl = resolveMediaValue(siteLogo, (key) => storage.url(key));
 const currentRevisionId = await getCurrentSiteTemplateRevisionId(db, ctx.tenantId);
 
 const layoutHtml = template.layoutHtml ?? "";
@@ -34,6 +47,13 @@ const componentRegistry = serializeRegistry();
 const componentConfigs: ComponentMap = normalizeComponents(template.components);
 
 const generatedHtml = generateHtml({ ...template, layoutHtml: undefined });
+
+const revisionRows = revisions.map((rev) => ({
+  revisionId: rev.revisionId,
+  savedAt: formatDateTime(rev.createdAt),
+  isCurrent: currentRevisionId === rev.revisionId,
+  name: (rev.template as { themeMeta?: { name?: string } })?.themeMeta?.name ?? null,
+}));
 
 const builtinTokens = [
   { token: "{{content}}", description: "Page/post body content" },
@@ -64,7 +84,7 @@ function formatDateTime(iso: string): string {
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <main class="editor-main editor-main--site">
+  <main class="nbr-design-main">
     <SiteEditor
       client:load
       layoutBase={layoutBase}
@@ -79,79 +99,17 @@ function formatDateTime(iso: string): string {
       componentRegistry={componentRegistry}
       componentConfigs={componentConfigs}
       previewUrl={previewUrl}
-      aiHref={ctx.aiEnabled ? `${ctx.adminBase}/ai` : null}
+      aiEnabled={ctx.aiEnabled}
+      siteName={settings[SETTING_SITE_NAME] ?? ""}
+      siteTagline={settings[SETTING_SITE_TAGLINE] ?? ""}
+      siteLogo={siteLogo}
+      siteLogoUrl={siteLogoUrl}
+      siteNamePlaceholder={process.env.SITE_NAME ?? ""}
+      siteTaglinePlaceholder={process.env.SITE_TAGLINE ?? ""}
+      themeBase={themeBase}
+      themeMeta={themeMeta}
+      revisions={revisionRows}
     />
 
-    <!-- Theme Import / Export -->
-    <div class="editor-list-section">
-      <h3>Theme</h3>
-      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-        <a href={`${themeBase}/export`} class="btn btn-ghost" download>Export theme</a>
-
-        <form method="POST" action={`${themeBase}/import`} enctype="multipart/form-data" class="editor-inline-form" style="display: flex; gap: 0.5rem; align-items: center;">
-          <input type="file" name="file" accept=".json,application/json" class="editor-input editor-input--sm" />
-          <button type="submit" class="btn btn-ghost">Import theme</button>
-        </form>
-
-        {themeMeta && (
-          <span class="hint" style="margin-left: 0.5rem">
-            Current: <strong>{themeMeta.name}</strong> v{themeMeta.version} by {themeMeta.author}
-          </span>
-        )}
-      </div>
-    </div>
-
-    <!-- Revisions -->
-    <div class="editor-list-section">
-      <h3>Revisions</h3>
-      {revisions.length === 0 ? (
-        <p class="editor-empty">No revisions yet. Save your first change.</p>
-      ) : (
-        <table class="editor-table">
-          <thead>
-            <tr><th>ID</th><th>Saved</th><th>Status</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {revisions.map((rev) => {
-              const isCurrent = currentRevisionId === rev.revisionId;
-              const meta = (rev.template as any)?.themeMeta;
-              return (
-                <tr>
-                  <td>
-                    #{rev.revisionId}
-                    {meta?.name ? <span class="hint" style="margin-left: 0.25rem">({meta.name})</span> : null}
-                  </td>
-                  <td>{formatDateTime(rev.createdAt)}</td>
-                  <td>
-                    {isCurrent
-                      ? <span class="badge badge-published">published</span>
-                      : <span class="badge badge-draft">draft</span>}
-                  </td>
-                  <td class="cell-actions">
-                    {!isCurrent ? (
-                      <form
-                        method="POST"
-                        action={`${layoutBase}/revision/publish/${rev.revisionId}`}
-                        class="editor-inline-form"
-                      >
-                        <button type="submit" class="btn btn-primary btn-sm">Publish</button>
-                      </form>
-                    ) : null}
-                    <form
-                      method="POST"
-                      action={`${layoutBase}/revision/delete/${rev.revisionId}`}
-                      class="editor-inline-form"
-                      onsubmit="return confirm('Delete this revision?')"
-                    >
-                      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </div>
   </main>
 </AdminLayout>

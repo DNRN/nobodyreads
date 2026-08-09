@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { siteTemplateFormSchema } from "../../../db/validation.js";
@@ -8,6 +9,10 @@ import {
   deleteSiteTemplateRevision,
   setCurrentSiteTemplateRevision,
   getCurrentSiteTemplateRevisionId,
+  listSiteTemplateTrials,
+  getSiteTemplateTrial,
+  saveSiteTemplateTrial,
+  deleteSiteTemplateTrial,
 } from "../../../shared/site-bundle.js";
 import {
   getSiteSettings,
@@ -184,6 +189,62 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ ok: true });
     }
     return c.redirect(`${editorBase}/site?saved`);
+  });
+
+  // --- Saved theme trials --------------------------------------------------
+  //
+  // JSON throughout: the trials strip is a client-side control on the Design
+  // screen, not a page of its own. Applying a trial is deliberately *not* a
+  // route — the client loads the template into the editor as an unsaved draft,
+  // so banking a look and publishing it stay two separate decisions.
+
+  app.get("/design/trials", async (c) => {
+    const trials = await listSiteTemplateTrials(db, tenantId);
+    // The stored template can be large and the strip only needs to identify and
+    // preview each entry, so the swatches come from the palette, not the body.
+    return c.json({
+      trials: trials.map((trial) => ({
+        trialId: trial.trialId,
+        name: trial.name,
+        createdAt: trial.createdAt,
+        swatches: [
+          trial.template?.tokens?.light?.text,
+          trial.template?.tokens?.light?.accent,
+          trial.template?.tokens?.light?.bg,
+        ].filter((value): value is string => typeof value === "string"),
+      })),
+    });
+  });
+
+  app.get("/design/trials/:id", async (c) => {
+    const trial = await getSiteTemplateTrial(db, c.req.param("id"), tenantId);
+    if (!trial) return c.json({ error: "No such trial" }, 404);
+    return c.json({ trial });
+  });
+
+  app.post("/design/trials", async (c) => {
+    const body = await c.req.json<{ name?: string; trialId?: string; template?: unknown }>()
+      .catch(() => ({}) as { name?: string; trialId?: string; template?: unknown });
+
+    const name = body.name?.trim();
+    if (!name) return c.json({ error: "A name is required" }, 400);
+
+    // Validated like any other saved theme: a trial is applied to the live
+    // editor later, so junk here would surface as a broken Design screen.
+    const validation = validateTheme(body.template);
+    if (!validation.ok) return c.json({ error: validation.error }, 400);
+
+    const trial = await saveSiteTemplateTrial(
+      db,
+      { trialId: body.trialId?.trim() || randomUUID(), name, template: validation.theme },
+      tenantId,
+    );
+    return c.json({ ok: true, trial });
+  });
+
+  app.post("/design/trials/:id/delete", async (c) => {
+    await deleteSiteTemplateTrial(db, c.req.param("id"), tenantId);
+    return c.json({ ok: true });
   });
 
   app.get("/design/registry", (c) => {

@@ -33,6 +33,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
       // a card grid and a filter row have room the paragraphs do not want.
       maxWidth: "900px",
       containerPadding: "2.5rem",
+      radius: "4px",
     },
     dark: {
       bg: PALETTE.dark.bg,
@@ -52,6 +53,8 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
       enabled: true,
       showHero: true,
       showTagline: true,
+      showNav: true,
+      showSubscribe: false,
       logoText: "nobodyreads",
       logoDotText: "me",
     },

@@ -23,5 +23,5 @@ if (!view) {
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
-  <CollectionEditor client:load view={view} collectionsBase={collectionsBase} adminBase={ctx.adminBase} />
+  <CollectionEditor client:load view={view} collectionsBase={collectionsBase} adminBase={ctx.adminBase} aiEnabled={ctx.aiEnabled} />
 </AdminLayout>

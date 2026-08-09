@@ -16,9 +16,16 @@
     view?: ContentView;
     collectionsBase?: string;
     adminBase?: string;
+    /** Whether the host has an AI provider configured. */
+    aiEnabled?: boolean;
   }
 
-  let { view, collectionsBase = "/admin/collections", adminBase = "/admin" }: Props = $props();
+  let {
+    view,
+    collectionsBase = "/admin/collections",
+    adminBase = "/admin",
+    aiEnabled = false,
+  }: Props = $props();
 
   const isNew = !view;
   const v = view ?? ({
@@ -154,6 +161,56 @@
 
   const templateError = $derived(isCustom ? validateCollectionTemplate(template) : null);
 
+  // --- Build it ------------------------------------------------------------
+  let building = $state(false);
+  let buildError = $state("");
+
+  /**
+   * Ask the AI for a query and a template from the description.
+   *
+   * What comes back has already been through the same validators a save runs,
+   * so it lands in the editor as ordinary unsaved work — the author reviews it
+   * in the preview and in the Advanced panel like anything else.
+   */
+  async function buildIt() {
+    const description = prompt.trim();
+    if (!description || building) return;
+    building = true;
+    buildError = "";
+    try {
+      const res = await fetch(`${adminBase}/ai/collection`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ description }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.collection) {
+        buildError = data.error ?? `Could not build that (${res.status})`;
+        return;
+      }
+
+      kind = "custom";
+      query = data.collection.query;
+      template = data.collection.template;
+      if (!title.trim() && data.collection.name) {
+        title = data.collection.name;
+        onTitleInput();
+      }
+      advancedOpen = true;
+      touched();
+      queueMicrotask(() => {
+        queryEditor?.setValue(query);
+        templateEditor?.setValue(template);
+        void refreshPreview();
+      });
+    } catch (err) {
+      buildError = err instanceof Error ? err.message : "Could not build that";
+    } finally {
+      building = false;
+    }
+  }
+
   // --- CodeMirror ----------------------------------------------------------
   let queryEl: HTMLTextAreaElement;
   let templateEl: HTMLTextAreaElement;
@@ -281,7 +338,24 @@
           The box is a description, not a command line: until AI generation
           lands it records intent and the presets below do the building.
         -->
-        <p class="hint">Describes the collection for you and whoever reads this later.</p>
+        {#if aiEnabled}
+          <div class="nbr-build-row">
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              onclick={buildIt}
+              disabled={building || !prompt.trim()}
+            >
+              {building ? "Building…" : "Build it"}
+            </button>
+            <span class="hint">AI writes the query &amp; layout</span>
+          </div>
+          {#if buildError}
+            <p class="nbr-nudge">{buildError}</p>
+          {/if}
+        {:else}
+          <p class="hint">Describes the collection for you and whoever reads this later.</p>
+        {/if}
       </div>
 
       <div class="nbr-control">

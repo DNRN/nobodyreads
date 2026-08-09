@@ -4810,3 +4810,14 @@
 		border-bottom: 1px solid var(--nr-border);
 	}
 }
+
+.nr-admin .nbr-build-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.nr-admin .nbr-build-row .hint {
+	margin-top: 0;
+}

@@ -35,7 +35,7 @@ export interface PageEditorOptions {
   mediaListUrl?: string;
   /**
    * URL for the server-side preview render API (default:
-   * "/admin/editor/preview"). Used to resolve {{view:slug}} content views and
+   * "/admin/editor/preview"). Used to resolve {{collection:slug}} embeds and
    * [[id]] links, which the client-side markdown pass cannot.
    */
   previewUrl?: string;

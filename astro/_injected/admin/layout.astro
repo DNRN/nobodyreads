@@ -79,6 +79,7 @@ function formatDateTime(iso: string): string {
       componentRegistry={componentRegistry}
       componentConfigs={componentConfigs}
       previewUrl={previewUrl}
+      aiHref={ctx.aiEnabled ? `${ctx.adminBase}/ai` : null}
     />
 
     <!-- Theme Import / Export -->

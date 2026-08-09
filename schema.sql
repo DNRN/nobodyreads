@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS page (
   UNIQUE (slug, kind, tenant_id)
 );
 
--- Reusable content views (embeddable via {{view:slug}} tokens)
+-- Reusable content views (embeddable via {{collection:slug}} tokens)
 CREATE TABLE IF NOT EXISTS content_view (
   content_view_id TEXT NOT NULL,
   tenant_id       TEXT NOT NULL DEFAULT '_default',

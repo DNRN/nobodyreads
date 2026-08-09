@@ -137,7 +137,7 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 |-------|---------|
 | `tenant` | Platform-mode user accounts (not used in default single-tenant setup) |
 | `page` | All content: posts, static pages, and the home page |
-| `content_view` | Reusable views embedded in pages via `{{view:slug}}` |
+| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` (legacy `{{view:slug}}` still parses) |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |
 | `site_settings` | Key-value settings per tenant (site name, logo, favicon, etc.) |
@@ -170,7 +170,7 @@ Content can be created two ways:
 `src/content/render.ts` is the core renderer:
 
 1. **`resolveLinks`** — replaces `[[page-id]]` and `[[page-id|label]]` wiki-style links with Markdown links, resolved against the DB at render time.
-2. **`resolveViews`** — replaces `{{view:slug}}` with HTML snippets (post lists, custom SQL views, etc.).
+2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). The original `{{view:slug}}` spelling is a permanent alias; `src/shared/embed-token.ts` is the single source for both.
 3. **`renderMarkdown`** — GFM Markdown to HTML via `marked`, with a custom image renderer for size/alignment hints in alt text.
 
 Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLayout.astro` wraps output in the generated site template (CSS + section HTML).
@@ -179,7 +179,7 @@ Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLay
 
 The admin page editor renders a live preview as you type. Plain Markdown is
 rendered client-side with `marked` for instant feedback. When the content
-contains server-only tokens (`{{view:slug}}` or `[[id]]` links), the editor
+contains server-only tokens (`{{collection:slug}}` or `[[id]]` links), the editor
 debounces a request to `POST /admin/editor/preview` (`src/admin/server/modules/content.ts`),
 which runs the unsaved Markdown through `renderContent()` with `includeDrafts`
 so views — including unpublished ones — and internal links render exactly as
@@ -187,9 +187,9 @@ they will on the public page. The endpoint falls back to the client render if
 unreachable. This is distinct from the `/preview/*` Astro routes used by the
 site-template editor iframe, which render *saved* content from the DB.
 
-### Content views
+### Collections (`content_view`)
 
-Views are defined in the admin UI or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Views are referenced in page Markdown as `{{view:slug}}`.
+Collections are defined in the admin UI at `/admin/collections` (the pre-rename `/admin/views` 301s there) or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---
 
@@ -216,7 +216,7 @@ The admin UI is split across **two layers** by design:
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
 
-The navigation is grouped into five areas — **Home** (dashboard), **Content**, **Design** (Theme/Layout + Views), **Community** (subscribers; comments later), and **Settings** (site identity, email) — chosen to match user mental models and leave a home for future roadmap features. Site identity is reached from **Settings**, not the Content editor. See [`../plan.md`](../plan.md) for the staged admin/editor reorganization.
+The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
 All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
 
@@ -224,7 +224,7 @@ All three admin editors are interactive **Svelte islands** in `astro/components/
 - `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
 - `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
 
-The custom Markdown constructs (`[[wiki]]`, `{{view:slug}}`) are Milkdown **atom-node** plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`): a shared `$remark` transform/serializer plus a `$node` schema and input rule each. Modelling them as dedicated nodes (never plain text) is what keeps the Markdown serializer from escaping them — round-trip fidelity verified end-to-end (`prototype/`). The other editor helpers in `src/admin/client/` are exported as `nobodyreads/editor`.
+The custom Markdown constructs (`[[wiki]]`, `{{collection:slug}}`) are Milkdown **atom-node** plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`): a shared `$remark` transform/serializer plus a `$node` schema and input rule each. Modelling them as dedicated nodes (never plain text) is what keeps the Markdown serializer from escaping them — round-trip fidelity verified end-to-end (`prototype/`). The other editor helpers in `src/admin/client/` are exported as `nobodyreads/editor`.
 
 Svelte powers admin islands only; the public site ships no islands and stays zero-framework. There is no longer a separate `build:editors` step. ProseMirror is deduped via `astro.config.mjs` `vite.resolve.dedupe` (Milkdown breaks with multiple ProseMirror instances).
 
@@ -250,7 +250,7 @@ The host Astro app must populate this via middleware before any admin page rende
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
 | `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
-| `views` | `/views/save`, `/views/delete` | Content view CRUD |
+| `views` | `/collections/save`, `/collections/delete` (also mounted at the pre-rename `/views/*`) | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
 

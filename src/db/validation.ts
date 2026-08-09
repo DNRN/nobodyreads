@@ -34,7 +34,7 @@ export const pageFormSchema = z.object({
 });
 export type PageFormData = z.infer<typeof pageFormSchema>;
 
-/** Content view create/update form (POST /admin/views/save). */
+/** Collection create/update form (POST /admin/collections/save). */
 export const viewFormSchema = z.object({
   id: z.string().trim().optional(),
   slug: z

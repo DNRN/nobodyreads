@@ -11,65 +11,98 @@
 
 /* >>> generated from the nobodyreads palette — do not edit by hand */
 :root {
-	--nr-bg:            #eef1ec;
-	--nr-surface:       #f7f9f6;
-	--nr-card:          #ffffff;
-	--nr-text:          #23302a;
-	--nr-muted:         #7c8a82;
-	--nr-faint:         #9aa79f;
-	--nr-border:        #e4eae3;
-	--nr-hover:         rgba(35, 48, 42, 0.04);
-	--nr-accent:        #4e8a6b;
-	--nr-accent-text:   #ffffff;
-	--nr-accent-soft:   #ddece3;
-	--nr-accent-tint:   #eef6f1;
-	--nr-link:          #23302a;
-	--nr-link-hover:    #4e8a6b;
-	--nr-success:       #4e8a6b;
-	--nr-success-soft:  #e7f0ea;
-	--nr-danger:        #b4443a;
-	--nr-danger-soft:   rgba(180, 68, 58, 0.1);
-	--nr-warning:       #b07a2e;
-	--nr-warning-soft:  rgba(176, 122, 46, 0.12);
-	--nr-code:          #415147;
-	--nr-codebg:        #f2f5f1;
-	--nr-shadow:        0 8px 24px -18px rgba(30, 50, 40, 0.26);
-	--nr-shadow-lg:     0 30px 60px -34px rgba(30, 50, 40, 0.26);
-	--nr-font:          'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	--nr-font-mono:     'IBM Plex Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
+	--nr-bg:              #eef1ec;
+	--nr-surface:         #f7f9f6;
+	--nr-card:            #ffffff;
+	--nr-canvas:          #f4f7f2;
+	--nr-nav:             #e7ece4;
+	--nr-bar:             #f3f6f1;
+	--nr-text:            #23302a;
+	--nr-muted:           #7c8a82;
+	--nr-faint:           #9aa79f;
+	--nr-border:          #e4eae3;
+	--nr-border-strong:   #c3d0c8;
+	--nr-hover:           rgba(35, 48, 42, 0.04);
+	--nr-accent:          #4e8a6b;
+	--nr-accent-strong:   #40765b;
+	--nr-accent-bright:   #4e8a6b;
+	--nr-accent-text:     #ffffff;
+	--nr-accent-soft:     #ddece3;
+	--nr-chip-text:       #2f6249;
+	--nr-accent-tint:     #eef6f1;
+	--nr-link:            #23302a;
+	--nr-link-hover:      #4e8a6b;
+	--nr-success:         #4e8a6b;
+	--nr-success-soft:    #e7f0ea;
+	--nr-danger:          #b4443a;
+	--nr-danger-soft:     rgba(180, 68, 58, 0.1);
+	--nr-warning:         #a06a1f;
+	--nr-warning-bright:  #d79a2b;
+	--nr-warning-soft:    rgba(160, 106, 31, 0.12);
+	--nr-code:            #415147;
+	--nr-codebg:          #f2f5f1;
+	--nr-overlay:         #1c2621;
+	--nr-overlay-text:    #e8efe9;
+	--nr-danger-overlay:  #f0a8a0;
+	--nr-shadow:          0 8px 24px -18px rgba(30, 50, 40, 0.26);
+	--nr-shadow-lg:       0 30px 60px -34px rgba(30, 50, 40, 0.26);
+	--nr-font:            'Hanken Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--nr-font-mono:       'IBM Plex Mono', 'Menlo', 'Consolas', ui-monospace, monospace;
+	--nr-font-serif:      'Newsreader', Georgia, 'Times New Roman', serif;
 }
 
 :root[data-theme="dark"] {
-	--nr-bg:            #141a17;
-	--nr-surface:       #1a211d;
-	--nr-card:          #1f2823;
-	--nr-text:          #e8efe9;
-	--nr-muted:         #8fa096;
-	--nr-faint:         #6c7d72;
-	--nr-border:        #2a342e;
-	--nr-hover:         rgba(232, 239, 233, 0.05);
-	--nr-accent:        #6fb894;
-	--nr-accent-text:   #0f1512;
-	--nr-accent-soft:   #25382d;
-	--nr-accent-tint:   #1c2822;
-	--nr-link:          #e8efe9;
-	--nr-link-hover:    #6fb894;
-	--nr-success:       #6fb894;
-	--nr-success-soft:  #1e3329;
-	--nr-danger:        #e0796f;
-	--nr-danger-soft:   rgba(224, 121, 111, 0.14);
-	--nr-warning:       #d8a558;
-	--nr-warning-soft:  rgba(216, 165, 88, 0.14);
-	--nr-code:          #b9cabf;
-	--nr-codebg:        #161c19;
-	--nr-shadow:        0 8px 24px -18px rgba(0, 0, 0, 0.5);
-	--nr-shadow-lg:     0 30px 60px -34px rgba(0, 0, 0, 0.5);
+	--nr-bg:              #141a17;
+	--nr-surface:         #1a211d;
+	--nr-card:            #1f2823;
+	--nr-canvas:          #141a17;
+	--nr-nav:             #141a17;
+	--nr-bar:             #1a211d;
+	--nr-text:            #e8efe9;
+	--nr-muted:           #8fa096;
+	--nr-faint:           #6c7d72;
+	--nr-border:          #2a342e;
+	--nr-border-strong:   #39463f;
+	--nr-hover:           rgba(232, 239, 233, 0.05);
+	--nr-accent:          #6fb894;
+	--nr-accent-strong:   #6fb894;
+	--nr-accent-bright:   #86c8a6;
+	--nr-accent-text:     #0f1512;
+	--nr-accent-soft:     #25382d;
+	--nr-chip-text:       #6fb894;
+	--nr-accent-tint:     #1c2822;
+	--nr-link:            #e8efe9;
+	--nr-link-hover:      #6fb894;
+	--nr-success:         #6fb894;
+	--nr-success-soft:    #1e3329;
+	--nr-danger:          #e0796f;
+	--nr-danger-soft:     rgba(224, 121, 111, 0.14);
+	--nr-warning:         #d8a558;
+	--nr-warning-bright:  #d8a558;
+	--nr-warning-soft:    rgba(216, 165, 88, 0.14);
+	--nr-code:            #b9cabf;
+	--nr-codebg:          #161c19;
+	--nr-overlay:         #0b0f0d;
+	--nr-overlay-text:    #e8efe9;
+	--nr-danger-overlay:  #f0a8a0;
+	--nr-shadow:          0 8px 24px -18px rgba(0, 0, 0, 0.5);
+	--nr-shadow-lg:       0 30px 60px -34px rgba(0, 0, 0, 0.5);
 }
 /* <<< end generated */
 
 /* ----- Shape (not palette — edit freely) ----- */
 :root {
 	--nr-radius: 16px;
+	/* The redesign's three radii. Cards and panels, then the controls inside
+	   them, then anything pill-shaped. Keeping them named stops each new screen
+	   from inventing its own 11px. */
+	--nr-radius-card: 12px;
+	--nr-radius-control: 8px;
+	--nr-radius-pill: 20px;
+	/* The reading measure of the editor canvas, and the content width every
+	   admin screen sits in. Both come straight from the comp. */
+	--nr-measure: 680px;
+	--nr-screen-width: 1000px;
 }
 
 /* ----- Scoped reset ----- */
@@ -334,8 +367,10 @@
 	text-decoration: none;
 }
 
+/* --nr-chip-text, not --nr-accent: the accent on an accent-soft chip is only
+   ~2.9:1, which this 14.5px label cannot afford. */
 .nr-admin-nav-link.active {
-	color: var(--nr-accent);
+	color: var(--nr-chip-text);
 	background: var(--nr-accent-soft);
 	font-weight: 600;
 }
@@ -397,7 +432,7 @@
 	font-family: var(--nr-font);
 	font-size: 0.9rem;
 	font-weight: 600;
-	border-radius: 999px;
+	border-radius: var(--nr-radius-control);
 	border: 1px solid var(--nr-border);
 	background: var(--nr-card);
 	color: var(--nr-text);
@@ -413,17 +448,19 @@
 	text-decoration: none;
 }
 
+/* The fill is --nr-accent-strong, not --nr-accent: white text needs the
+   accent darkened to clear 4.5:1, which is the same tone the body links use. */
 .nr-admin .btn-primary {
-	background: var(--nr-accent);
+	background: var(--nr-accent-strong);
 	color: var(--nr-accent-text);
-	border-color: var(--nr-accent);
+	border-color: var(--nr-accent-strong);
 	font-weight: 700;
 }
 
 .nr-admin .btn-primary:hover {
 	filter: brightness(0.96);
-	background: var(--nr-accent);
-	border-color: var(--nr-accent);
+	background: var(--nr-accent-strong);
+	border-color: var(--nr-accent-strong);
 }
 
 .nr-admin .btn-danger {
@@ -2650,5 +2687,334 @@
 	color: var(--nr-muted);
 	margin: 8px auto 0;
 	max-width: 420px;
+	line-height: 1.5;
+}
+
+/* ========================================
+   Redesign primitives
+   ----------------------------------------
+   The handful of pieces the Admin & Editor redesign repeats on every screen
+   (docs/designs/admin-editor.md §5). They live here rather than in each island
+   so "learning one teaches them all" is true of the CSS as well as the UI.
+   ======================================== */
+
+/* ----- Editorial titles -----
+   Newsreader carries titles and the canvas; UI chrome never does. */
+.nr-admin .nr-title {
+	font-family: var(--nr-font-serif);
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	color: var(--nr-text);
+}
+
+/* ----- Eyebrow -----
+   Mono, uppercase, wide-tracked. Labels a group without shouting: "COLORS",
+   "LIVE PREVIEW · UPDATES AS YOU EDIT", "SAVED TRIALS". */
+.nr-admin .nr-eyebrow {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--nr-faint);
+}
+
+/* ----- Status pill -----
+   `● Draft · saved` vs `● Unsaved changes`. Autosave is silent; the amber
+   state is the only thing that signals work pending an explicit save.
+
+     <span class="nr-status is-unsaved"><i class="nr-status-dot"></i>Unsaved changes</span>
+*/
+.nr-admin .nr-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	color: var(--nr-muted);
+	white-space: nowrap;
+}
+
+.nr-admin .nr-status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+	flex-shrink: 0;
+}
+
+/* Saved / live: the bright accent, which never carries text. */
+.nr-admin .nr-status.is-saved .nr-status-dot,
+.nr-admin .nr-status.is-live .nr-status-dot {
+	background: var(--nr-accent-bright);
+}
+
+/* Pending: amber dot with amber *text*, so the state reads even in greyscale
+   or at a glance away from the dot. */
+.nr-admin .nr-status.is-unsaved {
+	color: var(--nr-warning);
+}
+
+.nr-admin .nr-status.is-unsaved .nr-status-dot {
+	background: var(--nr-warning-bright);
+}
+
+/* ----- Contextual bar -----
+   One compact dark bar for every block type — image, embed, code, callout —
+   and for the text selection toolbar. Dark in both themes on purpose: it has
+   to read as floating above the document, not as part of it.
+
+     <div class="nr-ctxbar">
+       <button class="nr-ctxbar-btn">…</button>
+       <span class="nr-ctxbar-sep"></span>
+       <button class="nr-ctxbar-btn is-danger">…</button>
+     </div>
+*/
+.nr-admin .nr-ctxbar {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	padding: 4px;
+	background: var(--nr-overlay);
+	color: var(--nr-overlay-text);
+	border-radius: var(--nr-radius-control);
+	box-shadow: var(--nr-shadow-lg);
+}
+
+.nr-admin .nr-ctxbar-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 9px;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--nr-overlay-text);
+	font-family: var(--nr-font);
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.nr-admin .nr-ctxbar-btn svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nr-ctxbar-btn:hover,
+.nr-admin .nr-ctxbar-btn:focus-visible {
+	/* A wash of the bar's own foreground — the only light thing in scope. */
+	background: color-mix(in srgb, var(--nr-overlay-text) 12%, transparent);
+}
+
+.nr-admin .nr-ctxbar-btn.is-active {
+	background: color-mix(in srgb, var(--nr-overlay-text) 18%, transparent);
+}
+
+.nr-admin .nr-ctxbar-btn.is-danger {
+	color: var(--nr-danger-overlay);
+}
+
+.nr-admin .nr-ctxbar-sep {
+	width: 1px;
+	align-self: stretch;
+	margin: 2px 4px;
+	background: color-mix(in srgb, var(--nr-overlay-text) 18%, transparent);
+}
+
+/* ----- Rich tooltip -----
+   Label + one plain-language line + the shortcut. This is how someone
+   graduates to keyboard shortcuts without ever reading a manual, so the
+   description is the point, not decoration.
+
+   Wrap the trigger; the panel is a sibling. Shows on hover and on
+   :focus-visible, so keyboard users get it too. Give the panel an id and the
+   trigger aria-describedby — the CSS does not imply the semantics.
+
+     <span class="nr-tip">
+       <button aria-describedby="tip-bold">…</button>
+       <span class="nr-tip-panel" role="tooltip" id="tip-bold">
+         <b class="nr-tip-label">Bold</b>
+         <span class="nr-tip-desc">Make the selected text heavier.</span>
+         <kbd class="nr-tip-key">⌘B</kbd>
+       </span>
+     </span>
+*/
+.nr-admin .nr-tip {
+	position: relative;
+	display: inline-flex;
+}
+
+.nr-admin .nr-tip-panel {
+	position: absolute;
+	bottom: calc(100% + 9px);
+	left: 50%;
+	transform: translateX(-50%) translateY(3px);
+	z-index: 60;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	width: max-content;
+	max-width: 230px;
+	padding: 9px 11px;
+	background: var(--nr-overlay);
+	color: var(--nr-overlay-text);
+	border-radius: var(--nr-radius-control);
+	box-shadow: var(--nr-shadow-lg);
+	text-align: left;
+	opacity: 0;
+	visibility: hidden;
+	transition:
+		opacity 0.12s ease,
+		transform 0.12s ease,
+		visibility 0.12s;
+}
+
+.nr-admin .nr-tip:hover .nr-tip-panel,
+.nr-admin .nr-tip:focus-within .nr-tip-panel {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(0);
+}
+
+/* Pointer-driven reveal only; a touch tap should not leave a panel stuck open. */
+@media (hover: none) {
+	.nr-admin .nr-tip:hover .nr-tip-panel {
+		opacity: 0;
+		visibility: hidden;
+	}
+}
+
+.nr-admin .nr-tip-label {
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.nr-admin .nr-tip-desc {
+	font-size: 12.5px;
+	font-weight: 400;
+	line-height: 1.4;
+	color: color-mix(in srgb, var(--nr-overlay-text) 72%, transparent);
+}
+
+.nr-admin .nr-tip-key {
+	margin-top: 2px;
+	font-family: var(--nr-font-mono);
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	color: color-mix(in srgb, var(--nr-overlay-text) 60%, transparent);
+}
+
+/* ----- Segmented control -----
+   Two to four mutually exclusive choices, shown all at once: Sharp/Soft/Round,
+   List/Grid/Cards, align left/center/full. Radio inputs, not buttons, so the
+   exclusivity is real and keyboard arrows work.
+
+     <div class="nr-segmented" role="radiogroup" aria-label="Corners">
+       <label class="nr-segmented-option">
+         <input type="radio" name="corners" value="soft" checked /> Soft
+       </label>
+     </div>
+*/
+.nr-admin .nr-segmented {
+	display: inline-flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.nr-admin .nr-segmented-option {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 9px 18px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	color: var(--nr-text);
+	font-size: 13.5px;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+/* The input drives the state but is never seen — it stays in the accessibility
+   tree, so screen readers and arrow keys behave as a radio group should. */
+.nr-admin .nr-segmented-option input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.nr-admin .nr-segmented-option:hover {
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nr-segmented-option:has(input:checked) {
+	background: var(--nr-accent-strong);
+	border-color: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .nr-segmented-option:has(input:focus-visible) {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+/* ----- Help disc -----
+   The reopenable `?`, pinned bottom-right of the canvas. Everything explains
+   itself, but only when asked. */
+.nr-admin .nr-help-disc {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	z-index: 50;
+	width: 38px;
+	height: 38px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 50%;
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+	font-family: var(--nr-font);
+	font-size: 17px;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: var(--nr-shadow-lg);
+}
+
+.nr-admin .nr-help-disc:hover {
+	filter: brightness(0.96);
+}
+
+.nr-admin .nr-help-disc:focus-visible {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 3px;
+}
+
+/* Small pill after a nav label — "AI" on Design, marking a capability that
+   lives inside that screen rather than as a nav item of its own. */
+.nr-admin .nr-admin-nav-badge {
+	margin-left: auto;
+	padding: 2px 7px;
+	border-radius: var(--nr-radius-pill);
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+	font-family: var(--nr-font-mono);
+	font-size: 9.5px;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 	line-height: 1.5;
 }

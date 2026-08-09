@@ -5,6 +5,7 @@ import { resolvePageLinks, getContentViewBySlug, listPostsForView, executeCustom
 import { renderPostListView, type PostListRenderOptions, type PostListVariant } from "./templates.js";
 import { escapeHtml } from "../shared/http.js";
 import { renderImage } from "../shared/image-markdown.js";
+import { embedTokenPattern } from "../shared/embed-token.js";
 import { getSiteTemplate } from "../shared/site-bundle.js";
 import { createMediaStorage } from "../media/storage.js";
 import type { LinkTarget, CustomViewConfig } from "./types.js";
@@ -29,7 +30,6 @@ const marked = new Marked(
 
 /** Regex for wiki-style internal links: [[id]] or [[id|display text]] */
 const LINK_PATTERN = /\[\[([a-z0-9-]+)(?:\|([^\]]+))?\]\]/g;
-const VIEW_PATTERN = /\{\{view:([a-z0-9-]+)\}\}/g;
 
 /** Build the URL for a page based on its kind and slug. */
 function pageUrl(target: LinkTarget, urlPrefix: string = ""): string {
@@ -69,7 +69,7 @@ export async function resolveLinks(
   });
 }
 
-// --- {{view:slug}} resolution ---
+// --- {{collection:slug}} resolution ---
 
 export interface ResolveViewsOptions {
   includeDrafts?: boolean;
@@ -83,7 +83,7 @@ export interface ResolveViewsOptions {
 }
 
 /**
- * Resolve all {{view:slug}} tokens in markdown content.
+ * Resolve all {{collection:slug}} tokens in markdown content.
  * Replacements are HTML snippets inserted before markdown rendering.
  */
 export async function resolveViews(
@@ -95,7 +95,10 @@ export async function resolveViews(
 ): Promise<string> {
   const viewHtml = await resolveViewSlugs(db, markdown, tenantId, urlPrefix, options);
   if (viewHtml.size === 0) return markdown;
-  return markdown.replace(VIEW_PATTERN, (_match, slug: string) => viewHtml.get(slug) ?? "");
+  return markdown.replace(
+    embedTokenPattern(),
+    (_match, _name: string, slug: string) => viewHtml.get(slug) ?? "",
+  );
 }
 
 /**
@@ -111,7 +114,7 @@ async function postListVariant(db: Database, tenantId: string): Promise<PostList
   return variant === "default" || variant === "compact" || variant === "card" ? variant : "auto";
 }
 
-/** Render each distinct {{view:slug}} in `markdown` to its HTML. */
+/** Render each distinct {{collection:slug}} in `markdown` to its HTML. */
 async function resolveViewSlugs(
   db: Database,
   markdown: string,
@@ -119,11 +122,11 @@ async function resolveViewSlugs(
   urlPrefix: string,
   options: ResolveViewsOptions
 ): Promise<Map<string, string>> {
-  const matches = [...markdown.matchAll(VIEW_PATTERN)];
+  const matches = [...markdown.matchAll(embedTokenPattern())];
   const viewHtml = new Map<string, string>();
   if (matches.length === 0) return viewHtml;
 
-  const slugs = [...new Set(matches.map((m) => m[1]))];
+  const slugs = [...new Set(matches.map((m) => m[2]))];
   let listDefaults: PostListRenderOptions | null = null;
 
   for (const slug of slugs) {
@@ -281,7 +284,7 @@ export interface RenderContentOptions extends ResolveViewsOptions, RenderMarkdow
 
 /**
  * Render a page's markdown content to HTML, resolving [[id]] links and
- * {{view:slug}} content views.
+ * {{collection:slug}} content views.
  *
  * Views are resolved *after* markdown rendering to prevent the markdown
  * parser from mangling view HTML (e.g. treating indented HTML as code blocks).
@@ -334,8 +337,9 @@ async function resolveViewPlaceholders(
   if (viewHtml.size === 0) return { text: markdown, viewHtml };
 
   const text = markdown.replace(
-    VIEW_PATTERN,
-    (_match, slug: string) => `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
+    embedTokenPattern(),
+    (_match, _name: string, slug: string) =>
+      `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
   );
 
   return { text, viewHtml };

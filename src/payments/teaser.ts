@@ -1,5 +1,6 @@
 import type { Page } from "../content/types.js";
 import { DEFAULT_TEASER_WORDS } from "./types.js";
+import { embedTokenPattern } from "../shared/embed-token.js";
 
 /**
  * Build the markdown shown above a paywall.
@@ -15,7 +16,7 @@ import { DEFAULT_TEASER_WORDS } from "./types.js";
  *   code block leaves an unbalanced ``` that swallows the rest of the page; a
  *   cut inside an HTML comment leaves a dangling `<!--` that hides the paywall
  *   CTA itself.
- * - `{{view:slug}}` tokens are stripped. A custom view resolves against the
+ * - `{{collection:slug}}` tokens are stripped. A custom collection resolves against the
  *   database at render time, so leaving one in a teaser runs a query for a
  *   reader who has not paid.
  *
@@ -32,7 +33,6 @@ export interface TeaserOptions {
 }
 
 const PAYWALL_MARKER = /^[ \t]*<!--\s*(?:paywall|more)\s*-->[ \t]*$/im;
-const VIEW_TOKEN = /\{\{view:[a-z0-9-]+\}\}/g;
 
 export function buildTeaser(page: Page, options: TeaserOptions = {}): string {
   const words = options.words ?? DEFAULT_TEASER_WORDS;
@@ -51,7 +51,7 @@ export function buildTeaser(page: Page, options: TeaserOptions = {}): string {
 }
 
 function stripViewTokens(markdown: string): string {
-  return markdown.replace(VIEW_TOKEN, "");
+  return markdown.replace(embedTokenPattern(), "");
 }
 
 /**

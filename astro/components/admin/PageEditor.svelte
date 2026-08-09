@@ -601,7 +601,7 @@
             <tbody>
               <tr><td><code>[[page-id]]</code></td><td>Internal link (by page ID)</td></tr>
               <tr><td><code>[[page-id|text]]</code></td><td>Internal link with custom text</td></tr>
-              <tr><td><code>{"{{view:slug}}"}</code></td><td>Embed a content view</td></tr>
+              <tr><td><code>{"{{collection:slug}}"}</code></td><td>Embed a collection of posts</td></tr>
             </tbody>
           </table>
         </div>

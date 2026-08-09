@@ -8,6 +8,7 @@ import { sql, SQLite } from "@codemirror/lang-sql";
 import { LanguageDescription } from "@codemirror/language";
 import { Marked } from "marked";
 import { createEditor } from "./core/create-editor.js";
+import { hasEmbedToken } from "../../shared/embed-token.js";
 import {
   wrapSelection,
   insertAtLineStart,
@@ -97,11 +98,11 @@ export function createPageEditor(options: PageEditorOptions): PageEditorInstance
     previewElement.innerHTML = typeof rendered === "string" ? rendered : text;
   }
 
-  // {{view:slug}} content views and [[id]] links can only be resolved by the
+  // {{collection:slug}} embeds and [[id]] links can only be resolved by the
   // server (DB lookups, custom SQL/JS). When the content contains them we round
   // trip to the preview endpoint; otherwise we render locally for snappy typing.
   function needsServerRender(text: string): boolean {
-    return /\{\{view:[a-z0-9-]+\}\}/.test(text) || /\[\[[a-z0-9-]+(?:\|[^\]]+)?\]\]/.test(text);
+    return hasEmbedToken(text) || /\[\[[a-z0-9-]+(?:\|[^\]]+)?\]\]/.test(text);
   }
 
   async function updatePreview() {

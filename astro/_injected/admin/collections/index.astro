@@ -4,7 +4,7 @@ import { requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, listContentViews, auditCustomViews } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
-const viewsBase = `${ctx.adminBase}/views`;
+const collectionsBase = `${ctx.adminBase}/collections`;
 
 const db = await initDb();
 const views = await listContentViews(db, ctx.tenantId);
@@ -14,26 +14,26 @@ const views = await listContentViews(db, ctx.tenantId);
 // rendering — surface that here rather than letting it fail silently.
 const issues = await auditCustomViews(db, ctx.tenantId);
 ---
-<AdminLayout title="Views — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+<AdminLayout title="Collections — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
-        <h2>Views</h2>
-        <a href={`${viewsBase}/new`} class="btn btn-primary">New view</a>
+        <h2>Collections</h2>
+        <a href={`${collectionsBase}/new`} class="btn btn-primary">New collection</a>
       </div>
-      <p class="hint">Embed in markdown using <code>{"{{view:slug}}"}</code>. You can include multiple views per page.</p>
+      <p class="hint">Embed in markdown using <code>{"{{collection:slug}}"}</code>. You can include more than one per page.</p>
       {issues.length > 0 && (
         <div class="view-audit">
-          <strong>{issues.length === 1 ? "One view is not running" : `${issues.length} views are not running`}</strong>
+          <strong>{issues.length === 1 ? "One collection is not running" : `${issues.length} collections are not running`}</strong>
           <p>
-            Custom view queries may only read <code>page_public</code>, <code>post_like</code>,
+            Custom collection queries may only read <code>page_public</code>, <code>post_like</code>,
             <code>comment</code>, <code>content_view</code> and <code>media</code>, and must scope
             results with <code>:tenant_id</code>. Edit the query — usually <code>FROM page</code>
             becomes <code>FROM page_public</code>.
           </p>
           <ul>
             {issues.map((issue) => (
-              <li><a href={`${viewsBase}/${issue.id}`}>{issue.title}</a> — {issue.error}</li>
+              <li><a href={`${collectionsBase}/${issue.id}`}>{issue.title}</a> — {issue.error}</li>
             ))}
           </ul>
         </div>
@@ -44,7 +44,7 @@ const issues = await auditCustomViews(db, ctx.tenantId);
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
           <div class="nr-empty-title">Nothing here yet</div>
-          <p class="nr-empty-sub">Zero views, beautifully rendered. Create your first reusable view to get going.</p>
+          <p class="nr-empty-sub">Zero collections, beautifully rendered. Create your first reusable collection to get going.</p>
         </div>
       ) : (
         <table class="editor-table">
@@ -54,7 +54,7 @@ const issues = await auditCustomViews(db, ctx.tenantId);
           <tbody>
             {views.map((view) => (
               <tr>
-                <td><a href={`${viewsBase}/${view.id}`}>{view.title}</a></td>
+                <td><a href={`${collectionsBase}/${view.id}`}>{view.title}</a></td>
                 <td class="cell-slug">{view.slug}</td>
                 <td>{view.kind}</td>
                 <td class="cell-status">

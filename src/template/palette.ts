@@ -27,6 +27,16 @@ export interface Palette {
   surface: string;
   /** Cards, panels, inputs sitting on `surface`. */
   card: string;
+  /**
+   * The writing surface itself — the editor canvas, a shade *lighter* than
+   * `bg` so the page being written sits above the app around it. Dark themes
+   * have nowhere lighter to go, so there it simply equals `bg`.
+   */
+  canvas: string;
+  /** The left navigation rail — a shade recessed from `bg`. */
+  nav: string;
+  /** Top bars and tool bars: the strip a screen's actions live in. */
+  bar: string;
   /** Primary text: headlines, strong copy. */
   text: string;
   /** Secondary running copy — post excerpts, supporting paragraphs, code. */
@@ -37,12 +47,22 @@ export interface Palette {
   faint: string;
   /** Hairline borders. */
   border: string;
+  /** Input outlines and dividers that have to hold their own against `border`. */
+  borderStrong: string;
   /** The interactive brand colour: button fills, focus rings, wordmark dot. */
   accent: string;
+  /**
+   * `accent` lifted for emphasis rather than darkened for contrast: the
+   * "live / saved" status dot and accent highlights that sit *on* a surface
+   * rather than carrying text. Never put text on this.
+   */
+  accentBright: string;
   /** Foreground on an `accent` fill. */
   accentText: string;
   /** Active nav pills, soft chips. */
   accentSoft: string;
+  /** Text and icons on an `accentSoft` chip. */
+  chipText: string;
   /** Hover washes, info panels. */
   accentTint: string;
   /**
@@ -58,10 +78,28 @@ export interface Palette {
   successSoft: string;
   /** Destructive actions, form errors. */
   danger: string;
-  /** Cautions, unsaved-changes notices. */
+  /** Cautions, unsaved-changes notices — the readable one, for text. */
   warning: string;
+  /** The same caution as a dot or a fill, where nothing has to be legible on it. */
+  warningBright: string;
   /** Code panel background. */
   codeBg: string;
+  /**
+   * A deliberately dark surface that stays dark in *both* themes: tooltips,
+   * the selection toolbar, block hover bars, code blocks. Contextual controls
+   * read as "floating above the document" precisely because they don't follow
+   * the theme, so this is not `surface` under another name.
+   */
+  overlay: string;
+  /** Text on `overlay`. Theme-independent, for the same reason. */
+  overlayText: string;
+  /**
+   * Destructive actions *on* `overlay` — the delete icon in a block's hover
+   * bar. `danger` is tuned to carry on a light page and goes muddy on the dark
+   * bar, so this is a lighter tint of the same red, and likewise
+   * theme-independent.
+   */
+  dangerOverlay: string;
   /**
    * The "liked" heart. An affordance colour rather than a brand one — it reads
    * as a heart in any theme, so it does not shift between light and dark.
@@ -76,22 +114,34 @@ export const PALETTE: { light: Palette; dark: Palette } = {
     bg: "#eef1ec",
     surface: "#f7f9f6",
     card: "#ffffff",
+    canvas: "#f4f7f2",
+    nav: "#e7ece4",
+    bar: "#f3f6f1",
     text: "#23302a",
     bodyText: "#415147",
     muted: "#7c8a82",
     faint: "#9aa79f",
     border: "#e4eae3",
+    borderStrong: "#c3d0c8",
     accent: "#4e8a6b",
+    accentBright: "#4e8a6b",
     accentText: "#ffffff",
     accentSoft: "#ddece3",
+    chipText: "#2f6249",
     accentTint: "#eef6f1",
     link: "#40765b",
     linkHover: "#23302a",
     success: "#4e8a6b",
     successSoft: "#e7f0ea",
     danger: "#b4443a",
-    warning: "#b07a2e",
+    // Dark enough to clear 4.5:1 on `bg` as running text — a caution nobody can
+    // read is not a caution. `warningBright` carries the eye-catching end.
+    warning: "#a06a1f",
+    warningBright: "#d79a2b",
     codeBg: "#f2f5f1",
+    overlay: "#1c2621",
+    overlayText: "#e8efe9",
+    dangerOverlay: "#f0a8a0",
     like: "#e0245e",
     shadowInk: "#1e3228",
   },
@@ -99,14 +149,22 @@ export const PALETTE: { light: Palette; dark: Palette } = {
     bg: "#141a17",
     surface: "#1a211d",
     card: "#1f2823",
+    // Nothing sits above `bg` in a dark theme the way paper sits above a desk,
+    // so the canvas and the nav are the background; only the bars lift.
+    canvas: "#141a17",
+    nav: "#141a17",
+    bar: "#1a211d",
     text: "#e8efe9",
     bodyText: "#b9cabf",
     muted: "#8fa096",
     faint: "#6c7d72",
     border: "#2a342e",
+    borderStrong: "#39463f",
     accent: "#6fb894",
+    accentBright: "#86c8a6",
     accentText: "#0f1512",
     accentSoft: "#25382d",
+    chipText: "#6fb894",
     accentTint: "#1c2822",
     // Dark backgrounds do not need the contrast correction light ones do, so
     // links are the accent itself.
@@ -115,8 +173,15 @@ export const PALETTE: { light: Palette; dark: Palette } = {
     success: "#6fb894",
     successSoft: "#1e3329",
     danger: "#e0796f",
+    // A mid-amber already reads on a dark ground, so the dot and the text are
+    // the same colour here; only the light theme has to split them.
     warning: "#d8a558",
+    warningBright: "#d8a558",
     codeBg: "#161c19",
+    // Darker than `bg`, so a floating bar still separates from the page.
+    overlay: "#0b0f0d",
+    overlayText: "#e8efe9",
+    dangerOverlay: "#f0a8a0",
     like: "#e0245e",
     shadowInk: "#000000",
   },

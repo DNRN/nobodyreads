@@ -27,7 +27,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
   const app = new Hono();
 
   // Server-side render of unsaved markdown for the editor's live preview.
-  // Mirrors the public page pipeline so {{view:slug}} content views and
+  // Mirrors the public page pipeline so {{collection:slug}} embeds and
   // [[id]] links render faithfully — including unpublished views — which the
   // client-side `marked` pass cannot resolve (no DB / no SQL / no JS template).
   app.post("/editor/preview", async (c) => {

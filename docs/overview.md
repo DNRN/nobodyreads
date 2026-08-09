@@ -209,7 +209,7 @@ The visual design of the public site is data-driven, not hand-coded per deployme
 - **Components** — registered in `src/template/registry.ts` (header, nav, footer, post body, hero, etc.). Each component exposes variants and optional per-instance token overrides.
 - **Sections** — ordered, enable/disable-able layout sections that compose components into HTML.
 - **Generation** — `generateCss()` and `generateHtml()` in `src/template/generate.ts` produce the stylesheet and structural HTML injected by `SiteLayout.astro`.
-- **Editing** — `/admin/layout` and `/admin/editor/site` expose a live-preview template editor (site-editor bundle).
+- **Editing** — `/admin/layout` is the Design screen: visual tabs over the template, with the raw HTML/CSS/JS/tokens/JSON panes behind *Edit template code* (site-editor bundle).
 
 `DEFAULT_TEMPLATE` in `src/template/defaults.ts` is used when no template exists yet; `site:bootstrap` seeds the first revision.
 
@@ -235,11 +235,12 @@ Theme's named choices — type pairings, density steps, corner steps and which c
 
 The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
-All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
+The admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
 
 - `PageEditor.svelte` — a **Milkdown WYSIWYG** editor (Crepe: slash menu, selection toolbar, placeholder). Markdown remains the source of truth — Crepe serializes to Markdown on every change into the form field — with a **Source toggle** to a raw textarea. Saving is AJAX (debounced **draft autosave**, **Ctrl/Cmd+S**, and the Save button) with toast feedback; `POST /editor/save` returns JSON when the request `Accept`s it and otherwise redirects (the no-JS form-post path). Crepe's **ImageBlock feature is disabled** (it rewrites image alt text, which would clobber our `![alt|400px|right]` size/align hints); images are plain commonmark nodes with a drag/paste uploader via `@milkdown/kit/plugin/upload`.
-- `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
-- `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
+- `CollectionEditor.svelte` — the describe-first create/edit screen: presets, live preview, and CodeMirror SQL/HTML panes behind *Advanced*. (The template pane is HTML, not JavaScript — see Collections above.)
+- `SiteEditor.svelte` — the Design shell. It owns the tab markup and bootstraps the heavier `createSiteEditor` orchestration via element refs. Tabs whose state lives in Svelte contribute their slice of the template through `templatePatch(base)`; Brand saves its site settings through `beforeSave`, so one Save button still means one save. Revision history and theme import/export live inside its code panel.
+- `SharingSettings.svelte` — the favicon and social-image fields in Settings, with the tab-chrome and share-card previews. Saves on change (these are not versioned).
 
 Images use a **NodeView** in the same directory (`image-block.ts`): a hover bar for alignment, width, replace, alt text and delete, plus a soft nudge when alt text is missing. Crepe's own `ImageBlock` feature stays disabled because it stores its aspect ratio in the alt slot, which is where our `![alt|400px|right]` hints live; `parseImageAlt`/`formatImageAlt` in `src/shared/image-markdown.ts` are the single reader and writer of that grammar, shared with the server renderer.
 
@@ -256,8 +257,12 @@ interface NobodyreadsAdminContext {
   editorBase: string;   // e.g. "/admin/editor"
   siteBase: string;     // public site prefix for "View site"
   loginHref: string;
+  aiEnabled?: boolean;       // hides AI surfaces when no provider is configured
+  paymentsEnabled?: boolean; // hides the Payments panel until money can be taken
 }
 ```
+
+`aiEnabled` and `paymentsEnabled` are presentation only — they hide a surface, never gate it. The routes behind them do their own checking.
 
 The host Astro app must populate this via middleware before any admin page renders. In standalone mode, `astro/middleware.ts` does this for paths under `/admin`.
 

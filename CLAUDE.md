@@ -95,8 +95,17 @@ Page kinds: `home` (one per tenant, served at `/`), `post` (at `/posts/:slug`), 
 
 Render-time transforms in `src/content/render.ts`:
 1. `resolveLinks` — `[[page-id]]` wiki links → Markdown links (resolved against DB)
-2. `resolveViews` — `{{view:slug}}` embeds → HTML snippets
+2. `resolveViews` — `{{collection:slug}}` embeds → HTML snippets
 3. `renderMarkdown` — GFM Markdown → HTML via `marked`
+
+### Collections
+
+A collection is a SQL query plus a template. The query is validated against a table
+allowlist and forced to be tenant-scoped (`custom-view-sql.ts`). The template is **not
+JavaScript** — it is HTML plus `{{field}}`, `{{#each rows}}`, `{{#if field}}` and a fixed
+helper set, evaluated by `src/content/collection-template.ts`. Nothing executes, which is
+why there is no longer a `CUSTOM_VIEW_JS_TEMPLATES` gate. Both halves are checked at save
+time, at preview time and on AI output — same validators every time.
 
 ### Site template system
 
@@ -104,13 +113,14 @@ Visual design is data-driven JSON (`SiteTemplateDefinition`) stored in `site_tem
 
 ### Admin editors (Svelte islands)
 
-All three admin editors are Svelte islands in `astro/components/admin/`, hydrated with `client:load` and bundled by Astro/Vite (no manual build step):
+The admin editors are Svelte islands in `astro/components/admin/`, hydrated with `client:load` and bundled by Astro/Vite (no manual build step):
 
 - `PageEditor.svelte` — **Milkdown WYSIWYG** (Crepe). Markdown stays the source of truth (Crepe serializes on change); a Source toggle swaps to a raw `<textarea>`. Crepe's ImageBlock feature is **disabled** because it commandeers image alt text and would destroy our `![alt|400px|right]` size/align hints; images use plain commonmark nodes with a drop/paste uploader.
-- `ViewEditor.svelte` — idiomatic Svelte; CodeMirror for the SQL/JS panes.
-- `SiteEditor.svelte` — owns the markup and bootstraps the heavier `createSiteEditor` logic (`src/admin/client/site-editor.ts`) via element refs; CodeMirror panes.
+- `CollectionEditor.svelte` — describe-first create/edit: presets, live preview, and CodeMirror SQL/HTML panes behind *Advanced*.
+- `SiteEditor.svelte` — the Design shell (Brand · AI · Theme · Layout · Components, plus *Edit template code*). Owns the markup and bootstraps `createSiteEditor` (`src/admin/client/site-editor.ts`) via element refs. Tabs holding state in Svelte contribute through its `templatePatch(base)` hook; Brand saves site settings via `beforeSave`. **Never rebuild the template by hand** — call `getTemplateJson()`, which is the only assembly that includes the component DOM.
+- `SharingSettings.svelte` — favicon and social image in Settings, with previews of the browser tab and share card.
 
-Custom Markdown constructs (`[[wiki]]`, `{{view:slug}}`) are Milkdown atom-node plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`) — modelled as dedicated nodes so the serializer never escapes them. The other editor helpers live in `src/admin/client/` (`nobodyreads/editor`). Svelte powers admin islands only — the public site ships no islands and stays zero-framework.
+Custom Markdown constructs (`[[wiki]]`, `{{collection:slug}}`) are Milkdown atom-node plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`) — modelled as dedicated nodes so the serializer never escapes them. The other editor helpers live in `src/admin/client/` (`nobodyreads/editor`). Svelte powers admin islands only — the public site ships no islands and stays zero-framework.
 
 ProseMirror must run as a single instance: `astro.config.mjs` `vite.resolve.dedupe` collapses the `prosemirror-*` copies Milkdown ships. The standalone server serves the Astro client build (`dist/astro/client`, incl. `/_astro/*`) so islands hydrate in production.
 

@@ -480,6 +480,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     markDirty,
     loadTemplate,
     previewTemplate,
+    getTemplateJson: buildTemplateJson,
     save,
     refreshPreviewCss: scheduleLivePreview,
     destroy() {

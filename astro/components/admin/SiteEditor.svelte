@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import {
+    generateCss,
     createSiteEditor,
     TYPE_PAIRINGS,
     DENSITY_STEPS,
@@ -22,6 +23,8 @@
     defaultVariant: string;
     variants: ComponentVariant[];
     tokens: ComponentTokenDef[];
+    /** Sample markup; absent for components with nothing to show. */
+    specimen?: string;
   }
 
   interface Props {
@@ -108,6 +111,7 @@
   let brandLogo = $state(siteLogo);
   let brandLogoUrl = $state(siteLogoUrl);
   let logoPickerOpen = $state(false);
+  let showHidden = $state(false);
 
   // --- Layout --------------------------------------------------------------
   const headerSection = stored.sections?.find((s) => s.type === "header");
@@ -154,6 +158,46 @@
         : {}),
       ...(corner ? { radius: corner.radius } : {}),
     } as Partial<TokenSet>;
+  }
+
+  // --- Components ----------------------------------------------------------
+  // Only components with a specimen appear in the gallery. `base`, `responsive`
+  // and `platform` are global rules and auth-page styling — there is nothing to
+  // put in a frame for them, and a row that shows an empty box is the crowded
+  // surface §1 is trying to remove. Their tokens stay reachable in the code
+  // panes, where the whole template already is.
+  const galleryComponents = componentRegistry.filter((c) => c.specimen);
+  const hiddenComponents = componentRegistry.filter((c) => !c.specimen);
+
+  let selectedComponent = $state(galleryComponents[0]?.name ?? "");
+  const selected = $derived(
+    galleryComponents.find((c) => c.name === selectedComponent) ?? galleryComponents[0],
+  );
+
+  /**
+   * A self-contained document for the specimen: the site's generated CSS plus
+   * the component's own markup. Same stylesheet the real page gets, so what is
+   * framed here is genuinely what ships.
+   */
+  let specimenDoc = $state("");
+
+  function renderSpecimen() {
+    if (!selected?.specimen || !editor) {
+      specimenDoc = "";
+      return;
+    }
+    let css = "";
+    try {
+      css = generateCss(JSON.parse(editor!.getTemplateJson()) as SiteTemplateDefinition);
+    } catch (error) {
+      console.error("Specimen render failed:", error);
+      return;
+    }
+    specimenDoc = `<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+<style>${css}
+  body { margin: 0; padding: 28px; background: var(--bg); }
+</style></head><body>${selected.specimen}</body></html>`;
   }
 
   // --- AI ------------------------------------------------------------------
@@ -288,7 +332,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ name, template: JSON.parse(currentTemplateJson()) }),
+      body: JSON.stringify({ name, template: JSON.parse(editor!.getTemplateJson()) }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}) as { error?: string });
@@ -344,12 +388,6 @@
     await loadTrials();
   }
 
-  /** The template as it stands, for banking a trial. */
-  function currentTemplateJson(): string {
-    const base = JSON.parse(templateHidden.value) as Record<string, unknown>;
-    Object.assign(base, templatePatch(base));
-    return JSON.stringify(base);
-  }
 
   const arrangements = [
     { id: "auto", label: "Automatic" },
@@ -441,13 +479,20 @@
   function onTabChange(next: TabId) {
     if (next !== "ai" && proposal) editor?.refreshPreviewCss();
     if (next === "ai" && proposal) editor?.previewTemplate(proposal);
+    if (next === "components") renderSpecimen();
   }
 
   /** Any visual control changed: flag the work and re-render the preview. */
   function touched() {
     editor?.markDirty();
     editor?.refreshPreviewCss();
+    if (activeTab === "components") renderSpecimen();
   }
+
+  $effect(() => {
+    void selectedComponent;
+    if (activeTab === "components") renderSpecimen();
+  });
 
   async function publish() {
     if (publishing || !editor) return;
@@ -941,72 +986,108 @@
         tab is showing and is only hidden. §8c's specimen gallery replaces the
         presentation later, not the wiring.
       -->
+      <!--
+        Components stays mounted whichever tab is showing: createSiteEditor reads
+        variants and token overrides straight out of this DOM. Only the presentation
+        is tabbed.
+      -->
       <div
-        class="nbr-control nbr-components"
+        class="nbr-components"
         class:hidden={codeMode || activeTab !== "components"}
       >
-        <span class="nr-eyebrow">Components</span>
-        <p class="hint">Applies everywhere the component is used.</p>
+        <div class="nbr-component-rail">
+          <span class="nr-eyebrow">Components</span>
+          <ul class="nbr-component-list">
+            {#each galleryComponents as component}
+              <li>
+                <button
+                  type="button"
+                  class="nbr-component-item"
+                  class:is-active={selectedComponent === component.name}
+                  onclick={() => (selectedComponent = component.name)}
+                >{component.label}</button>
+              </li>
+            {/each}
+          </ul>
+        </div>
 
         <div bind:this={componentsPane} id="components-editor" class="components-editor">
           {#each componentRegistry as component}
             {@const config = componentConfigs[component.name] ?? {}}
             {@const currentVariant = config.variant ?? component.defaultVariant}
             {@const tokenOverrides = config.tokens ?? {}}
-            <details class="component-card" data-component={component.name}>
-              <summary class="component-card__summary">
-                <span class="component-card__label">{component.label}</span>
-                <code class="component-card__name">{component.name}</code>
-              </summary>
-              <div class="component-card__body">
-                {#if component.variants.length > 1}
-                  <div class="component-field">
-                    <label class="editor-label--sm" for={`component-${component.name}-variant`}>Variant</label>
-                    <select
-                      id={`component-${component.name}-variant`}
-                      name={`component:${component.name}:variant`}
-                      data-default={component.defaultVariant}
-                      value={currentVariant}
-                      class="editor-input editor-input--sm"
-                    >
-                      {#each component.variants as variant}
-                        <option value={variant.id}>{variant.label}</option>
-                      {/each}
-                    </select>
-                  </div>
-                {/if}
+            {@const inGallery = Boolean(component.specimen)}
+            <div
+              class="nbr-component-controls"
+              data-component={component.name}
+              class:hidden={inGallery ? selectedComponent !== component.name : !showHidden}
+            >
+              {#if inGallery}
+                <h3 class="nbr-component-title">{component.label}</h3>
+              {:else}
+                <h4 class="nbr-component-subtitle">{component.label} <code>{component.name}</code></h4>
+              {/if}
 
-                {#if component.tokens.length > 0}
-                  <div class="component-tokens">
-                    {#each component.tokens as token}
-                      {@const tokenValue = tokenOverrides[token.key] ?? token.defaultValue}
-                      {@const useColorPicker = token.type === "color" && isHexColor(token.defaultValue)}
-                      <div class="component-field">
-                        <label class="editor-label--sm" for={`component-${component.name}-token-${token.key}`}>
-                          {token.label}
-                        </label>
-                        <input
-                          id={`component-${component.name}-token-${token.key}`}
-                          type={useColorPicker ? "color" : "text"}
-                          name={`component:${component.name}:token:${token.key}`}
-                          data-default={token.defaultValue}
-                          value={tokenValue}
-                          placeholder={token.defaultValue}
-                          class="editor-input editor-input--sm"
-                        />
-                      </div>
+              {#if component.variants.length > 1}
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for={`component-${component.name}-variant`}>Variant</label>
+                  <select
+                    id={`component-${component.name}-variant`}
+                    name={`component:${component.name}:variant`}
+                    data-default={component.defaultVariant}
+                    value={currentVariant}
+                    onchange={() => renderSpecimen()}
+                  >
+                    {#each component.variants as variant}
+                      <option value={variant.id}>{variant.label}</option>
                     {/each}
-                  </div>
-                {:else}
-                  <p class="hint component-card__empty">No customizable tokens for this component.</p>
-                {/if}
+                  </select>
+                </div>
+              {/if}
 
-                <button type="button" class="btn btn-ghost btn-sm" data-reset-component={component.name}>
+              {#each component.tokens as token}
+                {@const tokenValue = tokenOverrides[token.key] ?? token.defaultValue}
+                {@const useColorPicker = token.type === "color" && isHexColor(token.defaultValue)}
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for={`component-${component.name}-token-${token.key}`}>
+                    {token.label}
+                  </label>
+                  <input
+                    id={`component-${component.name}-token-${token.key}`}
+                    type={useColorPicker ? "color" : "text"}
+                    name={`component:${component.name}:token:${token.key}`}
+                    data-default={token.defaultValue}
+                    value={tokenValue}
+                    placeholder={token.defaultValue}
+                    oninput={() => renderSpecimen()}
+                  />
+                </div>
+              {/each}
+
+              {#if component.variants.length <= 1 && component.tokens.length === 0}
+                <p class="hint">Nothing to adjust here — this component follows the theme.</p>
+              {/if}
+
+              <div class="nbr-component-foot">
+                <button type="button" class="btn btn-sm btn-ghost" data-reset-component={component.name}>
                   Reset to defaults
                 </button>
+                {#if inGallery}
+                  <p class="nbr-note">Applies everywhere this component is used.</p>
+                {/if}
               </div>
-            </details>
+            </div>
           {/each}
+
+          {#if hiddenComponents.length > 0}
+            <details class="nbr-advanced" bind:open={showHidden}>
+              <summary>Global rules ({hiddenComponents.length})</summary>
+              <p class="hint">
+                Base styles, responsive rules and platform pages. No specimen to show, but
+                their tokens are here.
+              </p>
+            </details>
+          {/if}
         </div>
       </div>
 
@@ -1191,11 +1272,28 @@
     <aside class="nbr-design-preview">
       <div class="nbr-design-preview-head">
         <span class="nr-eyebrow">
-          Live preview · {codeMode ? "your site" : tabs.find((t) => t.id === activeTab)?.hint}
+          {#if !codeMode && activeTab === "components"}
+            {selected?.label} · live specimen
+          {:else}
+            Live preview · {codeMode ? "your site" : tabs.find((t) => t.id === activeTab)?.hint}
+          {/if}
         </span>
         <a href={previewUrl} target="_blank" rel="noreferrer" class="btn btn-ghost btn-sm">Open ↗</a>
       </div>
-      <iframe bind:this={preview} id="site-preview" title="Site preview" data-preview-url={previewUrl}></iframe>
+      <!--
+        The site preview stays mounted whichever tab is showing: createSiteEditor
+        writes generated CSS into its document, and remounting would drop that.
+      -->
+      <iframe
+        bind:this={preview}
+        id="site-preview"
+        title="Site preview"
+        data-preview-url={previewUrl}
+        class:hidden={!codeMode && activeTab === "components"}
+      ></iframe>
+      {#if !codeMode && activeTab === "components"}
+        <iframe class="nbr-specimen" title={`${selected?.label} specimen`} srcdoc={specimenDoc}></iframe>
+      {/if}
     </aside>
   </div>
 </form>

@@ -17,6 +17,17 @@ export interface ComponentDefinition {
   variants: Record<string, ComponentVariantDef>;
   defaultVariant: string;
   tokens: ComponentTokenDef[];
+  /**
+   * Sample markup for the Design → Components gallery, using the same classes
+   * this component styles.
+   *
+   * It lives beside the CSS on purpose: a specimen written anywhere else drifts
+   * the first time a class is renamed, and then it silently stops demonstrating
+   * the thing it names. Components with no meaningful specimen — global rules,
+   * responsive rules, auth-page styling — simply omit it and are left out of
+   * the gallery.
+   */
+  specimen?: string;
   css(variant: string): string;
 }
 
@@ -26,6 +37,7 @@ export interface SerializableComponentDefinition {
   defaultVariant: string;
   variants: Array<{ id: string; label: string }>;
   tokens: ComponentTokenDef[];
+  specimen?: string;
 }
 
 export interface DefineComponentOptions {
@@ -35,6 +47,7 @@ export interface DefineComponentOptions {
   tokens: ComponentTokenDef[];
   variants: Record<string, ComponentVariantDef>;
   baseCss: string;
+  specimen?: string;
 }
 
 export function defineComponent(options: DefineComponentOptions): ComponentDefinition {
@@ -46,6 +59,7 @@ export function defineComponent(options: DefineComponentOptions): ComponentDefin
     defaultVariant,
     tokens: options.tokens,
     variants,
+    specimen: options.specimen,
     css(variant: string) {
       const resolved = variants[variant] ? variant : defaultVariant;
       const variantCss = variants[resolved]?.css ?? "";

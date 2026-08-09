@@ -127,6 +127,14 @@ export const heroComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<div class="container">
+  <div class="site-hero">
+    <div class="site-hero__text">
+      <p class="hero-title">Alice</p>
+      <p class="hero-tagline">Another simple blog engine.</p>
+    </div>
+  </div>
+</div>`,
   baseCss: BASE_CSS,
 });
 

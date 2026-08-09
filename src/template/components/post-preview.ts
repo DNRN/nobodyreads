@@ -382,6 +382,16 @@ export const postPreviewComponent = defineComponent({
     grid: { label: "Grid", css: "" },
     card: { label: "Cards", css: "" },
   },
+  specimen: `<section class="post-list post-list--default">
+  <div class="post-list__items">
+    <article class="post-preview">
+      <time class="post-date">2 Aug 2026</time>
+      <h2 class="post-title"><a href="#">Reeling In the Right Gear</a></h2>
+      <p class="post-excerpt">So you have decided to take up fishing. Before the legend, though, we need to talk about gear.</p>
+      <a href="#" class="read-more">read more &rarr;</a>
+    </article>
+  </div>
+</section>`,
   baseCss: BASE_CSS,
 });
 

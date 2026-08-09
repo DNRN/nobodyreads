@@ -108,6 +108,14 @@ export interface SiteEditorInstance {
   loadTemplate(template: Record<string, unknown>): void;
   /** Render a template into the preview without adopting it. */
   previewTemplate(template: SiteTemplateDefinition): void;
+  /**
+   * The template as it currently stands, serialised.
+   *
+   * The only correct assembly of it: code panes, component DOM and the tabs'
+   * own state all feed in, and a caller that rebuilds it by hand will quietly
+   * miss whichever of those it forgot.
+   */
+  getTemplateJson(): string;
   /** Re-generate and inject the preview stylesheet now. */
   refreshPreviewCss(): void;
 }

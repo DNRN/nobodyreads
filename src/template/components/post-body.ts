@@ -181,6 +181,12 @@ export const postBodyComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<article class="post-body">
+  <h2>What you will find here</h2>
+  <p>Some things are hard to say out loud. Writing helps, and a <a href="#">link</a> now and then does no harm.</p>
+  <blockquote><p>Nobody reads it anyway — and that is the point.</p></blockquote>
+  <pre><code>npm run dev</code></pre>
+</article>`,
   baseCss: BASE_CSS,
 });
 

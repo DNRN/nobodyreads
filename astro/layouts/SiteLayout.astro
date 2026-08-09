@@ -5,6 +5,7 @@ import { buildMetaTags, buildStructuredData, navHref } from "../../src/shared/se
 import { initDb } from "../../src/shared/db.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getSiteTemplate } from "../../src/shared/site-bundle.js";
+import { fontLinkHref } from "../../src/template/fonts.js";
 import {
   getSiteSettings,
   resolveSiteIdentity,
@@ -196,6 +197,15 @@ if (templateDef.customTokens?.length) {
   }
 }
 
+// The font request follows the theme rather than being fixed in the layout:
+// a site asks for the families it actually uses, and one built from system
+// stacks asks for nothing at all.
+const fontHref = fontLinkHref([
+  templateDef.tokens.light.font,
+  templateDef.tokens.light.brandFont,
+  templateDef.tokens.light.fontMono,
+]);
+
 const generatedCss = generateCss(templateDef);
 const customJs = templateDef.customJs?.trim() || "";
 ---
@@ -232,12 +242,13 @@ const customJs = templateDef.customJs?.trim() || "";
         href={`${options.urlPrefix}/feed.xml`}
       />
     )}
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&display=swap"
-    />
+    {fontHref && (
+      <>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href={fontHref} />
+      </>
+    )}
     <style is:global>
       .post-body img,
       .page-body img,

@@ -276,6 +276,14 @@ Two more decided as the work reached them:
 - **Collection templates are a small language, not JavaScript** (§8). Authors keep full
   control of the markup and lose only the ability to run code, which is what let the
   `CUSTOM_VIEW_JS_TEMPLATES` gate be removed entirely.
+- **One font catalogue governs every guided path.** The public layout used to hardcode a
+  single Google Fonts request, so a theme could never use a fourth family and the AI was
+  free to name one that would silently fall back. `src/template/fonts.ts` is now the list of
+  families the site can render: the layout builds its request from the theme's own tokens,
+  the type pairings are built from the catalogue, and the AI theme diff is a role-scoped
+  enum over it — `fontMono` can only hold a monospace family. A site built from system
+  stacks makes no font request at all. Stacks written by hand in template code are
+  unaffected: they match no entry, get no request, and remain the author's business.
 
 ---
 
@@ -299,10 +307,6 @@ rather than overlooked.
 - **Components is structural, not elemental (§7)**. The comp lists Buttons, Post cards,
   Tags, Quotes; the registry holds header, nav, hero, post preview and so on. The gallery is
   the comp's structure filled with the components that actually exist.
-- **Type pairings are limited to faces the site loads.** `SiteLayout.astro` hardcodes the
-  font `<link>`, so offering another family would render as a silent fallback. Widening the
-  list means making that link theme-driven first — and until it is, the *AI* theme generator
-  can still propose a font stack nobody loads, which the Theme tab deliberately cannot.
 
 Still to detail, unchanged from the original list: **embeds, layout columns,
 links/footnotes** — they share the block hover-bar grammar the image block now establishes.

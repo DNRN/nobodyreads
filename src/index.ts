@@ -321,6 +321,11 @@ export {
   PALETTE,
   FONTS,
   alpha,
+  FONT_CATALOGUE,
+  CATALOGUE_STACKS,
+  familyForStack,
+  fontFamilyById,
+  fontLinkHref,
   renderDeclarations,
   replaceGeneratedRegion,
   GENERATED_BEGIN,
@@ -328,6 +333,7 @@ export {
 } from "./template/index.js";
 export type { ThemeDiff } from "./template/index.js";
 export type { Palette, ThemeName } from "./template/index.js";
+export type { FontFamily, FontRole } from "./template/index.js";
 export type {
   SiteTemplateDefinition,
   TokenSet,

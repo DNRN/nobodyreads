@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { SiteTemplateDefinition, TokenSet } from "./types.js";
 import { tokenSetSchema } from "./theme-io.js";
 import { componentRegistry, getComponentByName } from "./registry.js";
+import { stacksForRoles, type FontRole } from "./fonts.js";
 import { normalizeComponents } from "./theme-io.js";
 
 /**
@@ -24,9 +25,35 @@ import { normalizeComponents } from "./theme-io.js";
  * strips optionality: the model may set the optional wordmark overrides too,
  * it just has to say so explicitly rather than omitting the key.
  */
+/**
+ * Font tokens are a role-scoped enum, not free text.
+ *
+ * The site's font request is built from its theme, so a family outside the
+ * catalogue cannot be loaded — a model that invented one would produce a theme
+ * that silently renders in a fallback face. Constraining it here is the same
+ * move the component variants already make: the model may only name something
+ * the engine can actually render. Each slot is narrowed further to the families
+ * that belong in it, so `fontMono` cannot end up holding a serif.
+ */
+const FONT_TOKEN_ROLES: Record<string, FontRole[]> = {
+  font: ["serif", "sans"],
+  brandFont: ["serif", "sans"],
+  fontMono: ["mono"],
+};
+
 const tokenDiffShape = Object.fromEntries(
-  Object.keys(tokenSetSchema.shape).map((key) => [key, z.string().nullable()]),
-) as { [K in keyof TokenSet]-?: z.ZodNullable<z.ZodString> };
+  Object.keys(tokenSetSchema.shape).map((key) => {
+    const roles = FONT_TOKEN_ROLES[key];
+    return [
+      key,
+      roles
+        ? z.enum(stacksForRoles(...roles) as [string, ...string[]]).nullable()
+        : z.string().nullable(),
+    ];
+  }),
+  // Through `unknown`: the values are no longer a single Zod type, and
+  // `Object.fromEntries` cannot express "one key per TokenSet field" either way.
+) as unknown as { [K in keyof TokenSet]-?: z.ZodNullable<z.ZodType<string>> };
 
 const tokenDiffSchema = z.object(tokenDiffShape);
 

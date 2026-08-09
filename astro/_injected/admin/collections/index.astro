@@ -7,6 +7,7 @@ import {
   auditCustomViews,
   describeCollection,
   generateCss,
+  fontLinkHref,
   getSiteTemplate,
   DEFAULT_TEMPLATE,
   resolveViews,
@@ -31,6 +32,16 @@ const issueById = new Map(issues.map((issue) => [issue.id, issue.error]));
 // to show what you would be embedding.
 const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
 const siteCss = generateCss(template);
+// The cards show the real output, so they need the real typeface too — without
+// this they fell back to system fonts and misrepresented every collection.
+const fontHref = fontLinkHref([
+  template.tokens?.light?.font,
+  template.tokens?.light?.brandFont,
+  template.tokens?.light?.fontMono,
+]);
+// Built here rather than inline: a nested template literal containing markup
+// trips Astro's frontmatter parser.
+const fontTag = fontHref ? `<link rel="stylesheet" href="${fontHref}">` : "";
 
 const cards = await Promise.all(
   views.map(async (view) => {
@@ -47,7 +58,7 @@ const cards = await Promise.all(
       rule: describeCollection(view),
       token: embedToken(view.slug),
       issue: issueById.get(view.id) ?? null,
-      preview: `<!doctype html><html><head><meta charset="utf-8"><style>${siteCss}
+      preview: `<!doctype html><html><head><meta charset="utf-8">${fontTag}<style>${siteCss}
 body { margin: 0; padding: 16px; background: var(--bg); pointer-events: none; }
 </style></head><body>${html}</body></html>`,
     };

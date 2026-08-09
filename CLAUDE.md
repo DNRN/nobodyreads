@@ -107,6 +107,14 @@ helper set, evaluated by `src/content/collection-template.ts`. Nothing executes,
 why there is no longer a `CUSTOM_VIEW_JS_TEMPLATES` gate. Both halves are checked at save
 time, at preview time and on AI output — same validators every time.
 
+### Fonts
+
+`src/template/fonts.ts` is the list of families the site can render — stack plus Google
+Fonts spec, or `null` for a system stack. `SiteLayout` builds its `<link>` from the theme's
+own tokens, so **do not hardcode a font request anywhere**; call `fontLinkHref`. Type
+pairings and the AI theme diff both draw from the catalogue (the AI's is role-scoped, so
+`fontMono` can only be a monospace family). Adding a family is one entry here.
+
 ### Site template system
 
 Visual design is data-driven JSON (`SiteTemplateDefinition`) stored in `site_template` with append-only revision history. `generateCss()` and `generateHtml()` in `src/template/generate.ts` produce the stylesheet and HTML injected by `SiteLayout.astro`. No theme directory to fork.

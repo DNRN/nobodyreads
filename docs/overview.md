@@ -190,6 +190,12 @@ site-template editor iframe, which render *saved* content from the DB.
 
 ### Collections (`content_view`)
 
+A custom collection is two halves: a SQL query (validated against a table allowlist and forced to be tenant-scoped — `custom-view-sql.ts`) and a **template** (`src/content/collection-template.ts`). The template is literal HTML plus `{{field}}`, `{{#each rows}}`, `{{#if field}}` and a fixed helper set (`url`, `postUrl`, `date`); values are HTML-escaped and there is no raw-output form. It replaced a JavaScript function body run through `new Function(...)` on the server, which had `process.env` in scope and so had to be disabled behind `CUSTOM_VIEW_JS_TEMPLATES`. Nothing executes now, so that flag is gone and custom collections work on every deployment, multi-tenant included. Templates are parse-checked at save time as well as at render.
+
+With an AI provider configured, **Build it** drafts a collection from the description via `POST {admin}/ai/collection`. It is the third capability on the shared `StructuredCaller` (after theming and moderation): `ai-collection.ts` holds the schema and the prompt — which names every readable table and column and the template grammar — and `generate-collection.ts` puts whatever comes back through `validateCustomQuery` and `validateCollectionTemplate` before any caller sees it, retrying once with the rejection fed back. Nothing is stored; the draft lands in the editor as unsaved work and is saved through the ordinary collection route.
+
+The Collections list shows each collection as a card with its real output rendered in an iframe using the site's own stylesheet, a plain-language rule (`describe-collection.ts`), a copy-ready embed token, and duplicate/edit actions; drafts read as provisional and say "publish to embed". Create/edit is describe-first: a description box, four presets from `collection-presets.ts` (each a real query and template, tested against the same validators a save runs), a live preview via `POST {admin}/collections/preview`, and the SQL and template behind an **Advanced** panel. The preview route enforces exactly what saving enforces, so it can never render something the saved collection could not.
+
 Collections are defined in the admin UI at `/admin/collections` or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---

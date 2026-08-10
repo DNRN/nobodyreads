@@ -4427,3 +4427,397 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+/* ========================================
+   Collections (docs/designs/admin-editor.md §8, comp 09)
+   ======================================== */
+.nr-admin .nbr-collections-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 24px;
+	flex-wrap: wrap;
+	margin-bottom: 26px;
+}
+
+.nr-admin .nbr-collections-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-collections-sub {
+	margin-top: 7px;
+	max-width: 60ch;
+	font-size: 14px;
+	line-height: 1.55;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collections-sub code {
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	padding: 2px 6px;
+	border-radius: 5px;
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-collections-audit {
+	margin-bottom: 22px;
+	padding: 12px 14px;
+	border: 1px solid var(--nr-warning);
+	border-left-width: 3px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.nr-admin .nbr-collections-audit p {
+	margin-top: 5px;
+}
+
+.nr-admin .nbr-collection-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 18px;
+}
+
+.nr-admin .nbr-collection-card {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	overflow: hidden;
+}
+
+/* A draft is not embeddable yet, so it reads as provisional rather than as a
+   card someone forgot to finish. */
+.nr-admin .nbr-collection-card.is-draft {
+	border-style: dashed;
+	background: transparent;
+}
+
+/* The real output, scaled back and inert — a card is for recognising a
+   collection, not for reading it. */
+.nr-admin .nbr-collection-render {
+	height: 168px;
+	overflow: hidden;
+	border-bottom: 1px solid var(--nr-border);
+	background: var(--nr-bg);
+	position: relative;
+}
+
+.nr-admin .nbr-collection-card.is-draft .nbr-collection-render {
+	border-bottom-color: transparent;
+	opacity: 0.65;
+}
+
+.nr-admin .nbr-collection-render iframe {
+	width: 200%;
+	height: 336px;
+	border: 0;
+	transform: scale(0.5);
+	transform-origin: 0 0;
+	pointer-events: none;
+}
+
+.nr-admin .nbr-collection-body {
+	padding: 14px 16px 16px;
+}
+
+.nr-admin .nbr-collection-line {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.nr-admin .nbr-collection-name {
+	font-size: 15.5px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-name:hover {
+	color: var(--nr-link-hover);
+}
+
+.nr-admin .nbr-collection-draft {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-collection-rule {
+	margin-top: 5px;
+	font-size: 13px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 14px;
+}
+
+.nr-admin .nbr-collection-token {
+	flex: 1;
+	min-width: 0;
+	text-align: left;
+	padding: 7px 10px;
+	border: 0;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-collection-token:hover,
+.nr-admin .nbr-collection-token.is-copied {
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .nbr-collection-token.is-empty {
+	border: 1px dashed var(--nr-border-strong);
+	background: transparent;
+	color: var(--nr-faint);
+	cursor: default;
+}
+
+.nr-admin .nbr-collection-actions .nbr-icon-btn {
+	width: 30px;
+	height: 30px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-collection-actions .nbr-icon-btn svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nr-empty .btn {
+	margin-top: 18px;
+}
+
+/* ----- Collection create / edit (comp 10) ----- */
+.nr-admin-content:has(.nbr-collection-editor) {
+	overflow: hidden;
+	padding: 0;
+}
+
+.nr-admin-content:has(.nbr-collection-editor) > * {
+	height: 100%;
+	min-height: 0;
+}
+
+.nr-admin .nbr-collection-editor {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-collection-crumb {
+	font-size: 13.5px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-heading {
+	font-family: var(--nr-font-serif);
+	font-size: 19px;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-split {
+	display: grid;
+	grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+	flex: 1;
+	min-height: 0;
+}
+
+.nr-admin .nbr-collection-controls {
+	overflow-y: auto;
+	padding: 22px 24px 40px;
+	border-right: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+}
+
+/* The question leads the screen: describe-first, not SQL-first. */
+.nr-admin .nbr-collection-ask {
+	display: block;
+	margin-bottom: 9px;
+	font-family: var(--nr-font);
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-preset-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.nr-admin .nbr-collection-fields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+	margin-top: 26px;
+	padding-top: 22px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-fields .nbr-control {
+	margin-bottom: 0;
+}
+
+.nr-admin .nbr-collection-controls input[type="text"],
+.nr-admin .nbr-collection-controls input[type="number"] {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-collection-controls input:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-collection-danger {
+	margin-top: 30px;
+	padding-top: 18px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-preview {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	padding-bottom: 22px;
+}
+
+/* The rows render with admin chrome rather than the site's stylesheet: this is
+   a check that the query and template are right, not a look at the page. */
+.nr-admin .nbr-collection-stage {
+	margin: 0 18px;
+	padding: 18px;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	min-height: 180px;
+	font-size: 14px;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-stage .post-preview {
+	padding: 12px 0;
+	border-bottom: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-stage .post-preview:last-child {
+	border-bottom: 0;
+}
+
+.nr-admin .nbr-collection-stage .post-date {
+	display: block;
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-collection-stage .post-title {
+	margin: 4px 0;
+	font-family: var(--nr-font-serif);
+	font-size: 19px;
+	font-weight: 500;
+}
+
+.nr-admin .nbr-collection-stage .post-title a {
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-stage .post-excerpt {
+	font-size: 13.5px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-stage .read-more {
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	color: var(--nr-link-hover);
+}
+
+.nr-admin .nbr-collection-advanced {
+	margin: 20px 18px 0;
+	padding: 14px 16px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-collection-advanced .code-editor,
+.nr-admin .nbr-collection-advanced .cm-editor {
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-control);
+}
+
+.nr-admin .nbr-collection-safety {
+	margin: 4px 0 14px;
+	padding: 11px 13px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-codebg);
+	border: 1px solid var(--nr-border);
+	font-size: 12.5px;
+	line-height: 1.55;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-safety code {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-text);
+}
+
+@media (max-width: 1000px) {
+	.nr-admin .nbr-collection-split {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(280px, 1fr);
+	}
+
+	.nr-admin .nbr-collection-controls {
+		border-right: 0;
+		border-bottom: 1px solid var(--nr-border);
+	}
+}
+
+.nr-admin .nbr-build-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.nr-admin .nbr-build-row .hint {
+	margin-top: 0;
+}

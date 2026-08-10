@@ -1,90 +1,172 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listContentViews, auditCustomViews } from "nobodyreads";
+import {
+  initDb,
+  listContentViews,
+  auditCustomViews,
+  describeCollection,
+  generateCss,
+  getSiteTemplate,
+  DEFAULT_TEMPLATE,
+  resolveViews,
+} from "nobodyreads";
+import { embedToken } from "nobodyreads/embed-token";
 
 const ctx = requireAdminContext(Astro.locals);
 const collectionsBase = `${ctx.adminBase}/collections`;
+const urlPrefix = ctx.siteBase === "/" ? "" : ctx.siteBase.replace(/\/$/, "");
 
 const db = await initDb();
 const views = await listContentViews(db, ctx.tenantId);
 
-// Custom view queries are checked against a table allowlist. Stored queries are
-// never rewritten for the author, so a view that no longer passes just stops
+// Collection queries are checked against a table allowlist. Stored queries are
+// never rewritten for the author, so one that no longer passes just stops
 // rendering — surface that here rather than letting it fail silently.
 const issues = await auditCustomViews(db, ctx.tenantId);
+const issueById = new Map(issues.map((issue) => [issue.id, issue.error]));
+
+// Each card shows the collection's real output rather than a mock of it, drawn
+// with the site's own stylesheet. Drafts render too: the point of the card is
+// to show what you would be embedding.
+const template = (await getSiteTemplate(db, ctx.tenantId)) ?? DEFAULT_TEMPLATE;
+const siteCss = generateCss(template);
+
+const cards = await Promise.all(
+  views.map(async (view) => {
+    let html = "";
+    try {
+      html = await resolveViews(db, embedToken(view.slug), ctx.tenantId, urlPrefix, {
+        includeDrafts: true,
+      });
+    } catch {
+      html = "";
+    }
+    return {
+      view,
+      rule: describeCollection(view),
+      token: embedToken(view.slug),
+      issue: issueById.get(view.id) ?? null,
+      preview: `<!doctype html><html><head><meta charset="utf-8"><style>${siteCss}
+body { margin: 0; padding: 16px; background: var(--bg); pointer-events: none; }
+</style></head><body>${html}</body></html>`,
+    };
+  }),
+);
 ---
 <AdminLayout title="Collections — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
-    <div class="editor-list">
-      <div class="editor-list-header">
-        <h2>Collections</h2>
-        <a href={`${collectionsBase}/new`} class="btn btn-primary">New collection</a>
-      </div>
-      <p class="hint">Embed in markdown using <code>{"{{collection:slug}}"}</code>. You can include more than one per page.</p>
-      {issues.length > 0 && (
-        <div class="view-audit">
-          <strong>{issues.length === 1 ? "One collection is not running" : `${issues.length} collections are not running`}</strong>
-          <p>
-            Custom collection queries may only read <code>page_public</code>, <code>post_like</code>,
-            <code>comment</code>, <code>content_view</code> and <code>media</code>, and must scope
-            results with <code>:tenant_id</code>. Edit the query — usually <code>FROM page</code>
-            becomes <code>FROM page_public</code>.
+    <div class="nbr-collections">
+      <header class="nbr-collections-head">
+        <div>
+          <h2 class="nr-title nbr-collections-title">Collections</h2>
+          <p class="nbr-collections-sub">
+            Reusable lists of posts you can embed anywhere. Drop one into a page with
+            <code>{"{{collection:slug}}"}</code> — as many per page as you like.
           </p>
-          <ul>
-            {issues.map((issue) => (
-              <li><a href={`${collectionsBase}/${issue.id}`}>{issue.title}</a> — {issue.error}</li>
-            ))}
-          </ul>
+        </div>
+        <a href={`${collectionsBase}/new`} class="btn btn-primary">+ New collection</a>
+      </header>
+
+      {issues.length > 0 && (
+        <div class="nbr-collections-audit">
+          <strong>
+            {issues.length === 1
+              ? "One collection is not running"
+              : `${issues.length} collections are not running`}
+          </strong>
+          <p>
+            A collection's query may only read <code>page_public</code>, <code>post_like</code>,
+            <code>comment</code>, <code>content_view</code> and <code>media</code>, and must scope
+            results with <code>:tenant_id</code>. Usually <code>FROM page</code> needs to become
+            <code>FROM page_public</code>.
+          </p>
         </div>
       )}
-      {views.length === 0 ? (
+
+      {cards.length === 0 ? (
         <div class="nr-empty">
           <div class="nr-empty-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8.5" width="13" height="12" rx="2.2"/><path d="M7 5.5h11a2 2 0 0 1 2 2v9"/></svg>
           </div>
           <div class="nr-empty-title">Nothing here yet</div>
-          <p class="nr-empty-sub">Zero collections, beautifully rendered. Create your first reusable collection to get going.</p>
+          <p class="nr-empty-sub">
+            Zero collections, beautifully rendered. Make your first one to get going.
+          </p>
+          <a href={`${collectionsBase}/new`} class="btn btn-primary">+ New collection</a>
         </div>
       ) : (
-        <table class="editor-table">
-          <thead>
-            <tr><th>Title</th><th>Slug</th><th>Kind</th><th>Status</th><th>Updated</th></tr>
-          </thead>
-          <tbody>
-            {views.map((view) => (
-              <tr>
-                <td><a href={`${collectionsBase}/${view.id}`}>{view.title}</a></td>
-                <td class="cell-slug">{view.slug}</td>
-                <td>{view.kind}</td>
-                <td class="cell-status">
-                  {view.published
-                    ? <span class="badge badge-published">published</span>
-                    : <span class="badge badge-draft">draft</span>}
-                </td>
-                <td class="cell-date">{view.updated || "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div class="nbr-collection-grid">
+          {cards.map((card) => (
+            <article class:list={["nbr-collection-card", { "is-draft": !card.view.published }]}>
+              <div class="nbr-collection-render">
+                <iframe title={`${card.view.title} preview`} srcdoc={card.preview} scrolling="no" tabindex="-1"></iframe>
+              </div>
+
+              <div class="nbr-collection-body">
+                <div class="nbr-collection-line">
+                  <a href={`${collectionsBase}/${card.view.id}`} class="nbr-collection-name">
+                    {card.view.title}
+                  </a>
+                  {card.view.published ? (
+                    <span class="nr-status is-live"><i class="nr-status-dot"></i>Live</span>
+                  ) : (
+                    <span class="nbr-collection-draft">Draft</span>
+                  )}
+                </div>
+
+                <p class="nbr-collection-rule">
+                  {card.issue ? `Not running — ${card.issue}` : card.rule}
+                </p>
+
+                <div class="nbr-collection-actions">
+                  {card.view.published ? (
+                    <button
+                      type="button"
+                      class="nbr-collection-token"
+                      data-copy={card.token}
+                      title="Copy the embed token"
+                    >{card.token}</button>
+                  ) : (
+                    <span class="nbr-collection-token is-empty">publish to embed</span>
+                  )}
+
+                  <form method="POST" action={`${collectionsBase}/duplicate/${card.view.id}`} style="margin:0">
+                    <button type="submit" class="nbr-icon-btn" title="Duplicate" aria-label={`Duplicate ${card.view.title}`}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                  </form>
+
+                  <a href={`${collectionsBase}/${card.view.id}`} class="nbr-icon-btn" title="Edit" aria-label={`Edit ${card.view.title}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-8.5 8.5L5 20l1.5-6.5z"/><path d="M11 7l6 6"/></svg>
+                  </a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       )}
     </div>
   </main>
 </AdminLayout>
 
-<style>
-  .view-audit {
-    margin: 0 0 1rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid var(--nr-warn-border, #e0b750);
-    border-left-width: 3px;
-    border-radius: 6px;
-    background: var(--nr-warn-bg, #fdf6e3);
-    color: var(--nr-warn-fg, #5c4813);
-    font-size: 0.9rem;
-  }
-  .view-audit p { margin: 0.4rem 0 0; }
-  .view-audit ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
-  .view-audit li { margin: 0.2rem 0; }
-  .view-audit code { font-size: 0.85em; }
-</style>
+<script>
+  // Copy-to-clipboard on the token chip. The token is the whole point of a
+  // collection, so it is one click from the card rather than inside the editor.
+  document.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement)?.closest("[data-copy]") as HTMLElement | null;
+    if (!button) return;
+    try {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      const previous = button.textContent;
+      button.textContent = "copied";
+      button.classList.add("is-copied");
+      setTimeout(() => {
+        button.textContent = previous;
+        button.classList.remove("is-copied");
+      }, 1200);
+    } catch {
+      /* clipboard blocked — the token is selectable text anyway */
+    }
+  });
+</script>

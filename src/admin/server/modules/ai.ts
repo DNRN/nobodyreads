@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import OpenAI from "openai";
 import { createThemeProvider } from "../../../api/ai/provider.js";
 import { generateTheme } from "../../../api/ai/generate-theme.js";
+import { createCollectionProvider } from "../../../api/ai/collection-provider.js";
+import { generateCollection } from "../../../api/ai/generate-collection.js";
 import {
   getTenantAiConfig,
   isAiConfigured,
@@ -148,6 +150,41 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
       await setSiteSetting(db, tenantId, SETTING_AI_API_KEY_ENC, encryptSecret(apiKey));
     }
     return c.json({ ok: true });
+  });
+
+  /**
+   * Draft a collection from a description.
+   *
+   * Generation only: nothing is stored. The client previews the draft and saves
+   * it through the normal collection route, so an AI collection goes through
+   * exactly the same door a hand-written one does.
+   */
+  app.post("/ai/collection", async (c) => {
+    const effectiveAi = (await getTenantAiConfig(db, tenantId)) ?? ai;
+    if (!isAiConfigured(effectiveAi)) {
+      return c.json({ error: "AI is not configured" }, 503);
+    }
+
+    const body = await c.req.json<{ description?: string }>().catch(() => ({}) as { description?: string });
+    const description = body.description?.trim();
+    if (!description) {
+      return c.json({ error: "Describe what you want to show first" }, 400);
+    }
+
+    try {
+      const provider = createCollectionProvider(effectiveAi);
+      const result = await generateCollection(provider, description);
+      if (!result.ok) {
+        return c.json({ error: result.error }, 400);
+      }
+      await recordThemeGeneration(tenantId);
+      return c.json({ collection: result.collection });
+    } catch (err) {
+      if (err instanceof OpenAI.APIError) {
+        return c.json({ error: err.message }, err.status ?? 502);
+      }
+      return c.json({ error: err instanceof Error ? err.message : "Generation failed" }, 502);
+    }
   });
 
   return app;

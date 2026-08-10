@@ -6,6 +6,9 @@ export type { InterfaceApiOptions } from "./api/interface.js";
 export { createAiApiRoutes } from "./api/ai/ai.routes.js";
 export type { AiApiOptions } from "./api/ai/ai.routes.js";
 export { createThemeProvider } from "./api/ai/provider.js";
+export { createCollectionProvider } from "./api/ai/collection-provider.js";
+export type { AICollectionProvider } from "./api/ai/collection-provider.js";
+export { generateCollection } from "./api/ai/generate-collection.js";
 export type { AIThemeProvider } from "./api/ai/provider.js";
 export { createModerationProvider } from "./api/ai/moderation-provider.js";
 export type { AIModerationProvider } from "./api/ai/moderation-provider.js";
@@ -244,6 +247,14 @@ export type { DefaultHomePageOptions } from "./content/defaults.js";
 export { renderPostListView, heroMetaLine } from "./content/templates.js";
 export type { PostListVariant, PostListRenderOptions } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
+export { describeCollection } from "./content/describe-collection.js";
+export {
+  renderCollectionTemplate,
+  validateCollectionTemplate,
+  parseCollectionTemplate,
+  DEFAULT_COLLECTION_TEMPLATE,
+  TEMPLATE_HELPERS,
+} from "./content/collection-template.js";
 export type { RenderMarkdownOptions, RenderContentOptions } from "./content/render.js";
 
 // SEO

@@ -26,6 +26,14 @@ export { renderImage, DEFAULT_IMAGE_WIDTH } from "../../shared/image-markdown.js
 // Client-safe template helpers for admin islands (no server/node deps).
 export { generateCss } from "../../template/generate.js";
 export {
+  FONT_CATALOGUE,
+  CATALOGUE_STACKS,
+  familyForStack,
+  fontFamilyById,
+  fontLinkHref,
+} from "../../template/fonts.js";
+export type { FontFamily, FontRole } from "../../template/fonts.js";
+export {
   TYPE_PAIRINGS,
   DENSITY_STEPS,
   CORNER_STEPS,

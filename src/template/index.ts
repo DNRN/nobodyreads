@@ -16,6 +16,14 @@ export type {
 export { generateTokenCss } from "./tokens.js";
 export { PALETTE, FONTS, alpha } from "./palette.js";
 export {
+  FONT_CATALOGUE,
+  CATALOGUE_STACKS,
+  familyForStack,
+  fontFamilyById,
+  fontLinkHref,
+} from "./fonts.js";
+export type { FontFamily, FontRole } from "./fonts.js";
+export {
   TYPE_PAIRINGS,
   DENSITY_STEPS,
   CORNER_STEPS,

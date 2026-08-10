@@ -209,7 +209,7 @@ The visual design of the public site is data-driven, not hand-coded per deployme
 - **Components** — registered in `src/template/registry.ts` (header, nav, footer, post body, hero, etc.). Each component exposes variants and optional per-instance token overrides.
 - **Sections** — ordered, enable/disable-able layout sections that compose components into HTML.
 - **Generation** — `generateCss()` and `generateHtml()` in `src/template/generate.ts` produce the stylesheet and structural HTML injected by `SiteLayout.astro`.
-- **Editing** — `/admin/layout` and `/admin/editor/site` expose a live-preview template editor (site-editor bundle).
+- **Editing** — `/admin/layout` is the Design screen: visual tabs over the template, with the raw HTML/CSS/JS/tokens/JSON panes behind *Edit template code* (site-editor bundle).
 
 `DEFAULT_TEMPLATE` in `src/template/defaults.ts` is used when no template exists yet; `site:bootstrap` seeds the first revision.
 
@@ -223,21 +223,26 @@ The admin UI is split across **two layers** by design:
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
 
+Site identity is split by where a thing is seen. Name, tagline and logo — visible *on* the site — are Design → Brand. Favicon and the default social image — visible *elsewhere* — are Settings → Sharing & SEO, each with a preview of where it actually turns up (browser-tab chrome, social share card), since neither appears on the site itself. Custom token *values* are in Settings too; their keys are still defined in Design's template code. `{admin}/editor/site` redirects to Design; its `/save` route is unchanged and both screens post to it.
+
 Design (`/admin/layout`) is one shell reused by every tab: controls on the left, a single live preview on the right. Visual edits and hand-written template code render into the same preview. `Edit template code` swaps the visual tabs for the raw HTML/CSS/JS/tokens/JSON panes, which also hold revision history and theme import/export. `createSiteEditor` (`src/admin/client/site-editor.ts`) still owns serialisation, saving and the preview; tabs whose state lives in Svelte contribute through its `templatePatch` hook, and Brand saves its site settings through `beforeSave` so one Save button means one save.
 
 Components is a gallery: a list rail, the selected component's controls, and its specimen rendered in the preview pane with the site's own generated CSS. Sample markup lives on the component definition (`specimen`, beside its CSS) so it cannot drift from the classes it demonstrates; components without one — `base`, `responsive`, `platform` — are global rules with nothing to frame and sit behind a disclosure.
 
 AI is Design's second tab. A generation returns a proposal held client-side and previewed via `previewTemplate` — the editor's own state is untouched until *Apply to Design*, which loads it into the visual controls as unsaved work through the same path saved trials use. `{admin}/ai` redirects to Design.
 
+Fonts come from one catalogue (`src/template/fonts.ts`): each entry pairs a CSS stack with the Google Fonts spec that loads it (or `null` for a stack the browser already has), a role, and a line of character used in the AI prompt — the model chooses from raw stacks, which say nothing about how a face looks, so without it it picks a system stack for every mood. `SiteLayout` builds its font request from the theme's own `font`/`brandFont`/`fontMono` via `fontLinkHref`, so a site asks only for the families it uses and a system-stack theme asks for nothing. The type pairings are built from the catalogue and the AI theme diff is a role-scoped enum over it, so neither guided path can name a family that would silently fall back. A hand-written stack matches no entry, gets no request, and is the author's responsibility.
+
 Theme's named choices — type pairings, density steps, corner steps and which colours lead — are data in `src/template/presets.ts`, shared by the visual controls and (later) the AI proposal so both mean the same thing by "Spacious". Type pairings are limited to faces `SiteLayout.astro` actually loads plus system stacks; offering anything else renders as a silent fallback. Saved trials load into the editor as unsaved work via `loadTemplate`, so banking a look never saves or publishes it.
 
 The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
-All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
+The admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
 
 - `PageEditor.svelte` — a **Milkdown WYSIWYG** editor (Crepe: slash menu, selection toolbar, placeholder). Markdown remains the source of truth — Crepe serializes to Markdown on every change into the form field — with a **Source toggle** to a raw textarea. Saving is AJAX (debounced **draft autosave**, **Ctrl/Cmd+S**, and the Save button) with toast feedback; `POST /editor/save` returns JSON when the request `Accept`s it and otherwise redirects (the no-JS form-post path). Crepe's **ImageBlock feature is disabled** (it rewrites image alt text, which would clobber our `![alt|400px|right]` size/align hints); images are plain commonmark nodes with a drag/paste uploader via `@milkdown/kit/plugin/upload`.
-- `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
-- `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
+- `CollectionEditor.svelte` — the describe-first create/edit screen: presets, live preview, and CodeMirror SQL/HTML panes behind *Advanced*. (The template pane is HTML, not JavaScript — see Collections above.)
+- `SiteEditor.svelte` — the Design shell. It owns the tab markup and bootstraps the heavier `createSiteEditor` orchestration via element refs. Tabs whose state lives in Svelte contribute their slice of the template through `templatePatch(base)`; Brand saves its site settings through `beforeSave`, so one Save button still means one save. Revision history and theme import/export live inside its code panel.
+- `SharingSettings.svelte` — the favicon and social-image fields in Settings, with the tab-chrome and share-card previews. Saves on change (these are not versioned).
 
 Images use a **NodeView** in the same directory (`image-block.ts`): a hover bar for alignment, width, replace, alt text and delete, plus a soft nudge when alt text is missing. Crepe's own `ImageBlock` feature stays disabled because it stores its aspect ratio in the alt slot, which is where our `![alt|400px|right]` hints live; `parseImageAlt`/`formatImageAlt` in `src/shared/image-markdown.ts` are the single reader and writer of that grammar, shared with the server renderer.
 
@@ -254,8 +259,12 @@ interface NobodyreadsAdminContext {
   editorBase: string;   // e.g. "/admin/editor"
   siteBase: string;     // public site prefix for "View site"
   loginHref: string;
+  aiEnabled?: boolean;       // hides AI surfaces when no provider is configured
+  paymentsEnabled?: boolean; // hides the Payments panel until money can be taken
 }
 ```
+
+`aiEnabled` and `paymentsEnabled` are presentation only — they hide a surface, never gate it. The routes behind them do their own checking.
 
 The host Astro app must populate this via middleware before any admin page renders. In standalone mode, `astro/middleware.ts` does this for paths under `/admin`.
 

@@ -6,19 +6,8 @@
  * "Soft" means. Each preset is a patch over `TokenSet`, so applying one is a
  * merge and nothing else in the theme is disturbed.
  */
-import { FONTS } from "./palette.js";
+import { fontFamilyById } from "./fonts.js";
 import type { TokenSet } from "./types.js";
-
-/**
- * Stacks the browser can render without a webfont request.
- *
- * Every family in {@link TYPE_PAIRINGS} must either be one of these or be in the
- * font `<link>` that `astro/layouts/SiteLayout.astro` hardcodes — offering a
- * pairing nobody loads renders as a silent fallback, which looks like a bug.
- */
-const SYSTEM_SERIF = "Georgia, 'Times New Roman', serif";
-const SYSTEM_SANS =
-  "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 export interface TypePairing {
   id: string;
@@ -29,37 +18,30 @@ export interface TypePairing {
   brandFont: string;
 }
 
+/**
+ * Pairings are built from the font catalogue rather than from literal stacks,
+ * so a pairing can only ever offer a family the site is able to load — and
+ * adding a family to the catalogue is all it takes to offer a new pairing.
+ */
+function pairing(id: string, label: string, fontId: string, brandFontId: string): TypePairing {
+  const font = fontFamilyById(fontId);
+  const brandFont = fontFamilyById(brandFontId);
+  if (!font || !brandFont) {
+    throw new Error(`Type pairing "${id}" names a family that is not in the catalogue.`);
+  }
+  return { id, label, font: font.stack, brandFont: brandFont.stack };
+}
+
 export const TYPE_PAIRINGS: TypePairing[] = [
-  {
-    id: "newsreader-hanken",
-    label: "Newsreader + Hanken Grotesk",
-    font: FONTS.serif,
-    brandFont: FONTS.sans,
-  },
-  {
-    id: "hanken",
-    label: "Hanken Grotesk throughout",
-    font: FONTS.sans,
-    brandFont: FONTS.sans,
-  },
-  {
-    id: "newsreader",
-    label: "Newsreader throughout",
-    font: FONTS.serif,
-    brandFont: FONTS.serif,
-  },
-  {
-    id: "system-serif",
-    label: "System serif",
-    font: SYSTEM_SERIF,
-    brandFont: SYSTEM_SANS,
-  },
-  {
-    id: "system-sans",
-    label: "System sans",
-    font: SYSTEM_SANS,
-    brandFont: SYSTEM_SANS,
-  },
+  pairing("newsreader-hanken", "Newsreader + Hanken Grotesk", "newsreader", "hanken-grotesk"),
+  pairing("fraunces-hanken", "Fraunces + Hanken Grotesk", "fraunces", "hanken-grotesk"),
+  pairing("garamond-hanken", "EB Garamond + Hanken Grotesk", "eb-garamond", "hanken-grotesk"),
+  pairing("space-grotesk", "Space Grotesk throughout", "space-grotesk", "space-grotesk"),
+  pairing("hanken", "Hanken Grotesk throughout", "hanken-grotesk", "hanken-grotesk"),
+  pairing("newsreader", "Newsreader throughout", "newsreader", "newsreader"),
+  pairing("jetbrains-mono", "JetBrains Mono throughout", "jetbrains-mono", "jetbrains-mono"),
+  pairing("system-serif", "System serif", "system-serif", "system-sans"),
+  pairing("system-sans", "System sans", "system-sans", "system-sans"),
 ];
 
 export interface DensityStep {

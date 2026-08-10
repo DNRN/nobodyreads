@@ -18,8 +18,8 @@ Four principles (comp footer):
 
 1. **Blank by default** — a new page is a title and a cursor; no toolbar wall.
 2. **Power on demand** — every function is one keystroke, hover, or drawer away.
-3. **Everything explains itself** — rich tooltips + a reopenable `?` help panel + a
-   3-step first-run tour teach tools in place. No manual.
+3. **Everything explains itself** — rich tooltips + a reopenable `?` help panel teach
+   tools in place. No manual. (The first-run tour was dropped — see §11.)
 4. **Complexity, contained** — media/layout/code controls live on the object they affect,
    using one repeated pattern so learning one teaches them all.
 
@@ -133,8 +133,8 @@ Decisions:
   (`#1c2621`) — same grammar for every block type.
 - **Rich tooltips** on hover/focus: label + one-line plain-language description + keyboard
   shortcut. This is how users graduate to shortcuts on their own.
-- **Reopenable `?` help** — accent disc, bottom-right of the canvas. First-run gets a
-  dismissible 3-step coach tour ("Tip 1 of 3").
+- **Reopenable `?` help** — accent disc, bottom-right of the canvas. No first-run tour:
+  there is no per-author identity to remember a dismissal against (§11).
 - **Drawers for "about the post," tabs for "about the site."** Per-post shipping settings
   (visibility, cover, tags, slug, comments, schedule) slide in from the right on demand.
   Site-wide customization uses Design's tabs.
@@ -155,7 +155,7 @@ Decisions:
   editor. **No metadata column** — the canvas runs full width (this was the core fix; the
   old editor split attention with an always-open slug/excerpt/tags/status column).
 - **01 Canvas** — slim top bar; single centered column; block gutter handle (+ / drag) in
-  the margin; placeholder line "Keep writing, or press `/`…"; first-run coach mark.
+  the margin; placeholder line "Keep writing, or press `/`…".
 - **02 Slash menu (`/`)** — insert anything. Grouped Basic / Media / Structure, ordered by
   frequency. Each row: icon + name + one-line description + markdown shortcut. Filters as
   you type.
@@ -219,7 +219,11 @@ Three-part shell reused across tabs: **controls (left) · live preview (right)**
 
 Constraints carried from the real feature: single `SELECT`, tenant-scoped
 (`:tenant_id`), read-only allowed tables (`page_public`, `post_like`, `comment`,
-`content_view`, `media`); JS templates are self-hosting-only. AI generation respects these.
+`content_view`, `media`). Templates are **not** JavaScript: they are HTML plus
+`{{field}}`, `{{#each}}`, `{{#if}}` and a fixed helper set, evaluated by the engine, so
+nothing executes and custom collections work on every deployment. (They *were* JS function
+bodies run server-side, which is why they used to be self-hosting-only.) AI generation is
+held to both validators before a draft is returned.
 
 ---
 
@@ -247,11 +251,62 @@ Constraints carried from the real feature: single `SELECT`, tenant-scoped
 
 ---
 
-## 11. Open questions / decisions to confirm
+## 11. Decisions
 
-- **Collections** vs Feeds vs Lists — rename not yet ratified.
-- AI **Apply** → drop into Design's visual controls (current framing) vs publish directly.
-- Site identity: split (current: Brand + Settings) vs all five fields together in Brand.
-- Whether the first-run coach tour stays, or tooltips + `?` drawer suffice.
-- Complex-editing priorities to detail next: **embeds, layout columns, links/footnotes**
-  (only the image block is fully drawn so far; they share the block hover-bar grammar).
+All four open questions were settled during the build.
+
+- **Collections** (over Feeds or Lists) — ratified. "Feeds" already means RSS here, and
+  "Lists" reads weakest for "reusable and embeddable". The embed token became
+  `{{collection:slug}}`; the `content_view` table and the `ContentView` type keep their
+  names, since the database concept did not change.
+- **AI Apply → the visual controls**, not publish. A proposal is held client-side and
+  previewed; applying it loads it into Design's controls as unsaved work. Nothing reaches
+  the site until the author saves and publishes.
+- **Site identity split** — name/tagline/logo in Design · Brand, favicon/social image in
+  Settings · Sharing & SEO, each beside a preview of where it is actually seen.
+- **No first-run coach tour** — tooltips and the `?` panel only. Dismissal state has
+  nowhere to live: `site_settings` is per-tenant, and password-gated mode has no per-author
+  identity at all.
+
+Two more decided as the work reached them:
+
+- **Saved trials are their own table**, not named revisions. A revision is history, appended
+  by every save; a trial is a look banked deliberately. Sharing one table would mean naming
+  every autosave or hiding most rows from the strip.
+- **Collection templates are a small language, not JavaScript** (§8). Authors keep full
+  control of the markup and lose only the ability to run code, which is what let the
+  `CUSTOM_VIEW_JS_TEMPLATES` gate be removed entirely.
+- **One font catalogue governs every guided path.** The public layout used to hardcode a
+  single Google Fonts request, so a theme could never use a fourth family and the AI was
+  free to name one that would silently fall back. `src/template/fonts.ts` is now the list of
+  families the site can render: the layout builds its request from the theme's own tokens,
+  the type pairings are built from the catalogue, and the AI theme diff is a role-scoped
+  enum over it — `fontMono` can only hold a monospace family. A site built from system
+  stacks makes no font request at all. Stacks written by hand in template code are
+  unaffected: they match no entry, get no request, and remain the author's business.
+
+---
+
+## 12. As built — knowingly unfinished
+
+Everything in §4–§9 is implemented except the following, each deferred for a stated reason
+rather than overlooked.
+
+- **Slash-menu descriptions and shortcuts (§6.02)** and **rich tooltips on the selection
+  toolbar (§6.03)**. Crepe's extension points are `{ label, icon }` and
+  `{ active, icon }` — there is no slot for a description, and the menu filters on `label`,
+  so smuggling text into it breaks search. Both need replacing Crepe's own components. The
+  menu is regrouped as Basic · Media · Structure in the meantime.
+- **Image caption (§6.04)**. Markdown images have no caption, only a title the renderer
+  emits as a tooltip. A real one means emitting `<figure>`/`<figcaption>` and changing the
+  published HTML of every existing image — a content-pipeline decision, not editor chrome.
+- **"Unlisted" visibility and "Schedule" (§6.05)**. Nothing in the schema hides a published
+  post from listings, and there is no scheduled publishing. The drawer ships the three real
+  tiers and a Publish now; a control that does not do what it says is worse than one that is
+  absent.
+- **Components is structural, not elemental (§7)**. The comp lists Buttons, Post cards,
+  Tags, Quotes; the registry holds header, nav, hero, post preview and so on. The gallery is
+  the comp's structure filled with the components that actually exist.
+
+Still to detail, unchanged from the original list: **embeds, layout columns,
+links/footnotes** — they share the block hover-bar grammar the image block now establishes.

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import {
     generateCss,
+    fontLinkHref,
     createSiteEditor,
     TYPE_PAIRINGS,
     DENSITY_STEPS,
@@ -193,8 +194,17 @@
       console.error("Specimen render failed:", error);
       return;
     }
+    // Same font request the published page makes, from the same theme — a
+    // specimen in the wrong typeface is not a specimen.
+    const template = JSON.parse(editor!.getTemplateJson()) as SiteTemplateDefinition;
+    const fontHref = fontLinkHref([
+      template.tokens?.light?.font,
+      template.tokens?.light?.brandFont,
+      template.tokens?.light?.fontMono,
+    ]);
+
     specimenDoc = `<!doctype html><html><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap">
+${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
 <style>${css}
   body { margin: 0; padding: 28px; background: var(--bg); }
 </style></head><body>${selected.specimen}</body></html>`;

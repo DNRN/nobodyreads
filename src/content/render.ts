@@ -6,6 +6,7 @@ import { renderPostListView, type PostListRenderOptions, type PostListVariant } 
 import { escapeHtml } from "../shared/http.js";
 import { renderImage } from "../shared/image-markdown.js";
 import { embedTokenPattern } from "../shared/embed-token.js";
+import { renderCollectionTemplate } from "./collection-template.js";
 import { getSiteTemplate } from "../shared/site-bundle.js";
 import { createMediaStorage } from "../media/storage.js";
 import type { LinkTarget, CustomViewConfig } from "./types.js";
@@ -95,10 +96,7 @@ export async function resolveViews(
 ): Promise<string> {
   const viewHtml = await resolveViewSlugs(db, markdown, tenantId, urlPrefix, options);
   if (viewHtml.size === 0) return markdown;
-  return markdown.replace(
-    embedTokenPattern(),
-    (_match, _name: string, slug: string) => viewHtml.get(slug) ?? "",
-  );
+  return markdown.replace(embedTokenPattern(), (_match, slug: string) => viewHtml.get(slug) ?? "");
 }
 
 /**
@@ -111,7 +109,8 @@ export async function resolveViews(
 async function postListVariant(db: Database, tenantId: string): Promise<PostListVariant> {
   const template = await getSiteTemplate(db, tenantId);
   const variant = template?.components?.postPreview?.variant;
-  return variant === "default" || variant === "compact" || variant === "card" ? variant : "auto";
+  const known: PostListVariant[] = ["default", "compact", "grid", "card"];
+  return known.includes(variant as PostListVariant) ? (variant as PostListVariant) : "auto";
 }
 
 /** Render each distinct {{collection:slug}} in `markdown` to its HTML. */
@@ -126,7 +125,7 @@ async function resolveViewSlugs(
   const viewHtml = new Map<string, string>();
   if (matches.length === 0) return viewHtml;
 
-  const slugs = [...new Set(matches.map((m) => m[2]))];
+  const slugs = [...new Set(matches.map((m) => m[1]))];
   let listDefaults: PostListRenderOptions | null = null;
 
   for (const slug of slugs) {
@@ -177,43 +176,18 @@ async function resolveViewSlugs(
 // --- Custom view rendering ---
 
 /**
- * Whether the author-written JavaScript template body may be executed.
- *
- * A custom view template is run through `new Function(...)` **server-side**, so
- * it is arbitrary JS with full `process.env` access — `JWT_SECRET`,
- * `SETTINGS_ENC_KEY`, payment provider keys. On a single-tenant self-host the
- * view author *is* the operator, so that is a fair trade. On a multi-tenant
- * deploy it is privilege escalation from "can write a blog post" to "owns the
- * platform", so it is **off unless the operator opts in**.
- *
- * Read per call rather than cached at module load: tests and `standalone.ts`
- * both set env after import.
- */
-function customViewTemplatesEnabled(): boolean {
-  const flag = process.env.CUSTOM_VIEW_JS_TEMPLATES;
-  return flag === "1" || flag === "true";
-}
-
-const TEMPLATES_DISABLED_MESSAGE =
-  "Custom view templates are disabled on this deployment. " +
-  "They execute author-written JavaScript on the server; set CUSTOM_VIEW_JS_TEMPLATES=1 " +
-  "to enable them (single-tenant self-hosting only).";
-
-/**
  * Execute a custom view's SQL query and render the results through its template.
  *
  * The query is validated against a table allowlist (see `custom-view-sql.ts`)
  * before it runs — these results are rendered into **public** pages.
  *
- * The template is a JavaScript function body that receives:
- *   - rows: Record<string, unknown>[] — the query result rows
- *   - urlPrefix: string — URL prefix for building links
- *   - escapeHtml: (s: string) => string — HTML escaping utility
- *
- * Example template:
- *   return rows.map(row =>
- *     `<article><a href="${urlPrefix}/posts/${row.slug}">${escapeHtml(String(row.title))}</a></article>`
- *   ).join('\n');
+ * The template is written in the collection template language
+ * (`collection-template.ts`) — literal HTML plus `{{field}}`, `{{#each}}`,
+ * `{{#if}}` and a fixed helper set. It used to be a JavaScript function body
+ * executed with `new Function(...)`, which is why custom collections shipped
+ * disabled: that is arbitrary server-side code with `process.env` in scope.
+ * Authors still write the markup; they just cannot run code, so there is
+ * nothing left to gate.
  */
 async function renderCustomView(
   db: Database,
@@ -225,20 +199,9 @@ async function renderCustomView(
     return `<div class="content-view content-view-custom content-view-error"><p>Custom view is missing query or template.</p></div>`;
   }
 
-  if (!customViewTemplatesEnabled()) {
-    return `<div class="content-view content-view-custom content-view-error"><p>${escapeHtml(TEMPLATES_DISABLED_MESSAGE)}</p></div>`;
-  }
-
   try {
     const rows = await executeCustomViewQuery(db, config.query, tenantId);
-
-    const templateFn = new Function("rows", "urlPrefix", "escapeHtml", config.template) as (
-      rows: Record<string, unknown>[],
-      urlPrefix: string,
-      escapeHtml: (s: string) => string
-    ) => string;
-
-    const html = templateFn(rows, urlPrefix, escapeHtml);
+    const html = renderCollectionTemplate(config.template, { rows, urlPrefix });
     return `<section class="content-view content-view-custom">\n${html}\n</section>`;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -338,8 +301,7 @@ async function resolveViewPlaceholders(
 
   const text = markdown.replace(
     embedTokenPattern(),
-    (_match, _name: string, slug: string) =>
-      `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
+    (_match, slug: string) => `\n<!--${VIEW_PLACEHOLDER_TAG}:${slug}-->\n`
   );
 
   return { text, viewHtml };

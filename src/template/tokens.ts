@@ -22,6 +22,7 @@ const TOKEN_VAR_MAP: Record<keyof TokenSet, string> = {
   lineHeight: "--line-height",
   maxWidth: "--max-width",
   containerPadding: "--container-padding",
+  radius: "--radius-base",
 };
 
 function tokenBlock(tokens: Partial<TokenSet>): string {
@@ -91,9 +92,12 @@ function derivedTokenCss(): string {
   --chip-fg: var(--link);
   /* The UI/body face. Follows the brand face so a theme picks one sans, not two. */
   --font-ui: var(--brand-font);
-  --radius-sm: 2px;
-  --radius: 4px;
-  --radius-lg: 8px;
+  /* The scale derives from the theme's --radius-base so one control moves
+     every rounded surface. The fallback is the scale as it stood before the
+     token existed, so a theme that omits it is unchanged. */
+  --radius-sm: calc(var(--radius-base, 4px) / 2);
+  --radius: var(--radius-base, 4px);
+  --radius-lg: calc(var(--radius-base, 4px) * 2);
   /* Running prose is capped at this; the container itself is wider so card
      grids and filter rows can use the full measure. */
   --reading-width: 40rem;

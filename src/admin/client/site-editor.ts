@@ -29,6 +29,8 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     customTokensEditor,
     componentsPane,
     addTokenBtn,
+    templatePatch,
+    beforeSave,
   } = options;
   let isDirty = false;
   let editMode: "tabs" | "advanced" = "tabs";
@@ -180,6 +182,10 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
     base.components = getComponentsFromUI();
 
+    // Visual tabs own their state in Svelte, so they hand their slice of the
+    // template over here rather than being read back out of the DOM.
+    Object.assign(base, templatePatch?.(base) ?? {});
+
     return JSON.stringify(base, null, 2);
   }
 
@@ -195,6 +201,23 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
       }
     } catch (error) {
       console.error("Live preview CSS update failed:", error);
+    }
+  }
+
+  /**
+   * Render an arbitrary template into the preview without adopting it.
+   *
+   * How an AI proposal is reviewed: the author sees the thing before deciding,
+   * and the editor's own state is untouched until they apply it.
+   */
+  function previewTemplate(template: SiteTemplateDefinition) {
+    ensurePreviewLoaded();
+    try {
+      const doc = preview.contentDocument;
+      const styleEl = doc?.getElementById("nr-generated-css");
+      if (styleEl) styleEl.textContent = generateCss(template);
+    } catch (error) {
+      console.error("Proposal preview failed:", error);
     }
   }
 
@@ -349,10 +372,49 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     applyLivePreviewCss();
   });
 
-  formElement.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  function setEditorValue(editor: EditorInstance | null, value: string) {
+    if (!editor) return;
+    editor.view.dispatch({
+      changes: { from: 0, to: editor.view.state.doc.length, insert: value },
+    });
+  }
 
+  /**
+   * Replace everything this module owns with a stored template.
+   *
+   * Used when a saved trial is applied: the code panes, the hidden template and
+   * the preview all have to move together, or the next save would splice the
+   * trial's tokens onto the previous theme's layout HTML.
+   *
+   * Controls that live in Svelte reset their own state — this only covers what
+   * this module reads out of the DOM.
+   */
+  function loadTemplate(template: Record<string, unknown>) {
+    templateHidden.value = JSON.stringify(template, null, 2);
+    setEditorValue(htmlEditor, String(template.layoutHtml ?? ""));
+    setEditorValue(cssEditor, String(template.customCss ?? ""));
+    setEditorValue(tsEditor, String(template.customJs ?? ""));
+    markDirty();
+    scheduleLivePreview();
+  }
+
+  /**
+   * Persist the current state as a draft revision.
+   *
+   * Returns the new revision id so a caller can publish it — Publish is
+   * save-then-publish, never a separate serialisation of the same state.
+   * Returns null if the save failed; the status line has already said so.
+   */
+  async function save(): Promise<number | null> {
     setSaveStatus("saving");
+
+    try {
+      await beforeSave?.();
+    } catch (error) {
+      setSaveStatus("error");
+      console.error("Pre-save step failed:", error);
+      return null;
+    }
 
     const templateJson = buildTemplateJson();
     templateHidden.value = templateJson;
@@ -365,6 +427,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
         method: formElement.method || "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          Accept: "application/json",
         },
         credentials: "same-origin",
         body,
@@ -372,7 +435,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
       if (response.redirected && response.url.includes("/admin/login")) {
         window.location.assign(response.url);
-        return;
+        return null;
       }
 
       if (!response.ok) {
@@ -386,25 +449,40 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
               saveStatus.title = data.error;
             }
             console.error("Save error:", data.error);
-            return;
+            return null;
           }
         }
         throw new Error(`Save failed: ${response.status}`);
       }
 
+      const data = (await response.json().catch(() => ({}))) as { revisionId?: number };
+
       isDirty = false;
       setSaveStatus("saved");
       refreshPreview(true);
+      return typeof data.revisionId === "number" ? data.revisionId : null;
     } catch (error) {
       setSaveStatus("error");
       console.error(error);
+      return null;
     }
+  }
+
+  formElement.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void save();
   });
 
   setSaveStatus("ready");
   activateTab("html");
 
   return {
+    markDirty,
+    loadTemplate,
+    previewTemplate,
+    getTemplateJson: buildTemplateJson,
+    save,
+    refreshPreviewCss: scheduleLivePreview,
     destroy() {
       if (previewDebounce) window.clearTimeout(previewDebounce);
       document.removeEventListener("click", onRemoveToken);

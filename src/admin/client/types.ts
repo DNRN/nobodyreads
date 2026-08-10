@@ -1,3 +1,4 @@
+import type { SiteTemplateDefinition } from "../../template/types.js";
 import type { EditorView } from "@codemirror/view";
 
 export interface EditorInstance {
@@ -73,6 +74,22 @@ export interface SiteEditorOptions {
   saveStatus?: HTMLElement;
   /** Container for the custom token editor table. */
   customTokensEditor?: HTMLElement;
+  /**
+   * Extra template fields contributed by controls outside this module — the
+   * Design tabs' visual editors, which own their state in Svelte rather than
+   * in the DOM this module reads.
+   *
+   * Receives the template as assembled so far — including the components read
+   * back out of the DOM — so a tab can compose with those rather than replacing
+   * them wholesale. Merged over the base on every serialise.
+   */
+  templatePatch?: (base: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Ran before the template is posted. Where a tab has state that is not part
+   * of the template — Brand writes site settings, not the theme — it saves
+   * here so one Save button still means one save.
+   */
+  beforeSave?: () => Promise<void>;
   /** Components tab pane for variant/token controls. */
   componentsPane?: HTMLElement;
   /** "Add token" button. */
@@ -83,6 +100,24 @@ export interface SiteEditorOptions {
 
 export interface SiteEditorInstance {
   destroy(): void;
+  /** Flag unsaved work — for controls that live outside this module's DOM. */
+  markDirty(): void;
+  /** Save a draft revision; resolves with its id, or null if the save failed. */
+  save(): Promise<number | null>;
+  /** Replace the code panes and hidden template with a stored template. */
+  loadTemplate(template: Record<string, unknown>): void;
+  /** Render a template into the preview without adopting it. */
+  previewTemplate(template: SiteTemplateDefinition): void;
+  /**
+   * The template as it currently stands, serialised.
+   *
+   * The only correct assembly of it: code panes, component DOM and the tabs'
+   * own state all feed in, and a caller that rebuilds it by hand will quietly
+   * miss whichever of those it forgot.
+   */
+  getTemplateJson(): string;
+  /** Re-generate and inject the preview stylesheet now. */
+  refreshPreviewCss(): void;
 }
 
 export interface ViewEditorOptions {

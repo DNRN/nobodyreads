@@ -137,7 +137,8 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 |-------|---------|
 | `tenant` | Platform-mode user accounts (not used in default single-tenant setup) |
 | `page` | All content: posts, static pages, and the home page |
-| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` (legacy `{{view:slug}}` still parses) |
+| `site_template_trial` | Named theme trials — a look banked deliberately, separate from revision history |
+| `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |
 | `site_settings` | Key-value settings per tenant (site name, logo, favicon, etc.) |
@@ -170,7 +171,7 @@ Content can be created two ways:
 `src/content/render.ts` is the core renderer:
 
 1. **`resolveLinks`** — replaces `[[page-id]]` and `[[page-id|label]]` wiki-style links with Markdown links, resolved against the DB at render time.
-2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). The original `{{view:slug}}` spelling is a permanent alias; `src/shared/embed-token.ts` is the single source for both.
+2. **`resolveViews`** — replaces `{{collection:slug}}` with HTML snippets (post lists, custom SQL views, etc.). `src/shared/embed-token.ts` is the single source of the token's syntax.
 3. **`renderMarkdown`** — GFM Markdown to HTML via `marked`, with a custom image renderer for size/alignment hints in alt text.
 
 Public Astro pages call `renderContent()` which runs the full pipeline. `SiteLayout.astro` wraps output in the generated site template (CSS + section HTML).
@@ -189,7 +190,13 @@ site-template editor iframe, which render *saved* content from the DB.
 
 ### Collections (`content_view`)
 
-Collections are defined in the admin UI at `/admin/collections` (the pre-rename `/admin/views` 301s there) or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
+A custom collection is two halves: a SQL query (validated against a table allowlist and forced to be tenant-scoped — `custom-view-sql.ts`) and a **template** (`src/content/collection-template.ts`). The template is literal HTML plus `{{field}}`, `{{#each rows}}`, `{{#if field}}` and a fixed helper set (`url`, `postUrl`, `date`); values are HTML-escaped and there is no raw-output form. It replaced a JavaScript function body run through `new Function(...)` on the server, which had `process.env` in scope and so had to be disabled behind `CUSTOM_VIEW_JS_TEMPLATES`. Nothing executes now, so that flag is gone and custom collections work on every deployment, multi-tenant included. Templates are parse-checked at save time as well as at render.
+
+With an AI provider configured, **Build it** drafts a collection from the description via `POST {admin}/ai/collection`. It is the third capability on the shared `StructuredCaller` (after theming and moderation): `ai-collection.ts` holds the schema and the prompt — which names every readable table and column and the template grammar — and `generate-collection.ts` puts whatever comes back through `validateCustomQuery` and `validateCollectionTemplate` before any caller sees it, retrying once with the rejection fed back. Nothing is stored; the draft lands in the editor as unsaved work and is saved through the ordinary collection route.
+
+The Collections list shows each collection as a card with its real output rendered in an iframe using the site's own stylesheet, a plain-language rule (`describe-collection.ts`), a copy-ready embed token, and duplicate/edit actions; drafts read as provisional and say "publish to embed". Create/edit is describe-first: a description box, four presets from `collection-presets.ts` (each a real query and template, tested against the same validators a save runs), a live preview via `POST {admin}/collections/preview`, and the SQL and template behind an **Advanced** panel. The preview route enforces exactly what saving enforces, so it can never render something the saved collection could not.
+
+Collections are defined in the admin UI at `/admin/collections` or seeded by `npm run site:bootstrap` (default: `latest-posts`). Kinds include `post_list` (filterable post listing) and `custom` (parameterized SQL). Collections are referenced in page Markdown as `{{collection:slug}}`.
 
 ---
 
@@ -202,7 +209,7 @@ The visual design of the public site is data-driven, not hand-coded per deployme
 - **Components** — registered in `src/template/registry.ts` (header, nav, footer, post body, hero, etc.). Each component exposes variants and optional per-instance token overrides.
 - **Sections** — ordered, enable/disable-able layout sections that compose components into HTML.
 - **Generation** — `generateCss()` and `generateHtml()` in `src/template/generate.ts` produce the stylesheet and structural HTML injected by `SiteLayout.astro`.
-- **Editing** — `/admin/layout` and `/admin/editor/site` expose a live-preview template editor (site-editor bundle).
+- **Editing** — `/admin/layout` is the Design screen: visual tabs over the template, with the raw HTML/CSS/JS/tokens/JSON panes behind *Edit template code* (site-editor bundle).
 
 `DEFAULT_TEMPLATE` in `src/template/defaults.ts` is used when no template exists yet; `site:bootstrap` seeds the first revision.
 
@@ -216,13 +223,28 @@ The admin UI is split across **two layers** by design:
 
 Live in `astro/_injected/admin/`. They are **not** file-system-routed in consuming apps; the `nobodyreadsAdmin()` integration injects routes at a configurable pattern (default `/admin`).
 
+Site identity is split by where a thing is seen. Name, tagline and logo — visible *on* the site — are Design → Brand. Favicon and the default social image — visible *elsewhere* — are Settings → Sharing & SEO, each with a preview of where it actually turns up (browser-tab chrome, social share card), since neither appears on the site itself. Custom token *values* are in Settings too; their keys are still defined in Design's template code. `{admin}/editor/site` redirects to Design; its `/save` route is unchanged and both screens post to it.
+
+Design (`/admin/layout`) is one shell reused by every tab: controls on the left, a single live preview on the right. Visual edits and hand-written template code render into the same preview. `Edit template code` swaps the visual tabs for the raw HTML/CSS/JS/tokens/JSON panes, which also hold revision history and theme import/export. `createSiteEditor` (`src/admin/client/site-editor.ts`) still owns serialisation, saving and the preview; tabs whose state lives in Svelte contribute through its `templatePatch` hook, and Brand saves its site settings through `beforeSave` so one Save button means one save.
+
+Components is a gallery: a list rail, the selected component's controls, and its specimen rendered in the preview pane with the site's own generated CSS. Sample markup lives on the component definition (`specimen`, beside its CSS) so it cannot drift from the classes it demonstrates; components without one — `base`, `responsive`, `platform` — are global rules with nothing to frame and sit behind a disclosure.
+
+AI is Design's second tab. A generation returns a proposal held client-side and previewed via `previewTemplate` — the editor's own state is untouched until *Apply to Design*, which loads it into the visual controls as unsaved work through the same path saved trials use. `{admin}/ai` redirects to Design.
+
+Fonts come from one catalogue (`src/template/fonts.ts`): each entry pairs a CSS stack with the Google Fonts spec that loads it (or `null` for a stack the browser already has), a role, and a line of character used in the AI prompt — the model chooses from raw stacks, which say nothing about how a face looks, so without it it picks a system stack for every mood. `SiteLayout` builds its font request from the theme's own `font`/`brandFont`/`fontMono` via `fontLinkHref`, so a site asks only for the families it uses and a system-stack theme asks for nothing. The type pairings are built from the catalogue and the AI theme diff is a role-scoped enum over it, so neither guided path can name a family that would silently fall back. A hand-written stack matches no entry, gets no request, and is the author's responsibility.
+
+Theme's named choices — type pairings, density steps, corner steps and which colours lead — are data in `src/template/presets.ts`, shared by the visual controls and (later) the AI proposal so both mean the same thing by "Spacious". Type pairings are limited to faces `SiteLayout.astro` actually loads plus system stacks; offering anything else renders as a silent fallback. Saved trials load into the editor as unsaved work via `loadTemplate`, so banking a look never saves or publishes it.
+
 The navigation is grouped into three areas — **Create** (Home, Content, Media), **Customize** (Design, Collections) and **Manage** (Community, Moderation, Payments, Settings). AI theming is not a nav item: it only ever produced a theme that landed in Design, so Design owns it and carries an "AI" badge on its nav row. See [`designs/admin-editor.md`](designs/admin-editor.md) for the redesign this follows.
 
-All three admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
+The admin editors are interactive **Svelte islands** in `astro/components/admin/` (hydrated with `client:load`), bundled by Astro/Vite:
 
 - `PageEditor.svelte` — a **Milkdown WYSIWYG** editor (Crepe: slash menu, selection toolbar, placeholder). Markdown remains the source of truth — Crepe serializes to Markdown on every change into the form field — with a **Source toggle** to a raw textarea. Saving is AJAX (debounced **draft autosave**, **Ctrl/Cmd+S**, and the Save button) with toast feedback; `POST /editor/save` returns JSON when the request `Accept`s it and otherwise redirects (the no-JS form-post path). Crepe's **ImageBlock feature is disabled** (it rewrites image alt text, which would clobber our `![alt|400px|right]` size/align hints); images are plain commonmark nodes with a drag/paste uploader via `@milkdown/kit/plugin/upload`.
-- `ViewEditor.svelte` — idiomatic Svelte with CodeMirror SQL/JS panes.
-- `SiteEditor.svelte` — owns the form markup and bootstraps the heavier `createSiteEditor` orchestration via element refs; CodeMirror panes. The Theme import/export and Revisions sections around it stay server-rendered Astro.
+- `CollectionEditor.svelte` — the describe-first create/edit screen: presets, live preview, and CodeMirror SQL/HTML panes behind *Advanced*. (The template pane is HTML, not JavaScript — see Collections above.)
+- `SiteEditor.svelte` — the Design shell. It owns the tab markup and bootstraps the heavier `createSiteEditor` orchestration via element refs. Tabs whose state lives in Svelte contribute their slice of the template through `templatePatch(base)`; Brand saves its site settings through `beforeSave`, so one Save button still means one save. Revision history and theme import/export live inside its code panel.
+- `SharingSettings.svelte` — the favicon and social-image fields in Settings, with the tab-chrome and share-card previews. Saves on change (these are not versioned).
+
+Images use a **NodeView** in the same directory (`image-block.ts`): a hover bar for alignment, width, replace, alt text and delete, plus a soft nudge when alt text is missing. Crepe's own `ImageBlock` feature stays disabled because it stores its aspect ratio in the alt slot, which is where our `![alt|400px|right]` hints live; `parseImageAlt`/`formatImageAlt` in `src/shared/image-markdown.ts` are the single reader and writer of that grammar, shared with the server renderer.
 
 The custom Markdown constructs (`[[wiki]]`, `{{collection:slug}}`) are Milkdown **atom-node** plugins in `src/admin/client/milkdown/` (exported as `nobodyreads/editor/milkdown`): a shared `$remark` transform/serializer plus a `$node` schema and input rule each. Modelling them as dedicated nodes (never plain text) is what keeps the Markdown serializer from escaping them — round-trip fidelity verified end-to-end (`prototype/`). The other editor helpers in `src/admin/client/` are exported as `nobodyreads/editor`.
 
@@ -237,8 +259,12 @@ interface NobodyreadsAdminContext {
   editorBase: string;   // e.g. "/admin/editor"
   siteBase: string;     // public site prefix for "View site"
   loginHref: string;
+  aiEnabled?: boolean;       // hides AI surfaces when no provider is configured
+  paymentsEnabled?: boolean; // hides the Payments panel until money can be taken
 }
 ```
+
+`aiEnabled` and `paymentsEnabled` are presentation only — they hide a surface, never gate it. The routes behind them do their own checking.
 
 The host Astro app must populate this via middleware before any admin page renders. In standalone mode, `astro/middleware.ts` does this for paths under `/admin`.
 
@@ -250,7 +276,7 @@ The host Astro app must populate this via middleware before any admin page rende
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
 | `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
-| `views` | `/collections/save`, `/collections/delete` (also mounted at the pre-rename `/views/*`) | Collection CRUD |
+| `views` | `/collections/save`, `/collections/delete` | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
 

@@ -79,6 +79,16 @@ CREATE TABLE IF NOT EXISTS site_template_revision (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Saved theme trials (a look banked under a name, distinct from revision history)
+CREATE TABLE IF NOT EXISTS site_template_trial (
+  trial_id   TEXT NOT NULL,
+  tenant_id  TEXT NOT NULL DEFAULT '_default',
+  name       TEXT NOT NULL,
+  template   TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (trial_id, tenant_id)
+);
+
 -- Key-value settings per tenant
 CREATE TABLE IF NOT EXISTS site_settings (
   tenant_id TEXT NOT NULL DEFAULT '_default',

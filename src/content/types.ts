@@ -51,11 +51,9 @@ export interface CustomViewConfig {
   /** SQL SELECT query. Use :tenant_id as a named parameter for tenant scoping. */
   query: string;
   /**
-   * JavaScript function body that receives (rows, urlPrefix, escapeHtml)
-   * and returns an HTML string.
-   *
-   * Example:
-   *   return rows.map(row => `<article><a href="${urlPrefix}/posts/${row.slug}">${escapeHtml(row.title)}</a></article>`).join('\n');
+   * Markup in the collection template language (`collection-template.ts`):
+   * literal HTML plus `{{field}}`, `{{#each rows}}`, `{{#if field}}` and a
+   * fixed helper set. Nothing in it executes.
    */
   template: string;
 }

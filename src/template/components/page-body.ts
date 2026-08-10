@@ -38,6 +38,10 @@ export const pageBodyComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<article class="page-body">
+  <h2>About</h2>
+  <p>A page rather than a post: no date, no read-more, just the words and a <a href="#">link</a>.</p>
+</article>`,
   baseCss: BASE_CSS,
 });
 

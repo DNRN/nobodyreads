@@ -1,36 +1,25 @@
 /**
- * The collection embed token — `{{collection:slug}}` — and its permanent alias.
- *
- * `{{view:slug}}` was the original spelling. It stays valid for ever: it is
- * sitting in stored Markdown in every database written before the rename, and
- * a rename does not get to invalidate content. Both spellings parse; only the
- * current one is ever written by new code.
+ * The collection embed token — `{{collection:slug}}`.
  *
  * This module exists because the pattern was previously restated in four places
- * (render, teaser redaction, editor dirty-detection, the Milkdown node) and a
- * fifth spelling would have had to be added to all four.
+ * (render, teaser redaction, editor dirty-detection, the Milkdown node), and a
+ * change to the syntax could land in one and not the others.
  *
  * No imports on purpose — the Milkdown plugins that need it are bundled for the
  * browser.
  */
 
-/** Slug grammar, shared by both spellings. */
+/** Slug grammar. */
 const SLUG = "[a-z0-9-]+";
 
-/** Accepted token names, current spelling first. */
-export const EMBED_TOKEN_NAMES = ["collection", "view"] as const;
+/** The token name. */
+export const EMBED_TOKEN_NAME = "collection";
 
-export type EmbedTokenName = (typeof EMBED_TOKEN_NAMES)[number];
-
-/** The current spelling — what new tokens are written as. */
-export const EMBED_TOKEN_NAME: EmbedTokenName = "collection";
-
-/** Alternation fragment for embedding in a larger pattern. */
-export const EMBED_TOKEN_SOURCE = `\\{\\{(${EMBED_TOKEN_NAMES.join("|")}):(${SLUG})\\}\\}`;
+/** Alternation fragment for embedding in a larger pattern. Group 1 is the slug. */
+export const EMBED_TOKEN_SOURCE = `\\{\\{${EMBED_TOKEN_NAME}:(${SLUG})\\}\\}`;
 
 /**
- * A **fresh** global regex matching either spelling: group 1 is the name, group
- * 2 the slug.
+ * A **fresh** global regex matching the token; group 1 is the slug.
  *
  * New object per call, deliberately. A module-level global regex carries
  * `lastIndex` across callers, so the second caller silently starts mid-string
@@ -41,12 +30,12 @@ export function embedTokenPattern(): RegExp {
   return new RegExp(EMBED_TOKEN_SOURCE, "g");
 }
 
-/** The token text for `slug`, in the current spelling. */
+/** The token text for `slug`. */
 export function embedToken(slug: string): string {
   return `{{${EMBED_TOKEN_NAME}:${slug}}}`;
 }
 
-/** Whether `text` contains at least one embed token, in either spelling. */
+/** Whether `text` contains at least one embed token. */
 export function hasEmbedToken(text: string): boolean {
   return embedTokenPattern().test(text);
 }

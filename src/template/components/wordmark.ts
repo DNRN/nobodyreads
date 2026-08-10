@@ -24,6 +24,8 @@ export const wordmarkComponent = defineComponent({
   variants: {
     default: { label: "Default", css: "" },
   },
+  specimen: `<span class="wordmark wordmark--xl">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span>
+<span class="wordmark wordmark--md">nobodyreads<span class="dot" aria-hidden="true">.</span><span class="me">me</span></span>`,
   baseCss: BASE_CSS,
 });
 

@@ -38,11 +38,36 @@ export function generateCss(def: SiteTemplateDefinition): string {
     }
   }
 
+  const postMetaCss = generatePostMetaCss(def.postMeta);
+  if (postMetaCss) {
+    parts.push(postMetaCss);
+  }
+
   if (def.customCss) {
     parts.push(def.customCss);
   }
 
   return parts.join("\n\n");
+}
+
+/**
+ * Hide the supporting details a listing has been told not to show.
+ *
+ * Expressed as CSS rather than threaded through the post-list renderer: the
+ * markup is the same either way, and a theme that omits `postMeta` emits
+ * nothing at all, so nothing changes for a site stored before this existed.
+ */
+function generatePostMetaCss(postMeta: SiteTemplateDefinition["postMeta"]): string {
+  if (!postMeta) return "";
+
+  const hidden: string[] = [];
+  if (postMeta.date === false) hidden.push(".post-preview .post-date");
+  if (postMeta.excerpt === false) hidden.push(".post-preview .post-excerpt");
+  if (postMeta.readMore === false) hidden.push(".post-preview .read-more");
+  if (postMeta.tags === false) hidden.push(".post-preview .post-tags");
+  if (hidden.length === 0) return "";
+
+  return `/* Post details switched off in Design → Layout. */\n${hidden.join(",\n")} {\n  display: none;\n}`;
 }
 
 export function generateHtml(def: SiteTemplateDefinition): string {

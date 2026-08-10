@@ -1,5 +1,5 @@
 import { eq, and, desc } from "drizzle-orm";
-import { siteTemplate, siteTemplateRevision } from "./schema.js";
+import { siteTemplate, siteTemplateRevision, siteTemplateTrial } from "./schema.js";
 import { getRawClient } from "./db.js";
 import type { Database } from "../db/index.js";
 import type { SiteTemplateDefinition } from "../template/types.js";
@@ -11,6 +11,14 @@ export interface SiteTemplateRecord {
 
 export interface SiteTemplateRevisionRecord extends SiteTemplateRecord {
   revisionId: number;
+  createdAt: string;
+}
+
+/** A look banked under a name, to switch away from and come back to. */
+export interface SiteTemplateTrial {
+  trialId: string;
+  name: string;
+  template: SiteTemplateDefinition;
   createdAt: string;
 }
 
@@ -214,4 +222,89 @@ export async function deleteSiteTemplateRevision(
         set: { currentRevisionId: nextId, updatedAt },
       });
   }
+}
+
+// --- Saved theme trials ---------------------------------------------------
+//
+// A trial is not a revision. Revisions are history: every save appends one, and
+// publishing points the site at one of them. A trial is a look someone
+// deliberately banked and named so they can try something else and come back —
+// it never publishes by itself, and it is never created as a side effect.
+
+/** Trials for a tenant, newest first. */
+export async function listSiteTemplateTrials(
+  db: Database,
+  tenantId: string,
+): Promise<SiteTemplateTrial[]> {
+  const rows = await db
+    .select()
+    .from(siteTemplateTrial)
+    .where(eq(siteTemplateTrial.tenantId, tenantId))
+    .orderBy(desc(siteTemplateTrial.createdAt));
+
+  return rows.map((row) => ({
+    trialId: row.trialId,
+    name: row.name,
+    template: row.template as SiteTemplateDefinition,
+    createdAt: row.createdAt,
+  }));
+}
+
+export async function getSiteTemplateTrial(
+  db: Database,
+  trialId: string,
+  tenantId: string,
+): Promise<SiteTemplateTrial | null> {
+  const rows = await db
+    .select()
+    .from(siteTemplateTrial)
+    .where(
+      and(eq(siteTemplateTrial.trialId, trialId), eq(siteTemplateTrial.tenantId, tenantId)),
+    )
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    trialId: row.trialId,
+    name: row.name,
+    template: row.template as SiteTemplateDefinition,
+    createdAt: row.createdAt,
+  };
+}
+
+/**
+ * Bank a look under a name.
+ *
+ * Upserts on the natural key, so saving over an existing trial replaces it
+ * rather than accumulating duplicates under the same id.
+ */
+export async function saveSiteTemplateTrial(
+  db: Database,
+  trial: { trialId: string; name: string; template: SiteTemplateDefinition },
+  tenantId: string,
+): Promise<SiteTemplateTrial> {
+  const createdAt = new Date().toISOString();
+
+  await db
+    .insert(siteTemplateTrial)
+    .values({ ...trial, tenantId, createdAt })
+    .onConflictDoUpdate({
+      target: [siteTemplateTrial.trialId, siteTemplateTrial.tenantId],
+      set: { name: trial.name, template: trial.template, createdAt },
+    });
+
+  return { ...trial, createdAt };
+}
+
+export async function deleteSiteTemplateTrial(
+  db: Database,
+  trialId: string,
+  tenantId: string,
+): Promise<void> {
+  await db
+    .delete(siteTemplateTrial)
+    .where(
+      and(eq(siteTemplateTrial.trialId, trialId), eq(siteTemplateTrial.tenantId, tenantId)),
+    );
 }

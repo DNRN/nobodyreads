@@ -23,6 +23,7 @@ export const tokenSetSchema = z.object({
   lineHeight: z.string(),
   maxWidth: z.string(),
   containerPadding: z.string(),
+  radius: z.string().optional(),
 });
 
 const headerSectionSchema = z.object({
@@ -32,6 +33,8 @@ const headerSectionSchema = z.object({
   showTagline: z.boolean(),
   logoText: z.string(),
   logoDotText: z.string(),
+  showNav: z.boolean().optional(),
+  showSubscribe: z.boolean().optional(),
 });
 
 const contentSectionSchema = z.object({

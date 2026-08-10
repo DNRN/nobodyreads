@@ -43,7 +43,7 @@ if (!latestPostsView) {
     published: true,
   };
   await upsertContentView(db, defaultView, TENANT_ID);
-  console.log(`Seeded default content view '{{view:latest-posts}}' for tenant ${TENANT_ID}.`);
+  console.log(`Seeded default content view '{{collection:latest-posts}}' for tenant ${TENANT_ID}.`);
 } else {
   console.log(`Default content view already exists for tenant ${TENANT_ID}.`);
 }

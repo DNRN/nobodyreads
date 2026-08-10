@@ -20,13 +20,22 @@ function wordmarkHtml(
 function headerSectionHtml(config: HeaderSectionConfig): string {
   const wm = wordmarkHtml("md", config.logoText, config.logoDotText);
 
+  // Omitted means shown, so a header stored before these toggles existed keeps
+  // its navigation.
+  const nav =
+    config.showNav === false
+      ? ""
+      : `\n      <nav class="site-nav-inline" aria-label="Main">{{nav}}</nav>`;
+  // Off by default: a subscribe form in the header is a deliberate choice, not
+  // something a site should acquire by upgrading.
+  const subscribe = config.showSubscribe ? "{{subscribe}}" : "";
+
   let html = `<header class="site-header">
   <div class="container">
     <div class="nav-bar">
-      <a class="site-logo" href="{{brandHref}}">${wm}</a>
-      <nav class="site-nav-inline" aria-label="Main">{{nav}}</nav>
+      <a class="site-logo" href="{{brandHref}}">${wm}</a>${nav}
       {{communityBlock}}
-      <div class="nav-actions">{{navToggle}}{{authLinksBlock}}</div>
+      <div class="nav-actions">${subscribe}{{navToggle}}{{authLinksBlock}}</div>
     </div>`;
 
   html += `\n  </div>\n</header>`;

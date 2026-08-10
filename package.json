@@ -32,6 +32,14 @@
       "types": "./dist/shared/embed-token.d.ts",
       "import": "./dist/shared/embed-token.js"
     },
+    "./collection-template": {
+      "types": "./dist/content/collection-template.d.ts",
+      "import": "./dist/content/collection-template.js"
+    },
+    "./collection-presets": {
+      "types": "./dist/content/collection-presets.d.ts",
+      "import": "./dist/content/collection-presets.js"
+    },
     "./editor/milkdown": {
       "types": "./dist/admin/client/milkdown/index.d.ts",
       "import": "./dist/admin/client/milkdown/index.js"

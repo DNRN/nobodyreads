@@ -1091,6 +1091,9 @@
 	overflow: auto;
 }
 
+/* Two-column shell: a settings rail beside a work area. Used by the Collection
+   editor. The page editor used to share it and no longer does — its canvas runs
+   full width with settings in a drawer. */
 .nr-admin .editor-form {
 	flex: 1;
 	display: grid;
@@ -1118,7 +1121,7 @@
 	pointer-events: none;
 }
 
-.nr-admin .editor-form > .editor-split {
+.nr-admin .editor-form > .editor-content {
 	grid-column: 2;
 	grid-row: 1;
 }
@@ -2290,55 +2293,21 @@
 	gap: 0.5rem;
 }
 
-/* The document title. Deliberately chrome-less and sharing the ProseMirror
-   column's measure and horizontal padding below, so it reads as the first line
-   of the document rather than as a form field. */
-.nr-admin .editor-doc-title {
-	flex-shrink: 0;
-	width: 100%;
-	box-sizing: border-box;
-	padding: 1.75rem max(2rem, calc((100% - 44rem) / 2)) 0;
-	border: none;
-	background: var(--nr-bg);
-	color: var(--nr-text);
-	font-family: inherit;
-	font-size: 1.75rem;
-	font-weight: 700;
-	line-height: 1.25;
-}
-
-.nr-admin .editor-doc-title::placeholder {
-	color: var(--nr-muted);
-	opacity: 0.55;
-}
-
-.nr-admin .editor-doc-title:focus {
-	outline: none;
-}
-
-/* Focus is still discoverable without a box: keyboard users get a ring. */
-.nr-admin .editor-doc-title:focus-visible {
-	outline: 2px solid var(--nr-accent, currentColor);
-	outline-offset: 2px;
-}
-
-/* The title supplies the column's top padding, so the body starts flush. */
-.nr-admin .editor-doc-title + .nbr-milkdown .milkdown > .ProseMirror {
-	padding-top: 1rem;
-}
-
+/* The prose area. The canvas column above owns the measure and the scroll, so
+   the editable element only supplies the space between the title and the first
+   paragraph — its own centring padding would inset the body a second time and
+   knock it out of line with the title. */
 .nr-admin .nbr-milkdown {
 	flex: 1;
 	min-height: 0;
-	background: var(--nr-bg);
-	overflow: auto;
+	background: transparent;
 }
 
 .nr-admin .nbr-milkdown.hidden {
 	display: none;
 }
 
-/* Flex chain so the editable area grows to fill the pane — the overlay
+/* Flex chain so the editable area grows to fill the column — the overlay
    siblings (toolbar, block handle, slash menu) are absolutely positioned and
    stay out of flow. This makes the whole region clickable, not just the text. */
 .nr-admin .nbr-milkdown .milkdown {
@@ -2347,13 +2316,12 @@
 	min-height: 100%;
 }
 
-/* Centered, readable column: the editable element stays full-width (so clicking
-   anywhere focuses), while horizontal padding collapses to center a ~44rem
-   measure on wide panes and falls back to 2rem on narrow ones. */
 .nr-admin .nbr-milkdown .milkdown > .ProseMirror {
 	flex: 1 0 auto;
-	padding: 2rem max(2rem, calc((100% - 44rem) / 2));
+	padding: 0;
 	box-sizing: border-box;
+	font-size: 17px;
+	line-height: 1.7;
 }
 
 /* Custom-token chips rendered inside the editor */
@@ -2366,7 +2334,7 @@
 
 .nr-admin .nbr-wiki-link {
 	background: var(--nr-accent-soft);
-	color: var(--nr-accent);
+	color: var(--nr-chip-text);
 }
 
 .nr-admin .nbr-view-embed {
@@ -2385,7 +2353,7 @@
 	--crepe-font-title: var(--nr-font);
 	--crepe-font-code: var(--nr-font-mono);
 
-	--crepe-color-background: var(--nr-bg);
+	--crepe-color-background: var(--nr-canvas);
 	--crepe-color-on-background: var(--nr-text);
 	--crepe-color-surface: var(--nr-surface);
 	--crepe-color-surface-low: var(--nr-surface);
@@ -3017,4 +2985,2073 @@
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	line-height: 1.5;
+}
+
+/* ========================================
+   Writing canvas (docs/designs/admin-editor.md §6)
+   ----------------------------------------
+   The canvas runs the full width of the shell. The always-open metadata column
+   this replaces split the author's attention with slug/excerpt/tags before a
+   sentence was written; all of it now lives in a drawer, one click away.
+   ======================================== */
+
+.nr-admin-content:has(.nbr-editor) {
+	overflow: hidden;
+	padding: 0;
+}
+
+.nr-admin .nbr-editor {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-canvas);
+}
+
+.nr-admin .nbr-editor-form {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+/* ----- Top bar ----- */
+.nr-admin .nbr-topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-shrink: 0;
+	padding: 10px 18px;
+	background: var(--nr-bar);
+	border-bottom: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-topbar-spacer {
+	flex: 1;
+}
+
+.nr-admin .nbr-topbar-back {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 30px;
+	border-radius: var(--nr-radius-control);
+	color: var(--nr-muted);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-topbar-back:hover {
+	background: var(--nr-hover);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-topbar-back svg {
+	width: 18px;
+	height: 18px;
+}
+
+.nr-admin .nbr-breadcrumb {
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+	color: var(--nr-body, var(--nr-text));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 34ch;
+}
+
+.nr-admin .nbr-wordcount {
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	color: var(--nr-faint);
+	white-space: nowrap;
+}
+
+/* Square icon button — the top bar's secondary actions. */
+.nr-admin .nbr-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	color: var(--nr-muted);
+	cursor: pointer;
+	transition:
+		color 0.15s,
+		border-color 0.15s,
+		background 0.15s;
+}
+
+.nr-admin .nbr-icon-btn:hover {
+	color: var(--nr-text);
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nbr-icon-btn.is-active {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-icon-btn svg {
+	width: 17px;
+	height: 17px;
+}
+
+/* ----- Canvas ----- */
+.nr-admin .nbr-canvas {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	background: var(--nr-canvas);
+}
+
+.nr-admin .nbr-canvas-col {
+	display: flex;
+	flex-direction: column;
+	min-height: 100%;
+	width: 100%;
+	max-width: var(--nr-measure);
+	margin: 0 auto;
+	padding: 56px 24px 40vh;
+}
+
+/* The title heads the writing column rather than sitting in a sidebar: it
+   becomes the document's <h1>, so it has to read as part of the document.
+   Tucked into metadata, authors re-type it as a `# ` heading in the body. */
+.nr-admin .nbr-doc-title {
+	width: 100%;
+	border: 0;
+	outline: none;
+	background: transparent;
+	font-family: var(--nr-font-serif);
+	font-size: 40px;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	color: var(--nr-text);
+	padding: 0 0 14px;
+}
+
+.nr-admin .nbr-doc-title::placeholder {
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-milkdown {
+	flex: 1;
+	min-height: 0;
+}
+
+.nr-admin .nbr-source {
+	flex: 1;
+	width: 100%;
+	min-height: 50vh;
+	padding: 0;
+	border: none;
+	outline: none;
+	resize: none;
+	background: transparent;
+	color: var(--nr-text);
+	font-family: var(--nr-font-mono);
+	font-size: 14px;
+	line-height: 1.75;
+	tab-size: 2;
+}
+
+/* ----- Focus mode -----
+   One shortcut hides every piece of chrome. `/` and the selection toolbar keep
+   working — they are just invisible until reached for. */
+.nr-admin:has(.nbr-editor.is-focus) .nr-admin-header,
+.nr-admin:has(.nbr-editor.is-focus) .nr-admin-sidebar {
+	display: none;
+}
+
+.nr-admin .nbr-editor.is-focus .nbr-topbar {
+	display: none;
+}
+
+.nr-admin .nbr-editor.is-focus .nbr-canvas-col {
+	padding-top: 12vh;
+}
+
+.nr-admin .nbr-focus-hint {
+	position: fixed;
+	left: 50%;
+	bottom: 22px;
+	transform: translateX(-50%);
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--nr-faint);
+	pointer-events: none;
+}
+
+/* ----- Settings drawer ----- */
+/* Above the app header (100) and the mobile nav drawer (200): the comp puts
+   this over everything, and a scrim that dims only part of the page reads as a
+   rendering bug. Neutral black rather than --nr-overlay, which is nearly
+   invisible against a dark background. */
+.nr-admin .nbr-drawer-scrim {
+	position: fixed;
+	inset: 0;
+	z-index: 300;
+	background: rgba(0, 0, 0, 0.38);
+}
+
+.nr-admin .nbr-drawer {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 301;
+	width: min(400px, 100vw);
+	display: flex;
+	flex-direction: column;
+	background: var(--nr-card);
+	border-left: 1px solid var(--nr-border);
+	box-shadow: var(--nr-shadow-lg);
+	transform: translateX(101%);
+	visibility: hidden;
+	transition:
+		transform 0.22s cubic-bezier(0.32, 0.72, 0, 1),
+		visibility 0.22s;
+}
+
+.nr-admin .nbr-drawer.is-open {
+	transform: translateX(0);
+	visibility: visible;
+}
+
+/* The fields live in the <form> even when the drawer is shut, so a no-JS
+   submit still carries them. Hiding by transform alone would leave them
+   tabbable off-screen. */
+.nr-admin .nbr-drawer:not(.is-open) {
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.nr-admin .nbr-drawer {
+		transition: none;
+	}
+}
+
+.nr-admin .nbr-drawer:focus {
+	outline: none;
+}
+
+.nr-admin .nbr-drawer-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid var(--nr-border);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-drawer-title {
+	font-size: 21px;
+}
+
+.nr-admin .nbr-drawer-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 18px 20px 24px;
+}
+
+.nr-admin .nbr-drawer-foot {
+	display: flex;
+	gap: 8px;
+	padding: 14px 20px;
+	border-top: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-drawer-foot .btn {
+	flex: 1;
+}
+
+.nr-admin .nbr-drawer-danger {
+	margin-top: 28px;
+	padding-top: 18px;
+	border-top: 1px solid var(--nr-border);
+}
+
+/* ----- Drawer fields ----- */
+.nr-admin .nbr-field {
+	margin-bottom: 20px;
+	border: 0;
+	padding: 0;
+}
+
+.nr-admin .nbr-field > label,
+.nr-admin .nbr-field > legend {
+	display: block;
+	margin-bottom: 7px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-field > legend.nr-eyebrow {
+	font-weight: 500;
+}
+
+.nr-admin .nbr-field input[type="text"],
+.nr-admin .nbr-field input[type="date"],
+.nr-admin .nbr-field input[type="number"],
+.nr-admin .nbr-field textarea,
+.nr-admin .nbr-field select {
+	width: 100%;
+	padding: 9px 11px;
+	font-family: var(--nr-font);
+	font-size: 13.5px;
+	color: var(--nr-text);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-field textarea {
+	resize: vertical;
+	line-height: 1.55;
+}
+
+.nr-admin .nbr-field input:focus,
+.nr-admin .nbr-field textarea:focus,
+.nr-admin .nbr-field select:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-field .hint {
+	margin-top: 6px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-check {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+	cursor: pointer;
+	margin-bottom: 0;
+}
+
+.nr-admin .nbr-check input {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--nr-accent-strong);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-advanced > summary {
+	cursor: pointer;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--nr-muted);
+	padding: 8px 0;
+	list-style: none;
+}
+
+.nr-admin .nbr-advanced > summary::-webkit-details-marker {
+	display: none;
+}
+
+.nr-admin .nbr-advanced > summary::before {
+	content: "▸";
+	display: inline-block;
+	margin-right: 7px;
+	transition: transform 0.15s;
+}
+
+.nr-admin .nbr-advanced[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.nr-admin .nbr-advanced > summary:hover {
+	color: var(--nr-text);
+}
+
+/* ----- Visibility choices -----
+   Radios rather than a segmented control: each option needs a sentence of
+   consequence beside it, and this is the choice people open the drawer for. */
+.nr-admin .nbr-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nr-admin .nbr-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 11px 12px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-bg);
+	cursor: pointer;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+}
+
+.nr-admin .nbr-choice:hover {
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nbr-choice:has(input:checked) {
+	border-color: var(--nr-accent);
+	background: var(--nr-accent-tint);
+}
+
+.nr-admin .nbr-choice:has(input:focus-visible) {
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-choice input {
+	margin-top: 2px;
+	width: 15px;
+	height: 15px;
+	accent-color: var(--nr-accent-strong);
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-choice-body {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.nr-admin .nbr-choice-title {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-choice-desc {
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+/* A nudge, never a blocker — nothing here prevents publishing. */
+.nr-admin .nbr-nudge {
+	margin-bottom: 20px;
+	padding: 10px 12px;
+	border: 1px solid var(--nr-warning);
+	border-left-width: 3px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.nr-admin .nbr-slug-row {
+	display: flex;
+	align-items: center;
+	gap: 0;
+}
+
+.nr-admin .nbr-slug-prefix {
+	padding: 9px 8px 9px 11px;
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+	color: var(--nr-faint);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-right: 0;
+	border-radius: var(--nr-radius-control) 0 0 var(--nr-radius-control);
+	white-space: nowrap;
+}
+
+.nr-admin .nbr-slug-row input[type="text"] {
+	border-radius: 0 var(--nr-radius-control) var(--nr-radius-control) 0;
+	font-family: var(--nr-font-mono);
+	font-size: 13px;
+}
+
+.nr-admin .nbr-image-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.nr-admin .nbr-image-preview {
+	margin-top: 10px;
+	max-width: 100%;
+	border-radius: var(--nr-radius-control);
+	border: 1px solid var(--nr-border);
+}
+
+/* ----- Help panel ----- */
+.nr-admin .nbr-help {
+	position: fixed;
+	right: 24px;
+	bottom: 74px;
+	z-index: 49;
+	width: min(340px, calc(100vw - 48px));
+	max-height: 60vh;
+	overflow-y: auto;
+	padding: 16px 18px 18px;
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	box-shadow: var(--nr-shadow-lg);
+}
+
+.nr-admin .nbr-help-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.nr-admin .nbr-help-head .nbr-icon-btn {
+	width: 26px;
+	height: 26px;
+	border-color: transparent;
+	background: transparent;
+}
+
+.nr-admin .nbr-help-head .nbr-icon-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.nr-admin .nbr-help-list {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 8px 12px;
+	margin: 0;
+	align-items: baseline;
+}
+
+.nr-admin .nbr-help-list dt {
+	white-space: nowrap;
+	font-size: 12px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-help-list dt kbd,
+.nr-admin .nbr-help-list dt code {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	padding: 2px 5px;
+	border-radius: 5px;
+	background: var(--nr-codebg);
+	border: 1px solid var(--nr-border);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-help-list dd {
+	margin: 0;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-body, var(--nr-muted));
+}
+
+/* ----- Narrow screens ----- */
+@media (max-width: 720px) {
+	.nr-admin .nbr-canvas-col {
+		padding: 32px 18px 40vh;
+	}
+
+	.nr-admin .nbr-doc-title {
+		font-size: 30px;
+	}
+
+	.nr-admin .nbr-breadcrumb,
+	.nr-admin .nbr-wordcount {
+		display: none;
+	}
+}
+
+/* ----- Image block (docs/designs/admin-editor.md §6.04) -----
+   Controls live on the object they affect, in the same dark bar every other
+   block type will use. */
+.nr-admin .nbr-image {
+	position: relative;
+	margin: 22px 0;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.nr-admin .nbr-image[data-align="center"] {
+	align-items: center;
+}
+
+.nr-admin .nbr-image[data-align="right"] {
+	align-items: flex-end;
+}
+
+.nr-admin .nbr-image-img {
+	display: block;
+	max-width: 100%;
+	border-radius: var(--nr-radius-control);
+}
+
+.nr-admin .nbr-image.is-selected .nbr-image-img {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+/* The bar sits over the top edge of the image and appears on hover, on
+   keyboard focus, or when the node is selected — reaching for it should not
+   require a mouse. */
+.nr-admin .nbr-image-bar {
+	position: absolute;
+	top: 8px;
+	left: 50%;
+	transform: translateX(-50%) translateY(-4px);
+	opacity: 0;
+	visibility: hidden;
+	transition:
+		opacity 0.12s ease,
+		transform 0.12s ease,
+		visibility 0.12s;
+	z-index: 5;
+}
+
+.nr-admin .nbr-image:hover .nbr-image-bar,
+.nr-admin .nbr-image.is-selected .nbr-image-bar,
+.nr-admin .nbr-image:focus-within .nbr-image-bar {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(0);
+}
+
+.nr-admin .nbr-image-altrow {
+	display: none;
+	width: 100%;
+	max-width: 520px;
+	margin-top: 8px;
+}
+
+.nr-admin .nbr-image.is-editing-alt .nbr-image-altrow {
+	display: block;
+}
+
+.nr-admin .nbr-image-altinput {
+	width: 100%;
+	padding: 8px 11px;
+	font-family: var(--nr-font);
+	font-size: 13px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-image-altinput:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+/* Soft warning, never a blocker — publishing is never prevented by it. */
+.nr-admin .nbr-image-nudge {
+	display: none;
+	margin-top: 8px;
+	padding: 6px 10px;
+	border: 1px solid var(--nr-warning);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-family: var(--nr-font);
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.nr-admin .nbr-image.has-no-alt .nbr-image-nudge {
+	display: block;
+}
+
+/* ========================================
+   Design screen (docs/designs/admin-editor.md §7)
+   ----------------------------------------
+   One shell reused by every tab: controls on the left, one live preview on the
+   right. Visual edits and hand-written template code both render into the same
+   preview, so cause and effect stay visible either way.
+   ======================================== */
+
+.nr-admin-content:has(.nbr-design) {
+	overflow: hidden;
+	padding: 0;
+}
+
+/* The shell sizes itself off the content area, so every wrapper between the
+   two has to pass the height through or the columns stop short. */
+.nr-admin-content:has(.nbr-design) > * {
+	height: 100%;
+	min-height: 0;
+}
+
+.nr-admin .nbr-design {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-design-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 20px;
+	flex-wrap: wrap;
+	padding: 24px 28px 18px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-design-sub {
+	margin-top: 5px;
+	font-size: 14px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-design-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+/* ----- Tab bar ----- */
+.nr-admin .nbr-design-tabbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 0 28px;
+	border-bottom: 1px solid var(--nr-border);
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-tabs {
+	display: flex;
+	gap: 4px;
+}
+
+.nr-admin .nbr-design-tab {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	padding: 10px 16px;
+	border-radius: var(--nr-radius-control) var(--nr-radius-control) 0 0;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--nr-muted);
+	cursor: pointer;
+	text-decoration: none;
+	line-height: 1.4;
+	display: inline-flex;
+	align-items: center;
+}
+
+.nr-admin .nbr-design-tab:hover {
+	color: var(--nr-text);
+	background: var(--nr-hover);
+	text-decoration: none;
+}
+
+.nr-admin .nbr-design-tab.is-active {
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .nbr-design-code-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	margin: 6px 0;
+}
+
+.nr-admin .nbr-design-code-toggle svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nbr-design-code-toggle.is-active {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+/* ----- Two-pane body ----- */
+.nr-admin .nbr-design-body {
+	display: grid;
+	grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+	flex: 1;
+	min-height: 0;
+}
+
+/* Code needs the room prose does not. */
+.nr-admin .nbr-design-body.is-code {
+	grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+}
+
+.nr-admin .nbr-design-controls {
+	min-width: 0;
+	overflow-y: auto;
+	padding: 22px 24px 40px;
+	border-right: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+}
+
+.nr-admin .nbr-design-preview {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-design-preview-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 18px 10px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-design-preview iframe {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	margin: 0 18px 18px;
+	width: calc(100% - 36px);
+}
+
+/* ----- Controls ----- */
+.nr-admin .nbr-control {
+	margin-bottom: 26px;
+}
+
+.nr-admin .nbr-control > .nr-eyebrow,
+.nr-admin .nbr-control > label.nr-eyebrow {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 9px;
+}
+
+.nr-admin .nbr-control-value {
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-control input[type="text"] {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-control input[type="text"]:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-control input[type="range"] {
+	width: 100%;
+	accent-color: var(--nr-accent-strong);
+}
+
+.nr-admin .nbr-control .hint {
+	margin-top: 7px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-control .nbr-check {
+	padding: 7px 0;
+}
+
+/* Metadata chips — on/off, shown all at once. */
+.nr-admin .nbr-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.nr-admin .nbr-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 14px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-pill);
+	background: var(--nr-card);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-chip input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.nr-admin .nbr-chip:has(input:checked) {
+	background: var(--nr-accent-soft);
+	border-color: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-chip:has(input:checked)::before {
+	content: "✓";
+	font-size: 11px;
+}
+
+.nr-admin .nbr-chip:has(input:focus-visible) {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+/* ----- Brand ----- */
+.nr-admin .nbr-logo-row {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+
+.nr-admin .nbr-logo-thumb {
+	width: 68px;
+	height: 68px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px dashed var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	color: var(--nr-faint);
+	overflow: hidden;
+}
+
+.nr-admin .nbr-logo-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.nr-admin .nbr-logo-thumb svg {
+	width: 24px;
+	height: 24px;
+}
+
+.nr-admin .nbr-logo-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.nr-admin .nbr-logo-actions .hint {
+	flex-basis: 100%;
+	margin-top: 0;
+}
+
+/* A pointer, not a warning — where something moved to. */
+.nr-admin .nbr-note {
+	padding: 12px 14px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-accent-tint);
+	border: 1px solid var(--nr-accent-soft);
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-note--code {
+	margin-bottom: 14px;
+	background: var(--nr-codebg);
+	border-color: var(--nr-border);
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-components .component-card {
+	margin-bottom: 8px;
+}
+
+.nr-admin .nbr-design-code .editor-tabs--site {
+	margin-bottom: 14px;
+}
+
+@media (max-width: 1080px) {
+	.nr-admin .nbr-design-body,
+	.nr-admin .nbr-design-body.is-code {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(320px, 1fr);
+	}
+
+	.nr-admin .nbr-design-controls {
+		border-right: 0;
+		border-bottom: 1px solid var(--nr-border);
+	}
+}
+
+/* History and the theme file live in code mode: reachable, but not in the way
+   of someone who only wants to change a colour. */
+.nr-admin .nbr-design-history {
+	margin-top: 28px;
+	padding-top: 22px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-history-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 8px;
+}
+
+/* ----- Theme tab ----- */
+.nr-admin .nbr-swatches {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nr-admin .nbr-swatch {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 12px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-swatch:hover {
+	border-color: var(--nr-accent);
+}
+
+/* The native swatch is the control; the chrome around it is ours. */
+.nr-admin .nbr-swatch input[type="color"] {
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: 7px;
+	background: transparent;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-swatch input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 2px;
+}
+
+.nr-admin .nbr-swatch input[type="color"]::-webkit-color-swatch {
+	border: 0;
+	border-radius: 5px;
+}
+
+.nr-admin .nbr-swatch-name {
+	flex: 1;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-swatch-hex {
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	text-transform: uppercase;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-control select {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-control select:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-control > .nbr-advanced {
+	margin-top: 12px;
+}
+
+/* ----- Saved trials ----- */
+.nr-admin .nbr-trials {
+	margin-top: 32px;
+	padding-top: 22px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-trial-strip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.nr-admin .nbr-trial {
+	display: inline-flex;
+	align-items: stretch;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+	overflow: hidden;
+}
+
+.nr-admin .nbr-trial:hover {
+	border-color: var(--nr-accent);
+}
+
+.nr-admin .nbr-trial-apply {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 0;
+	background: transparent;
+	font-family: var(--nr-font);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--nr-text);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-trial-swatches {
+	display: inline-flex;
+	gap: 2px;
+}
+
+.nr-admin .nbr-trial-swatches i {
+	width: 11px;
+	height: 11px;
+	border-radius: 3px;
+	border: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-trial-remove {
+	padding: 0 9px;
+	border: 0;
+	border-left: 1px solid var(--nr-border);
+	background: transparent;
+	color: var(--nr-faint);
+	font-size: 15px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-trial-remove:hover {
+	color: var(--nr-danger);
+	background: var(--nr-danger-soft);
+}
+
+.nr-admin .nbr-trial-add {
+	padding: 8px 14px;
+	border: 1px dashed var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: transparent;
+	font-family: var(--nr-font);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-trial-add:hover {
+	border-color: var(--nr-accent);
+	color: var(--nr-text);
+}
+
+/* ----- AI tab ----- */
+.nr-admin .nbr-ai-prompt {
+	width: 100%;
+	padding: 11px 13px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+	resize: vertical;
+}
+
+.nr-admin .nbr-ai-prompt:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-starters {
+	margin-top: 10px;
+}
+
+.nr-admin .nbr-starter {
+	padding: 6px 13px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-pill);
+	background: var(--nr-card);
+	font-family: var(--nr-font);
+	font-size: 12.5px;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-starter:hover:not(:disabled) {
+	border-color: var(--nr-accent);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-starter:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.nr-admin .nbr-ai-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+/* The proposal reads as something to review, so each part is a row with its own
+   way in rather than a wall of changed token names. */
+.nr-admin .nbr-proposal {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nr-admin .nbr-proposal-group {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 11px 12px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-proposal-label {
+	display: block;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-proposal-changes {
+	display: block;
+	margin-top: 3px;
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	line-height: 1.4;
+	color: var(--nr-muted);
+	word-break: break-word;
+}
+
+.nr-admin .nbr-tweak {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+	padding: 6px 12px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-pill);
+	background: transparent;
+	font-family: var(--nr-font);
+	font-size: 12.5px;
+	font-weight: 500;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-tweak svg {
+	width: 13px;
+	height: 13px;
+}
+
+.nr-admin .nbr-tweak:hover {
+	border-color: var(--nr-accent);
+	color: var(--nr-text);
+}
+
+/* ----- Components gallery (comp 08c) -----
+   A list rail beside the controls, with the specimen in the preview pane —
+   list · specimen · controls, folded onto the two-pane shell. */
+.nr-admin .nbr-components {
+	display: grid;
+	grid-template-columns: minmax(120px, 150px) minmax(0, 1fr);
+	gap: 18px;
+	align-items: start;
+}
+
+.nr-admin .nbr-components.hidden {
+	display: none;
+}
+
+.nr-admin .nbr-component-list {
+	list-style: none;
+	margin: 9px 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.nr-admin .nbr-component-item {
+	width: 100%;
+	text-align: left;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: var(--nr-radius-control);
+	background: transparent;
+	font-family: var(--nr-font);
+	font-size: 13.5px;
+	font-weight: 500;
+	color: var(--nr-muted);
+	cursor: pointer;
+}
+
+.nr-admin .nbr-component-item:hover {
+	background: var(--nr-hover);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-component-item.is-active {
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+	font-weight: 600;
+}
+
+.nr-admin .nbr-component-controls.hidden {
+	display: none;
+}
+
+.nr-admin .nbr-component-title {
+	margin-bottom: 14px;
+	font-family: var(--nr-font);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-component-subtitle {
+	margin: 18px 0 10px;
+	font-family: var(--nr-font);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-component-subtitle code {
+	font-family: var(--nr-font-mono);
+	font-size: 11px;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-component-foot {
+	margin-top: 18px;
+	padding-top: 14px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-component-foot .nbr-note {
+	margin-top: 12px;
+}
+
+/* The specimen sits where the site preview does, and inherits its framing. */
+.nr-admin .nbr-specimen {
+	flex: 1;
+	min-height: 0;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	margin: 0 18px 18px;
+	width: calc(100% - 36px);
+}
+
+@media (max-width: 700px) {
+	.nr-admin .nbr-components {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* ========================================
+   Collections (docs/designs/admin-editor.md §8, comp 09)
+   ======================================== */
+.nr-admin .nbr-collections-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 24px;
+	flex-wrap: wrap;
+	margin-bottom: 26px;
+}
+
+.nr-admin .nbr-collections-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-collections-sub {
+	margin-top: 7px;
+	max-width: 60ch;
+	font-size: 14px;
+	line-height: 1.55;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collections-sub code {
+	font-family: var(--nr-font-mono);
+	font-size: 12.5px;
+	padding: 2px 6px;
+	border-radius: 5px;
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-collections-audit {
+	margin-bottom: 22px;
+	padding: 12px 14px;
+	border: 1px solid var(--nr-warning);
+	border-left-width: 3px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-warning-soft);
+	color: var(--nr-warning);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.nr-admin .nbr-collections-audit p {
+	margin-top: 5px;
+}
+
+.nr-admin .nbr-collection-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 18px;
+}
+
+.nr-admin .nbr-collection-card {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	overflow: hidden;
+}
+
+/* A draft is not embeddable yet, so it reads as provisional rather than as a
+   card someone forgot to finish. */
+.nr-admin .nbr-collection-card.is-draft {
+	border-style: dashed;
+	background: transparent;
+}
+
+/* The real output, scaled back and inert — a card is for recognising a
+   collection, not for reading it. */
+.nr-admin .nbr-collection-render {
+	height: 168px;
+	overflow: hidden;
+	border-bottom: 1px solid var(--nr-border);
+	background: var(--nr-bg);
+	position: relative;
+}
+
+.nr-admin .nbr-collection-card.is-draft .nbr-collection-render {
+	border-bottom-color: transparent;
+	opacity: 0.65;
+}
+
+.nr-admin .nbr-collection-render iframe {
+	width: 200%;
+	height: 336px;
+	border: 0;
+	transform: scale(0.5);
+	transform-origin: 0 0;
+	pointer-events: none;
+}
+
+.nr-admin .nbr-collection-body {
+	padding: 14px 16px 16px;
+}
+
+.nr-admin .nbr-collection-line {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.nr-admin .nbr-collection-name {
+	font-size: 15.5px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-name:hover {
+	color: var(--nr-link-hover);
+}
+
+.nr-admin .nbr-collection-draft {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-collection-rule {
+	margin-top: 5px;
+	font-size: 13px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 14px;
+}
+
+.nr-admin .nbr-collection-token {
+	flex: 1;
+	min-width: 0;
+	text-align: left;
+	padding: 7px 10px;
+	border: 0;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-collection-token:hover,
+.nr-admin .nbr-collection-token.is-copied {
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .nbr-collection-token.is-empty {
+	border: 1px dashed var(--nr-border-strong);
+	background: transparent;
+	color: var(--nr-faint);
+	cursor: default;
+}
+
+.nr-admin .nbr-collection-actions .nbr-icon-btn {
+	width: 30px;
+	height: 30px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nbr-collection-actions .nbr-icon-btn svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nr-empty .btn {
+	margin-top: 18px;
+}
+
+/* ----- Collection create / edit (comp 10) ----- */
+.nr-admin-content:has(.nbr-collection-editor) {
+	overflow: hidden;
+	padding: 0;
+}
+
+.nr-admin-content:has(.nbr-collection-editor) > * {
+	height: 100%;
+	min-height: 0;
+}
+
+.nr-admin .nbr-collection-editor {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background: var(--nr-bg);
+}
+
+.nr-admin .nbr-collection-crumb {
+	font-size: 13.5px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-heading {
+	font-family: var(--nr-font-serif);
+	font-size: 19px;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-split {
+	display: grid;
+	grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+	flex: 1;
+	min-height: 0;
+}
+
+.nr-admin .nbr-collection-controls {
+	overflow-y: auto;
+	padding: 22px 24px 40px;
+	border-right: 1px solid var(--nr-border);
+	background: var(--nr-bar);
+}
+
+/* The question leads the screen: describe-first, not SQL-first. */
+.nr-admin .nbr-collection-ask {
+	display: block;
+	margin-bottom: 9px;
+	font-family: var(--nr-font);
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-preset-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.nr-admin .nbr-collection-fields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+	margin-top: 26px;
+	padding-top: 22px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-fields .nbr-control {
+	margin-bottom: 0;
+}
+
+.nr-admin .nbr-collection-controls input[type="text"],
+.nr-admin .nbr-collection-controls input[type="number"] {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-collection-controls input:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-collection-danger {
+	margin-top: 30px;
+	padding-top: 18px;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-preview {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	padding-bottom: 22px;
+}
+
+/* The rows render with admin chrome rather than the site's stylesheet: this is
+   a check that the query and template are right, not a look at the page. */
+.nr-admin .nbr-collection-stage {
+	margin: 0 18px;
+	padding: 18px;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+	min-height: 180px;
+	font-size: 14px;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-stage .post-preview {
+	padding: 12px 0;
+	border-bottom: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-collection-stage .post-preview:last-child {
+	border-bottom: 0;
+}
+
+.nr-admin .nbr-collection-stage .post-date {
+	display: block;
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-collection-stage .post-title {
+	margin: 4px 0;
+	font-family: var(--nr-font-serif);
+	font-size: 19px;
+	font-weight: 500;
+}
+
+.nr-admin .nbr-collection-stage .post-title a {
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-collection-stage .post-excerpt {
+	font-size: 13.5px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-stage .read-more {
+	font-family: var(--nr-font-mono);
+	font-size: 12px;
+	color: var(--nr-link-hover);
+}
+
+.nr-admin .nbr-collection-advanced {
+	margin: 20px 18px 0;
+	padding: 14px 16px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-collection-advanced .code-editor,
+.nr-admin .nbr-collection-advanced .cm-editor {
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-control);
+}
+
+.nr-admin .nbr-collection-safety {
+	margin: 4px 0 14px;
+	padding: 11px 13px;
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-codebg);
+	border: 1px solid var(--nr-border);
+	font-size: 12.5px;
+	line-height: 1.55;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-collection-safety code {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	color: var(--nr-text);
+}
+
+@media (max-width: 1000px) {
+	.nr-admin .nbr-collection-split {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(280px, 1fr);
+	}
+
+	.nr-admin .nbr-collection-controls {
+		border-right: 0;
+		border-bottom: 1px solid var(--nr-border);
+	}
+}
+
+.nr-admin .nbr-build-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 12px;
+}
+
+.nr-admin .nbr-build-row .hint {
+	margin-top: 0;
+}
+
+/* ========================================
+   Settings (docs/designs/admin-editor.md §9, comp 12)
+   ======================================== */
+.nr-admin .nbr-settings-head {
+	margin-bottom: 22px;
+}
+
+.nr-admin .nbr-settings-title {
+	font-size: 30px;
+}
+
+.nr-admin .nbr-settings-sub {
+	margin-top: 6px;
+	font-size: 14px;
+	color: var(--nr-muted);
+}
+
+/* Not a warning — a signpost to where something moved. */
+.nr-admin .nbr-settings-pointer {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 30px;
+	text-decoration: none;
+}
+
+.nr-admin .nbr-settings-pointer:hover {
+	border-color: var(--nr-accent);
+	text-decoration: none;
+}
+
+.nr-admin .nbr-settings-section {
+	margin-bottom: 30px;
+}
+
+.nr-admin .nbr-settings-card {
+	margin-top: 9px;
+	padding: 20px;
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-card);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+}
+
+.nr-admin .nbr-settings-row-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-settings-row-sub {
+	margin-top: 3px;
+	font-size: 13px;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nbr-token-form input[type="text"],
+.nr-admin .nbr-token-form input[type="password"],
+.nr-admin .nbr-token-form textarea,
+.nr-admin .nbr-token-form select {
+	width: 100%;
+	padding: 10px 12px;
+	font-family: var(--nr-font);
+	font-size: 14px;
+	color: var(--nr-text);
+	background: var(--nr-bg);
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	outline: none;
+}
+
+.nr-admin .nbr-token-form input:focus,
+.nr-admin .nbr-token-form textarea:focus,
+.nr-admin .nbr-token-form select:focus {
+	border-color: var(--nr-accent);
+	box-shadow: 0 0 0 3px var(--nr-accent-soft);
+}
+
+/* ----- Sharing & SEO ----- */
+.nr-admin .nbr-sharing {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+	gap: 28px;
+	align-items: start;
+}
+
+.nr-admin .nbr-favicon-thumb {
+	width: 46px;
+	height: 46px;
+}
+
+.nr-admin .nbr-og-drop {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 1200 / 630;
+	max-height: 200px;
+	border: 1px dashed var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-bg);
+	color: var(--nr-muted);
+	font-family: var(--nr-font);
+	font-size: 13.5px;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-og-drop:hover {
+	border-color: var(--nr-accent);
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-og-set img {
+	width: 100%;
+	max-height: 200px;
+	object-fit: cover;
+	border-radius: var(--nr-radius-control);
+	border: 1px solid var(--nr-border);
+}
+
+.nr-admin .nbr-og-set-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+/* Neither of these appears on the site, so the only way to judge them is to
+   see where they actually turn up. */
+.nr-admin .nbr-sharing-preview {
+	position: sticky;
+	top: 0;
+}
+
+.nr-admin .nbr-tabchrome {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 9px;
+	padding: 9px 11px;
+	border: 1px solid var(--nr-border);
+	border-radius: 10px 10px 0 0;
+	background: var(--nr-bar);
+}
+
+.nr-admin .nbr-tabchrome-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	border-radius: 4px;
+	background: var(--nr-accent-soft);
+	overflow: hidden;
+	display: inline-flex;
+}
+
+.nr-admin .nbr-tabchrome-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.nr-admin .nbr-tabchrome-title {
+	flex: 1;
+	min-width: 0;
+	font-size: 12.5px;
+	color: var(--nr-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.nr-admin .nbr-tabchrome-close {
+	color: var(--nr-faint);
+	font-size: 14px;
+	line-height: 1;
+}
+
+.nr-admin .nbr-sharecard {
+	border: 1px solid var(--nr-border);
+	border-top: 0;
+	border-radius: 0 0 10px 10px;
+	overflow: hidden;
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-sharecard-img {
+	aspect-ratio: 1200 / 630;
+	background: var(--nr-accent-tint);
+	display: flex;
+}
+
+.nr-admin .nbr-sharecard-img img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.nr-admin .nbr-sharecard-body {
+	padding: 11px 13px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.nr-admin .nbr-sharecard-host {
+	font-family: var(--nr-font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--nr-faint);
+}
+
+.nr-admin .nbr-sharecard-title {
+	font-size: 14px;
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-sharecard-desc {
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--nr-muted);
+}
+
+@media (max-width: 860px) {
+	.nr-admin .nbr-sharing {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

@@ -1,9 +1,7 @@
 import type { Page, PageMeta, FaqItem, LayoutOptions } from "../content/types.js";
 import { escapeHtml } from "./http.js";
 import { firstImageUrl } from "./image-markdown.js";
-
-const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
-const SITE_NAME = process.env.SITE_NAME || "nobodyreads.me";
+import { resolveSiteUrl, resolveSiteName } from "./site-url.js";
 
 /**
  * The social share image for a page: an explicit `seo.ogImage` always wins
@@ -35,9 +33,10 @@ function resolveOgImage(options: LayoutOptions): string | undefined {
 export function buildMetaTags(options: LayoutOptions): string {
   const lines: string[] = [];
   const seo = options.seo;
+  const siteUrl = resolveSiteUrl(options.siteUrl);
   const description = seo?.metaDescription || options.description || "";
   const canonicalUrl =
-    seo?.canonicalUrl || (options.pathname ? `${SITE_URL}${options.pathname}` : "");
+    seo?.canonicalUrl || (options.pathname ? `${siteUrl}${options.pathname}` : "");
 
   // Meta description
   if (description) {
@@ -66,7 +65,7 @@ export function buildMetaTags(options: LayoutOptions): string {
   const ogImage = resolveOgImage(options);
 
   // Open Graph tags
-  lines.push(`  <meta property="og:site_name" content="${escapeHtml(options.siteName || SITE_NAME)}">`);
+  lines.push(`  <meta property="og:site_name" content="${escapeHtml(resolveSiteName(options.siteName))}">`);
   lines.push(
     `  <meta property="og:type" content="${escapeHtml(seo?.ogType || options.ogType || "website")}">`
   );
@@ -82,7 +81,7 @@ export function buildMetaTags(options: LayoutOptions): string {
   if (ogImage) {
     const imgUrl = ogImage.startsWith("http")
       ? ogImage
-      : `${SITE_URL}${ogImage}`;
+      : `${siteUrl}${ogImage}`;
     lines.push(`  <meta property="og:image" content="${escapeHtml(imgUrl)}">`);
   }
 
@@ -98,7 +97,7 @@ export function buildMetaTags(options: LayoutOptions): string {
   if (ogImage) {
     const imgUrl = ogImage.startsWith("http")
       ? ogImage
-      : `${SITE_URL}${ogImage}`;
+      : `${siteUrl}${ogImage}`;
     lines.push(`  <meta name="twitter:image" content="${escapeHtml(imgUrl)}">`);
   }
 
@@ -124,13 +123,14 @@ export function buildMetaTags(options: LayoutOptions): string {
 
 export function buildStructuredData(options: LayoutOptions): string {
   const chunks: string[] = [];
+  const siteUrl = resolveSiteUrl(options.siteUrl);
 
   // Article / BlogPosting structured data (for posts)
   if (options.page && options.page.kind === "post") {
     const page = options.page;
     const seo = page.seo;
     const prefix = options.urlPrefix || "";
-    const url = `${SITE_URL}${prefix}/posts/${page.slug}`;
+    const url = `${siteUrl}${prefix}/posts/${page.slug}`;
 
     const article: Record<string, unknown> = {
       "@context": "https://schema.org",
@@ -142,8 +142,8 @@ export function buildStructuredData(options: LayoutOptions): string {
       mainEntityOfPage: { "@type": "WebPage", "@id": url },
       publisher: {
         "@type": "Organization",
-        name: options.siteName || SITE_NAME,
-        url: SITE_URL,
+        name: resolveSiteName(options.siteName),
+        url: siteUrl,
       },
     };
 
@@ -151,7 +151,7 @@ export function buildStructuredData(options: LayoutOptions): string {
     if (page.tags.length > 0) article.keywords = page.tags.join(", ");
     const ogImage = resolveOgImage(options);
     if (ogImage) {
-      article.image = ogImage.startsWith("http") ? ogImage : `${SITE_URL}${ogImage}`;
+      article.image = ogImage.startsWith("http") ? ogImage : `${siteUrl}${ogImage}`;
     }
 
     // GEO: Author with expertise for AI citation quality

@@ -38,18 +38,24 @@ export function isAuthenticatedRequest(req: Request): boolean {
   return isAuthenticatedWithCookie(req.headers.get("cookie") ?? undefined);
 }
 
-/** Build Set-Cookie header value to create an editor session. */
+/**
+ * Build Set-Cookie header value to create an editor session.
+ *
+ * An empty `cookiePath` would emit `Path=`, which browsers resolve against the
+ * request's directory rather than the site root — so a host mounting the admin
+ * at the root would scope the session to whatever path happened to set it.
+ */
 export function buildSessionCookie(cookiePath: string = "/admin"): string {
   const token = sign(`editor:${Date.now()}`);
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=${cookiePath}; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
+  return `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=${cookiePath || "/"}; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
 }
 
 /** Build Set-Cookie header values to clear the editor session across all known paths. */
 export function buildClearSessionCookies(cookiePath: string = "/admin"): string[] {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   const expires = "; Expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  const paths = new Set([cookiePath, "/admin", "/admin/editor", "/editor", "/"]);
+  const paths = new Set([cookiePath || "/", "/admin", "/admin/editor", "/editor", "/"]);
   return Array.from(paths).map(
     (path) =>
       `${COOKIE_NAME}=; HttpOnly; Path=${path}; Max-Age=0${expires}; SameSite=Lax${secure}`

@@ -3,14 +3,19 @@ import type { Database } from "../db/index.js";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
 import { listFeedPosts } from "./db.js";
 import { escapeHtml } from "../shared/http.js";
-
-const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
-const SITE_NAME = process.env.SITE_NAME || "nobodyreads.me";
+import { resolveSiteUrl, resolveSiteName } from "../shared/site-url.js";
 
 export interface FeedOptions {
   db: Database;
   tenantId?: string;
   urlPrefix?: string;
+  /**
+   * Absolute origin for the channel and item links, e.g. `https://example.com`.
+   * Defaults to `SITE_URL`. Hosts serving several sites must pass it per site —
+   * a feed is nothing but absolute URLs, so getting this wrong points every
+   * subscriber at the wrong place.
+   */
+  siteUrl?: string;
   siteName?: string;
   siteTagline?: string;
 }
@@ -37,7 +42,8 @@ export function createFeedRoutes(options: FeedOptions): Hono {
   const { db } = options;
   const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const urlPrefix = options.urlPrefix ?? "";
-  const siteName = options.siteName ?? SITE_NAME;
+  const siteUrl = resolveSiteUrl(options.siteUrl);
+  const siteName = resolveSiteName(options.siteName);
   const siteTagline = options.siteTagline ?? "";
 
   const app = new Hono();
@@ -45,12 +51,12 @@ export function createFeedRoutes(options: FeedOptions): Hono {
   app.get("/feed.xml", async (c) => {
     const posts = await listFeedPosts(db, tenantId);
 
-    const channelUrl = `${SITE_URL}${urlPrefix}`;
+    const channelUrl = `${siteUrl}${urlPrefix}`;
     const feedUrl = `${channelUrl}/feed.xml`;
 
     const items = posts
       .map((p) => {
-        const link = `${SITE_URL}${urlPrefix}/posts/${p.slug}`;
+        const link = `${siteUrl}${urlPrefix}/posts/${p.slug}`;
         const teaserNote =
           p.accessTier !== "public" ? `\n\nRead the full post → ${link}` : "";
         const descriptionText = `${p.excerpt}${teaserNote}`.trim();

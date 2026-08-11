@@ -431,6 +431,27 @@ app.route(
 
 `urlPrefix` is prepended to every link the route factories generate (e.g. `/admin/editor/save` becomes `/alice/admin/editor/save`). Omit it and links break in multi-tenant setups.
 
+#### Absolute URLs: `siteUrl`
+
+`urlPrefix` covers relative links. Canonical tags, `og:url`, JSON-LD and RSS
+entries are **absolute**, and they resolve their origin through `siteUrl`:
+
+| Passed to | Field |
+|---|---|
+| `buildMetaTags`, `buildStructuredData` (via `LayoutOptions`) | `siteUrl` |
+| `createFeedRoutes` | `siteUrl` |
+| `createAdminRoutes`, `createSubscriptionApiRoutes`, `createInterfaceApiRoutes` | `siteUrl` |
+
+Omit it and the package falls back to `SITE_URL`, which is what a single-tenant
+install wants. A host serving **several sites from one process** must pass it
+per request — the environment names one origin, so leaving it unset would give
+every site the same canonical and point every feed subscriber at one of them.
+This matters most for hosts that give each site its own hostname:
+
+```ts
+app.route("/", createFeedRoutes({ db, tenantId, siteUrl: `https://${nickname}.example.com` }));
+```
+
 ### 3. Authentication
 
 Standalone uses a simple `EDITOR_PASSWORD` session cookie. In embedded mode, **the host owns authentication entirely** — the package does not call any auth helper on your behalf. Apply your own middleware before the admin routes:

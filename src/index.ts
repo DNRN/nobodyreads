@@ -30,6 +30,13 @@ export {
 export { createBlogApiRoutes } from "./content/routes.js";
 export type { BlogApiOptions } from "./content/routes.js";
 export { createFeedRoutes } from "./content/feed.js";
+export {
+  createRobotsRoutes,
+  createSitemapRoutes,
+  buildRobotsTxt,
+} from "./content/robots.js";
+export type { DiscoveryOptions } from "./content/robots.js";
+export type { SitemapEntry } from "./content/db.js";
 export type { FeedOptions } from "./content/feed.js";
 
 // Comments
@@ -161,6 +168,7 @@ export {
   listPosts,
   listPostsForView,
   listFeedPosts,
+  listSitemapEntries,
   getPostStats,
   getPageBySlug,
   getPageByKind,
@@ -269,7 +277,12 @@ export {
   deleteSiteSetting,
   resolveMediaValue,
   resolveSiteIdentity,
+  resolveSiteDiscovery,
   SITE_IDENTITY_FIELDS,
+  SITE_DISCOVERY_FIELDS,
+  SETTING_SEARCH_INDEXING,
+  SETTING_AI_TRAINING,
+  SETTING_ROBOTS_TXT,
   SETTING_SITE_NAME,
   SETTING_SITE_TAGLINE,
   SETTING_SITE_LOGO,
@@ -280,6 +293,8 @@ export type {
   SiteIdentityField,
   SiteIdentityFieldType,
   ResolvedSiteIdentity,
+  SiteDiscoveryField,
+  ResolvedSiteDiscovery,
 } from "./shared/site-settings.js";
 
 // Template system

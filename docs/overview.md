@@ -116,7 +116,7 @@ schema.sql              # SQLite schema applied on startup
 `standalone.ts` mounts routes in this order:
 
 1. **Dev live-reload** — `GET /__reload` (SSE)
-2. **robots.txt** — from package root
+2. **robots.txt + sitemap.xml** — generated from the site's discoverability settings
 3. **Static files** — `public/` (editor CSS, public-site JS, etc.)
 3a. **Astro client build** — `dist/astro/client` (hashed island/transition assets at `/_astro/*`); production only, dev serves these via the Astro proxy
 4. **Media** — `GET /media/:key` via `MediaStorage.serve()`
@@ -141,7 +141,7 @@ SQLite via Drizzle ORM and `@libsql/client`. Schema is in `schema.sql` and mirro
 | `content_view` | Reusable collections embedded in pages via `{{collection:slug}}` |
 | `site_template` | Current site template JSON + pointer to active revision |
 | `site_template_revision` | Append-only template history |
-| `site_settings` | Key-value settings per tenant (site name, logo, favicon, etc.) |
+| `site_settings` | Key-value settings per tenant (site name, logo, favicon, discoverability, etc.) |
 | `media` | Uploaded file metadata (storage key, mime, size) |
 | `subscriber` | Email subscription list with verification tokens |
 
@@ -456,6 +456,36 @@ app.route(
 ```
 
 `urlPrefix` is prepended to every link the route factories generate (e.g. `/admin/editor/save` becomes `/alice/admin/editor/save`). Omit it and links break in multi-tenant setups.
+
+#### Discoverability: robots.txt and sitemap.xml
+
+`createRobotsRoutes` and `createSitemapRoutes` serve `/robots.txt` and
+`/sitemap.xml` for one site, generated from settings the owner controls in
+Admin → Settings → Discoverability:
+
+| Setting | Key | Default |
+|---|---|---|
+| Allow search indexing | `search_indexing` | allowed |
+| Allow AI training crawlers | `ai_training` | allowed |
+| Custom robots.txt | `robots_txt` | generate one |
+
+Both toggles store a row only when switched **off**, so existing sites stay
+indexable with no migration. A custom robots.txt replaces the generated file
+entirely rather than merging into it. Turning indexing off also makes
+`/sitemap.xml` 404 — publishing a machine-readable index of a site you have
+asked crawlers to ignore defeats the point.
+
+Mount both at the site root, and pass `siteUrl` for the same reason the feed
+needs it:
+
+```ts
+app.route("/", createRobotsRoutes({ db, tenantId, siteUrl }));
+app.route("/", createSitemapRoutes({ db, tenantId, siteUrl }));
+```
+
+**robots.txt must be served by the host it governs.** Redirecting it to a
+shared location is ignored by most crawlers, so a multi-host deployment mounts
+these per host rather than answering centrally.
 
 #### Absolute URLs: `siteUrl`
 

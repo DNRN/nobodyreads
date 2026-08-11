@@ -8,6 +8,9 @@ import {
   getSiteSettings,
   getSiteTemplate,
   resolveMediaValue,
+  resolveSiteDiscovery,
+  SITE_DISCOVERY_FIELDS,
+  SETTING_ROBOTS_TXT,
   DEFAULT_TEMPLATE,
   SETTING_SITE_NAME,
   SETTING_SITE_TAGLINE,
@@ -47,6 +50,13 @@ const siteHost = (() => {
   }
 })();
 
+const discovery = resolveSiteDiscovery(settings);
+const discoveryToggles = SITE_DISCOVERY_FIELDS.filter((f) => f.type === "toggle").map((f) => ({
+  ...f,
+  on: f.key === "search_indexing" ? discovery.searchIndexing : discovery.aiTraining,
+}));
+const robotsField = SITE_DISCOVERY_FIELDS.find((f) => f.key === SETTING_ROBOTS_TXT)!;
+
 const saved = Astro.url.searchParams.has("saved");
 ---
 <AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
@@ -79,6 +89,45 @@ const saved = Astro.url.searchParams.has("saved");
             siteTagline={settings[SETTING_SITE_TAGLINE] ?? process.env.SITE_TAGLINE ?? ""}
             siteHost={siteHost}
           />
+        </div>
+      </section>
+
+      <section class="nbr-settings-section">
+        <span class="nr-eyebrow">Discoverability</span>
+        <div class="nbr-settings-card">
+          <p class="hint" style="margin-top:0">
+            How search engines and AI crawlers treat this site. These are requests,
+            not enforcement — well-behaved crawlers honour them, and the rest never
+            asked.
+          </p>
+
+          <form method="post" action={`${ctx.adminBase}/settings/discovery/save`} class="nbr-token-form">
+            {discoveryToggles.map((field) => (
+              <label class="settings-toggle-row">
+                <span>
+                  <span class="env-label">{field.label}</span>
+                  {field.hint ? <span class="hint" style="display:block">{field.hint}</span> : null}
+                </span>
+                <input type="hidden" name={field.formName} value="off" />
+                <input type="checkbox" name={field.formName} value="on" checked={field.on} />
+              </label>
+            ))}
+
+            <div class="nbr-control">
+              <label class="nr-eyebrow" for="discovery-robots">{robotsField.label}</label>
+              <textarea
+                id="discovery-robots"
+                name={robotsField.formName}
+                rows="8"
+                spellcheck="false"
+                placeholder="Leave empty to use the generated robots.txt"
+              >{settings[SETTING_ROBOTS_TXT] ?? ""}</textarea>
+              <p class="hint">{robotsField.hint} <a href="/robots.txt" target="_blank" rel="noopener">View current</a></p>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:1rem">Save</button>
+            {saved ? <span class="nr-status is-saved"><i class="nr-status-dot"></i>Saved</span> : null}
+          </form>
         </div>
       </section>
 

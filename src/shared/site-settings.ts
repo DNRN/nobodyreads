@@ -72,6 +72,81 @@ export const SITE_IDENTITY_FIELDS: SiteIdentityField[] = [
   },
 ];
 
+// --- Discoverability settings ---
+
+export const SETTING_SEARCH_INDEXING = "search_indexing";
+export const SETTING_AI_TRAINING = "ai_training";
+export const SETTING_ROBOTS_TXT = "robots_txt";
+
+export interface SiteDiscoveryField {
+  key: string;
+  formName: string;
+  label: string;
+  type: "toggle" | "textarea";
+  hint?: string;
+  /** Value stored when the toggle is on. Absent setting means the default. */
+  defaultOn?: boolean;
+}
+
+/**
+ * Editable settings that control how crawlers treat the site.
+ *
+ * Kept separate from {@link SITE_IDENTITY_FIELDS} on purpose: that registry
+ * drives the "Site identity" form, which is about how the site presents itself.
+ * How it is *indexed* is a different decision, made at a different time, and
+ * mixing the two would put "block all search engines" one slip away from
+ * editing a tagline.
+ */
+export const SITE_DISCOVERY_FIELDS: SiteDiscoveryField[] = [
+  {
+    key: SETTING_SEARCH_INDEXING,
+    formName: "discovery:search_indexing",
+    label: "Allow search engines to index this site",
+    type: "toggle",
+    defaultOn: true,
+    hint: "Turning this off asks crawlers to leave the whole site out of search results.",
+  },
+  {
+    key: SETTING_AI_TRAINING,
+    formName: "discovery:ai_training",
+    label: "Allow AI crawlers to use this site for training",
+    type: "toggle",
+    defaultOn: true,
+    hint: "Blocks GPTBot, ClaudeBot, CCBot, Google-Extended and friends site-wide.",
+  },
+  {
+    key: SETTING_ROBOTS_TXT,
+    formName: "discovery:robots_txt",
+    label: "Custom robots.txt",
+    type: "textarea",
+    hint: "Replaces the generated file entirely. Leave empty to keep the generated one.",
+  },
+];
+
+export interface ResolvedSiteDiscovery {
+  searchIndexing: boolean;
+  aiTraining: boolean;
+  /** Verbatim robots.txt supplied by the owner, or null to generate one. */
+  robotsTxt: string | null;
+}
+
+/**
+ * Resolve discoverability settings. Both toggles default to *allowed*: a site
+ * nobody can find is a surprising default, and the owner has to opt into being
+ * invisible.
+ */
+export function resolveSiteDiscovery(
+  settings: Record<string, string>,
+): ResolvedSiteDiscovery {
+  const flag = (key: string) => settings[key] !== "off";
+  const robots = settings[SETTING_ROBOTS_TXT]?.trim();
+  return {
+    searchIndexing: flag(SETTING_SEARCH_INDEXING),
+    aiTraining: flag(SETTING_AI_TRAINING),
+    robotsTxt: robots ? robots : null,
+  };
+}
+
 /**
  * Resolve a stored media value to a usable URL. Values may be a media storage
  * key (resolved via `urlFn`), an absolute URL, or a root-relative path; empty

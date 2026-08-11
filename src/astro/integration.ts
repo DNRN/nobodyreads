@@ -20,9 +20,11 @@ export interface NobodyreadsAdminIntegrationOptions {
    * `/preview/revision.json`). This is the AI/Design editors' live-preview
    * iframe target.
    *
-   * Multi-tenant hosts pass the site base, e.g. `"/[nickname]"`, and must have
-   * middleware that authorizes the owner and populates
-   * `Astro.locals.nobodyreadsAdmin` for `{sitePattern}/preview` too.
+   * Multi-tenant hosts pass the site base and must have middleware that
+   * authorizes the owner and populates `Astro.locals.nobodyreadsAdmin` for
+   * `{sitePattern}/preview` too. Pass `"/"` when each site owns a whole origin
+   * (subdomain-per-site) so preview lands at `/preview`, or a path base such as
+   * `"/[nickname]"` when sites are distinguished by path.
    *
    * When omitted, no preview routes are injected — single-tenant hosts that
    * already ship their own `/preview` pages (or don't want them) are unaffected.
@@ -41,8 +43,14 @@ export function nobodyreadsAdmin(
   options: NobodyreadsAdminIntegrationOptions = {}
 ): AstroIntegration {
   const pattern = (options.pattern ?? "/admin").replace(/\/+$/, "") || "/admin";
-  const sitePattern = options.sitePattern
-    ? options.sitePattern.replace(/\/+$/, "")
+  // Opting in is decided by whether the option was supplied at all, not by
+  // whether it survives normalisation. A host serving one site per origin
+  // passes `sitePattern: "/"`, which strips to the empty string — testing the
+  // stripped value would read that as "not opted in" and silently ship no
+  // preview routes, leaving the AI and Design editors with a dead iframe.
+  const wantsPreview = options.sitePattern != null && options.sitePattern !== "";
+  const sitePattern = wantsPreview
+    ? options.sitePattern!.replace(/\/+$/, "")
     : null;
 
   // This file compiles to `dist/astro/integration.js`. The injected pages live
@@ -120,7 +128,7 @@ export function nobodyreadsAdmin(
         // Owner-only draft preview surface (the editors' live-preview iframe).
         // Only injected when a host opts in via `sitePattern`; single-tenant
         // hosts keep their own `/preview` pages.
-        if (sitePattern) {
+        if (wantsPreview) {
           injectRoute({
             pattern: `${sitePattern}/preview`,
             entrypoint: previewEntry("index.astro"),

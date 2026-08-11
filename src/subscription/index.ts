@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { zValidator } from "@hono/zod-validator";
 import { DEFAULT_TENANT_ID } from "../shared/types.js";
+import { resolveSiteUrl, resolveSiteName } from "../shared/site-url.js";
 import type { Database } from "../db/index.js";
 import { subscribeFormSchema } from "../db/validation.js";
 import {
@@ -40,18 +41,6 @@ export interface NotifyOptions {
   email?: EmailResolvable;
   siteUrl?: string;
   siteName?: string;
-}
-
-function resolveSiteUrl(siteUrl?: string): string {
-  return (
-    siteUrl ||
-    process.env.SITE_URL ||
-    `http://localhost:${process.env.PORT || 3000}`
-  );
-}
-
-function resolveSiteName(siteName?: string): string {
-  return siteName || process.env.SITE_NAME || "nobodyreads.me";
 }
 
 /**

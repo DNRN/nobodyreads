@@ -109,3 +109,90 @@ describe("og:image and gated pages", () => {
     expect(buildMetaTags(makeOptions({ page: safe }))).toContain("paid-cover.jpg");
   });
 });
+
+describe("per-request site origin", () => {
+  it("builds the canonical from options.siteUrl when given", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com",
+      pathname: "/posts/hello-world",
+    });
+
+    expect(buildMetaTags(options)).toContain(
+      'rel="canonical" href="https://alice.example.com/posts/hello-world"'
+    );
+  });
+
+  it("lets options.siteUrl override the SITE_URL environment variable", () => {
+    const previous = process.env.SITE_URL;
+    process.env.SITE_URL = "https://env.example.com";
+    try {
+      const options = makeOptions({
+        siteUrl: "https://alice.example.com",
+        pathname: "/about",
+      });
+
+      const tags = buildMetaTags(options);
+      expect(tags).toContain('property="og:url" content="https://alice.example.com/about"');
+      expect(tags).not.toContain("env.example.com");
+    } finally {
+      if (previous === undefined) delete process.env.SITE_URL;
+      else process.env.SITE_URL = previous;
+    }
+  });
+
+  it("falls back to SITE_URL when no siteUrl is passed", () => {
+    const previous = process.env.SITE_URL;
+    process.env.SITE_URL = "https://env.example.com";
+    try {
+      const options = makeOptions({ pathname: "/about" });
+
+      expect(buildMetaTags(options)).toContain(
+        'rel="canonical" href="https://env.example.com/about"'
+      );
+    } finally {
+      if (previous === undefined) delete process.env.SITE_URL;
+      else process.env.SITE_URL = previous;
+    }
+  });
+
+  it("tolerates a trailing slash on the supplied origin", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com/",
+      pathname: "/about",
+    });
+
+    expect(buildMetaTags(options)).toContain(
+      'rel="canonical" href="https://alice.example.com/about"'
+    );
+  });
+
+  it("uses options.siteUrl for absolute URLs in BlogPosting structured data", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com",
+      page: makePage(),
+    });
+
+    const json = JSON.parse(
+      buildStructuredData(options).match(/>({.*})</)![1]
+    ) as Record<string, unknown>;
+
+    expect(json.url).toBe("https://alice.example.com/posts/hello-world");
+    expect((json.mainEntityOfPage as Record<string, string>)["@id"]).toBe(
+      "https://alice.example.com/posts/hello-world"
+    );
+    expect((json.publisher as Record<string, string>).url).toBe(
+      "https://alice.example.com"
+    );
+  });
+
+  it("absolutises a relative og:image against options.siteUrl", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com",
+      defaultOgImage: "/media/cover.jpg",
+    });
+
+    expect(buildMetaTags(options)).toContain(
+      'property="og:image" content="https://alice.example.com/media/cover.jpg"'
+    );
+  });
+});

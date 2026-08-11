@@ -272,17 +272,6 @@ async function start() {
 		}),
 	);
 
-	// ---- RSS feed ----
-	app.route(
-		"/",
-		createFeedRoutes({
-			db,
-			urlPrefix: process.env.URL_PREFIX || "",
-			siteName: process.env.SITE_NAME,
-			siteTagline: process.env.SITE_TAGLINE,
-		}),
-	);
-
 	// ---- Public API: blog + subscriptions + community ----
 	app.route("/api", createBlogApiRoutes({ db }));
 	app.route("/api", createSubscriptionApiRoutes({ db }));

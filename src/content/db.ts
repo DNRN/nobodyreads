@@ -172,6 +172,51 @@ export async function listPosts(db: Database, tenantId: string): Promise<PageSum
   return rows.map(toPageSummary);
 }
 
+/** One published URL, as a sitemap needs it. */
+export interface SitemapEntry {
+  slug: string;
+  kind: PageKind;
+  /** Last modification date, falling back to the publication date. */
+  lastmod: string;
+}
+
+/**
+ * List every published page and post for sitemap generation.
+ *
+ * Unlike {@link listFeedPosts} this is not capped and not restricted to
+ * in-feed posts — a sitemap's job is completeness. Pages the author marked
+ * `noIndex` are dropped, since listing a URL while asking crawlers to ignore it
+ * is a contradiction search engines report as an error.
+ *
+ * Gated posts stay in: a paywalled post still has a public teaser and a
+ * canonical URL worth indexing. As with every listing here, the projection
+ * carries no `content`, so nothing paid can leak through it.
+ */
+export async function listSitemapEntries(
+  db: Database,
+  tenantId: string,
+): Promise<SitemapEntry[]> {
+  const rows = await db
+    .select({
+      slug: page.slug,
+      kind: page.kind,
+      date: page.date,
+      updated: page.updated,
+      seo: page.seo,
+    })
+    .from(page)
+    .where(and(eq(page.published, true), eq(page.tenantId, tenantId)))
+    .orderBy(desc(page.date));
+
+  return rows
+    .filter((row) => !row.seo?.noIndex)
+    .map((row) => ({
+      slug: row.slug,
+      kind: row.kind as PageKind,
+      lastmod: row.updated || row.date,
+    }));
+}
+
 /** List published, in-feed posts for RSS generation (newest first, limit 50). */
 export async function listFeedPosts(db: Database, tenantId: string): Promise<PageSummary[]> {
   const rows = await db

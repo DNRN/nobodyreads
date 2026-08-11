@@ -1,11 +1,29 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { isEmailEnabled } from "nobodyreads";
+import {
+  isEmailEnabled,
+  initDb,
+  getSiteSettings,
+  resolveSiteDiscovery,
+  SITE_DISCOVERY_FIELDS,
+  SETTING_ROBOTS_TXT,
+} from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 
 const emailEnabled = isEmailEnabled();
+
+const db = await initDb();
+const settings = await getSiteSettings(db, ctx.tenantId);
+const discovery = resolveSiteDiscovery(settings);
+const discoveryToggles = SITE_DISCOVERY_FIELDS.filter((f) => f.type === "toggle").map((f) => ({
+  ...f,
+  on: f.key === "search_indexing" ? discovery.searchIndexing : discovery.aiTraining,
+}));
+const robotsField = SITE_DISCOVERY_FIELDS.find((f) => f.key === SETTING_ROBOTS_TXT)!;
+
+const saved = Astro.url.searchParams.has("saved");
 ---
 <AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -26,6 +44,44 @@ const emailEnabled = isEmailEnabled();
         </div>
         <a href={`${ctx.editorBase}/site`} class="btn btn-sm">Edit</a>
       </section>
+
+      <div class="editor-list-section" style="margin-top:2rem">
+        <h3>Discoverability</h3>
+        <p class="hint" style="margin-top:0">
+          How search engines and AI crawlers treat this site. These are requests,
+          not enforcement — well-behaved crawlers honour them, and the rest never
+          asked.
+        </p>
+
+        {saved ? (
+          <p class="badge badge-published" style="margin-bottom:1rem; display:inline-block;">Saved</p>
+        ) : null}
+
+        <form method="post" action={`${ctx.adminBase}/settings/discovery/save`}>
+          {discoveryToggles.map((field) => (
+            <label class="env-label" style="display:flex; gap:0.6rem; align-items:flex-start; margin-bottom:1rem; font-weight:400">
+              <input type="checkbox" name={field.formName} checked={field.on} style="margin-top:0.25rem" />
+              <span>
+                {field.label}
+                {field.hint ? <span class="hint" style="display:block">{field.hint}</span> : null}
+              </span>
+            </label>
+          ))}
+
+          <label class="env-label" for="discovery-robots">{robotsField.label}</label>
+          <textarea
+            id="discovery-robots"
+            name={robotsField.formName}
+            class="editor-input"
+            rows="8"
+            spellcheck="false"
+            placeholder="Leave empty to use the generated robots.txt"
+          >{settings[SETTING_ROBOTS_TXT] ?? ""}</textarea>
+          <p class="hint">{robotsField.hint} <a href="/robots.txt" target="_blank" rel="noopener">View current</a></p>
+
+          <button type="submit" class="btn btn-sm" style="margin-top:1rem">Save</button>
+        </form>
+      </div>
 
       {ctx.aiEnabled && (
         <div class="editor-list-section" style="margin-top:2rem">

@@ -34,8 +34,7 @@ function headerSectionHtml(config: HeaderSectionConfig): string {
   <div class="container">
     <div class="nav-bar">
       <a class="site-logo" href="{{brandHref}}">${wm}</a>${nav}
-      {{communityBlock}}
-      <div class="nav-actions">${subscribe}{{navToggle}}{{authLinksBlock}}</div>
+      <div class="nav-actions">${subscribe}{{communityBlock}}{{navToggle}}{{authLinksBlock}}</div>
     </div>`;
 
   html += `\n  </div>\n</header>`;

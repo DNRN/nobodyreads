@@ -49,6 +49,10 @@ export const siteButtonGhostHoverCss = `  filter: none;
 export const siteButtonHoverCss = `  filter: brightness(0.93);
   text-decoration: none;`;
 
+export const siteButtonDisabledCss = `  cursor: not-allowed;
+  opacity: 0.5;
+  filter: none;`;
+
 export function siteInputRules(selector: string): string {
   return `${selector} {
 ${siteInputCss}
@@ -74,5 +78,10 @@ ${siteButtonGhostCss}
 
 ${selector}--ghost:hover {
 ${siteButtonGhostHoverCss}
+}
+
+${selector}:disabled,
+${selector}:disabled:hover {
+${siteButtonDisabledCss}
 }`;
 }

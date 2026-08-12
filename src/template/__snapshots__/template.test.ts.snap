@@ -198,6 +198,13 @@ main {
   border-color: var(--text);
 }
 
+.site-button:disabled,
+.site-button:disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: none;
+}
+
 .wordmark {
   font-family: var(--brand-font);
   font-weight: var(--logo-weight);
@@ -1433,6 +1440,13 @@ body.nav-open .site-menu {
 .auth-form button--ghost:hover {
   filter: none;
   border-color: var(--text);
+}
+
+.auth-form button:disabled,
+.auth-form button:disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: none;
 }
 
 .auth-alt {

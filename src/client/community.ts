@@ -51,7 +51,12 @@ async function init(root: HTMLElement): Promise<void> {
           ? "Join"
           : "Join this space";
       joinBtn.classList.toggle("joined", !!state.joined);
-      joinBtn.title = state.joined ? "Click to leave this space" : "";
+      joinBtn.disabled = !!state.isOwner;
+      joinBtn.title = state.isOwner
+        ? "You can't join your own plot"
+        : state.joined
+          ? "Click to leave this space"
+          : "";
     }
     if (likeBtn) {
       likeBtn.innerHTML =

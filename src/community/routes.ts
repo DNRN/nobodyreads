@@ -174,6 +174,9 @@ export function createCommunityRoutes(options: CommunityRouterOptions): Hono {
         : null,
       joined,
       memberCount: await countPlotMembers(db, tenantId),
+      // A plot owner can't join their own plot; the client disables the
+      // button rather than hiding it, so ownership must be visible here.
+      isOwner: isOwner ? await isOwner(c) : false,
     });
   });
 

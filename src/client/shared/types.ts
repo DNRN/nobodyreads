@@ -7,6 +7,8 @@ export interface MembershipState {
   member: { issuer: string; displayName: string } | null;
   joined: boolean;
   memberCount: number;
+  /** True when the viewer owns this plot — they can't join their own space. */
+  isOwner: boolean;
 }
 
 export interface LikeState {

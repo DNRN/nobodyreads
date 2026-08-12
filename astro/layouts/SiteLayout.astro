@@ -54,7 +54,11 @@ const structuredData = buildStructuredData(metaOptions);
 
 const faviconTags = faviconUrl
   ? `  <link rel="icon" href="${escapeHtml(faviconUrl)}">\n  <link rel="apple-touch-icon" href="${escapeHtml(faviconUrl)}">`
-  : "";
+  : `  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="icon" type="image/png" href="/favicon-16x16.png" sizes="16x16">
+  <link rel="icon" type="image/png" href="/favicon-32x32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">`;
 
 const brandingHtml = logoUrl
   ? `<img class="site-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(siteName)}">`

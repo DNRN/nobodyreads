@@ -86,6 +86,7 @@ const MIME: Record<string, string> = {
 	".webp": "image/webp",
 	".svg": "image/svg+xml",
 	".ico": "image/x-icon",
+	".webmanifest": "application/manifest+json",
 	".mp4": "video/mp4",
 	".webm": "video/webm",
 	".mp3": "audio/mpeg",

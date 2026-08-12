@@ -19,6 +19,7 @@ import {
   setSiteSetting,
   deleteSiteSetting,
   SITE_IDENTITY_FIELDS,
+  SITE_DISCOVERY_FIELDS,
 } from "../../../shared/site-settings.js";
 import { validateTheme, themeHasScripts } from "../../../template/theme-io.js";
 import { serializeRegistry } from "../../../template/registry.js";
@@ -157,6 +158,40 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       return c.json({ ok: true });
     }
     return c.redirect(`${adminBase}/layout`);
+  });
+
+  /**
+   * Save the discoverability settings.
+   *
+   * Toggles are stored only when *off*: an absent row means "allowed", which
+   * keeps every existing site indexable without a migration and makes the
+   * default visible in the data rather than hidden in a resolver.
+   */
+  app.post("/settings/discovery/save", async (c) => {
+    const body = await c.req.parseBody();
+
+    for (const field of SITE_DISCOVERY_FIELDS) {
+      const raw = body[field.formName];
+
+      if (field.type === "toggle") {
+        // An unchecked checkbox submits nothing, so absence means off — but
+        // only for a form that actually rendered the field. A hidden companion
+        // input guarantees the key is always present.
+        const on = raw === "on" || raw === "true" || raw === "1";
+        if (on) await deleteSiteSetting(db, tenantId, field.key);
+        else await setSiteSetting(db, tenantId, field.key, "off");
+        continue;
+      }
+
+      if (typeof raw !== "string") continue;
+      const value = raw.trim();
+      if (value === "") await deleteSiteSetting(db, tenantId, field.key);
+      else await setSiteSetting(db, tenantId, field.key, value);
+    }
+
+    const accept = c.req.header("accept") || "";
+    if (accept.includes("application/json")) return c.json({ ok: true });
+    return c.redirect(`${adminBase}/settings?saved=1`);
   });
 
   app.post("/editor/site/save", async (c) => {

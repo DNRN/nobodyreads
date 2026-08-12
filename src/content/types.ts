@@ -173,6 +173,13 @@ export interface LayoutOptions {
   /** Tenant whose settings/template the layout should load. Defaults to the single-tenant id. */
   tenantId?: string;
   urlPrefix?: string;
+  /**
+   * Absolute origin the page's canonical, `og:url` and JSON-LD URLs are built
+   * from, e.g. `https://example.com`. Defaults to `SITE_URL`. A host serving
+   * several sites from one process must pass this per request — the
+   * environment can only name one of them.
+   */
+  siteUrl?: string;
   /** Target for the topbar brand/wordmark link. Defaults to the per-context home (`urlPrefix || "/"`). */
   brandHref?: string;
   /** Login target for the community widget (e.g. join button). Defaults to `${urlPrefix}/login`. */

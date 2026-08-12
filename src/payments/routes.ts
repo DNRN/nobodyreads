@@ -151,11 +151,14 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
     const customerRef = await getPaymentCustomerRef(db, tenantId, member, provider.id);
     if (!customerRef) return fail("nothing_to_manage", 404);
 
+    // Resolve rather than concatenate: a host whose billing settings live on a
+    // different origin than the site passes an absolute `manageReturnHref`, and
+    // gluing that onto `origin` would yield `https://site/https://billing/...`.
     const origin = new URL(c.req.url).origin;
     const url = await provider.getManageUrl({
       member,
       customerRef,
-      returnUrl: `${origin}${manageReturnHref}`,
+      returnUrl: new URL(manageReturnHref, origin).toString(),
     });
 
     if (!url) return fail("nothing_to_manage", 404);

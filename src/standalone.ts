@@ -16,6 +16,7 @@ import { createBlogApiRoutes } from "./content/routes.js";
 import { createAiApiRoutes } from "./api/ai/ai.routes.js";
 import { resolveAiProviderConfig, resolveModerationAiConfig } from "./api/ai/config.js";
 import { createFeedRoutes } from "./content/feed.js";
+import { createRobotsRoutes, createSitemapRoutes } from "./content/robots.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
 	createSubscriptionApiRoutes,
@@ -38,7 +39,6 @@ import {
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const IS_DEV = process.env.NODE_ENV !== "production";
 const PUBLIC_DIR = join(import.meta.dirname, "..", "public");
-const ROBOTS_TXT_PATH = join(import.meta.dirname, "..", "robots.txt");
 const ASTRO_DEV_URL = process.env.ASTRO_DEV_URL || "http://localhost:4321";
 const ASTRO_DEV_PROXY = process.env.ASTRO_DEV_PROXY !== "0";
 const ASTRO_ENTRY_PATH = join(
@@ -190,15 +190,17 @@ async function start() {
 	// ---- Health check ----
 	app.get("/_health", (c) => c.text("ok"));
 
-	// ---- robots.txt ----
-	app.get("/robots.txt", async (c) => {
-		try {
-			const content = await readFileAsync(ROBOTS_TXT_PATH, "utf-8");
-			return c.text(content);
-		} catch {
-			return c.text("Not found", 404);
-		}
-	});
+	// ---- robots.txt + sitemap.xml ----
+	// Generated from the owner's discoverability settings rather than read from
+	// the shipped static file, so the admin toggles actually do something.
+	app.route(
+		"/",
+		createRobotsRoutes({ db, urlPrefix: process.env.URL_PREFIX || "" }),
+	);
+	app.route(
+		"/",
+		createSitemapRoutes({ db, urlPrefix: process.env.URL_PREFIX || "" }),
+	);
 
 	// ---- Static files from public/ ----
 	app.use("*", async (c, next) => {
@@ -260,17 +262,6 @@ async function start() {
 		if (served) return alreadySent();
 		return c.text("Not found", 404);
 	});
-
-	// ---- RSS feed ----
-	app.route(
-		"/",
-		createFeedRoutes({
-			db,
-			urlPrefix: process.env.URL_PREFIX || "",
-			siteName: process.env.SITE_NAME,
-			siteTagline: process.env.SITE_TAGLINE,
-		}),
-	);
 
 	// ---- RSS feed ----
 	app.route(

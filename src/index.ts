@@ -260,7 +260,12 @@ export {
 export type { HtmlOptions } from "./shared/http.js";
 
 // Starter content
-export { defaultHomePage, buildDefaultHomeContent } from "./content/defaults.js";
+export {
+  defaultHomePage,
+  buildDefaultHomeContent,
+  defaultLatestPostsView,
+  DEFAULT_COLLECTION_SLUG,
+} from "./content/defaults.js";
 export type { DefaultHomePageOptions } from "./content/defaults.js";
 
 // Templates & rendering

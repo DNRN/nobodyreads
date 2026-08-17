@@ -1,4 +1,13 @@
-import type { Page } from "./types.js";
+import { embedToken } from "../shared/embed-token.js";
+import type { ContentView, Page } from "./types.js";
+
+/**
+ * Slug of the collection the starter home page embeds. Shared by the content
+ * and the view so the two cannot drift — a home page referencing a collection
+ * nobody seeds renders as nothing at all (public rendering does not draw the
+ * missing-view placeholder).
+ */
+export const DEFAULT_COLLECTION_SLUG = "latest-posts";
 
 export interface DefaultHomePageOptions {
   /** Page title — typically the site or owner name. */
@@ -34,8 +43,26 @@ export function buildDefaultHomeContent(adminHref = "/admin"): string {
     "",
     "Nobody reads it anyway. So write for yourself.",
     "",
-    "{{collection:latest-posts}}",
+    embedToken(DEFAULT_COLLECTION_SLUG),
   ].join("\n");
+}
+
+/**
+ * The collection {@link buildDefaultHomeContent} embeds.
+ *
+ * Seed this whenever you seed {@link defaultHomePage} — the starter home page
+ * references it by slug, so a site that gets the page without the view shows a
+ * silently empty section where its posts should be.
+ */
+export function defaultLatestPostsView(): ContentView {
+  return {
+    id: DEFAULT_COLLECTION_SLUG,
+    slug: DEFAULT_COLLECTION_SLUG,
+    title: "Latest posts",
+    kind: "post_list",
+    config: { order: "newest", limit: 10 },
+    published: true,
+  };
 }
 
 /** A complete starter home page record for seeding a fresh site. */

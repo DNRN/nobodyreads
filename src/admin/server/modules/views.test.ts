@@ -73,6 +73,59 @@ describe("collection routes", () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("refuses a slug another collection already uses", async () => {
+    const app = mount();
+    await postForm(app, "/collections/save", { title: "First", slug: "shared" });
+
+    const res = await postForm(app, "/collections/save", { title: "Second", slug: "shared" });
+
+    // Without the pre-check the UNIQUE constraint throws past the route and the
+    // author sees a bare 500 with nothing about the slug.
+    expect(res.status).toBe(409);
+    expect((await res.json()).details[0].message).toContain("shared");
+    expect(await listContentViews(t.db, TENANT)).toHaveLength(1);
+  });
+
+  it("lets a collection keep its own slug when edited", async () => {
+    const app = mount();
+    await postForm(app, "/collections/save", { title: "Only", slug: "keeper" });
+    const [saved] = await listContentViews(t.db, TENANT);
+
+    const res = await postForm(app, "/collections/save", {
+      id: saved.id,
+      title: "Renamed",
+      slug: "keeper",
+    });
+
+    expect(res.status).toBe(302);
+    expect(await listContentViews(t.db, TENANT)).toHaveLength(1);
+  });
+
+  it("returns the saved slug as JSON when the caller asks for it", async () => {
+    // The page editor's picker needs the slug back to build its embed token.
+    const res = await mount().request("/collections/save", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: new URLSearchParams({ id: "", title: "From picker", slug: "from-picker", kind: "post_list" }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ slug: "from-picker", title: "From picker" });
+  });
+
+  it("lists collections as JSON for the picker", async () => {
+    const app = mount();
+    await postForm(app, "/collections/save", { title: "Listed", slug: "listed" });
+
+    const res = await app.request("/collections/list");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject([{ slug: "listed", title: "Listed" }]);
+  });
 });
 
 function postJson(app: Hono, path: string, body: unknown) {

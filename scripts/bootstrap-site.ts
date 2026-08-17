@@ -11,8 +11,12 @@ import {
   upsertContentView,
   upsertPage,
 } from "../src/content/db.js";
-import { defaultHomePage } from "../src/content/defaults.js";
-import type { ContentView } from "../src/content/types.js";
+import {
+  DEFAULT_COLLECTION_SLUG,
+  defaultHomePage,
+  defaultLatestPostsView,
+} from "../src/content/defaults.js";
+import { embedToken } from "../src/shared/embed-token.js";
 
 const TENANT_ID = process.env.TENANT_ID ?? DEFAULT_TENANT_ID;
 
@@ -32,18 +36,12 @@ if (existing.length === 0) {
   console.log(`Site template already initialized for tenant ${TENANT_ID}.`);
 }
 
-const latestPostsView = await getContentViewBySlug(db, "latest-posts", TENANT_ID);
+const latestPostsView = await getContentViewBySlug(db, DEFAULT_COLLECTION_SLUG, TENANT_ID);
 if (!latestPostsView) {
-  const defaultView: ContentView = {
-    id: "latest-posts",
-    slug: "latest-posts",
-    title: "Latest posts",
-    kind: "post_list",
-    config: { order: "newest", limit: 10 },
-    published: true,
-  };
-  await upsertContentView(db, defaultView, TENANT_ID);
-  console.log(`Seeded default content view '{{collection:latest-posts}}' for tenant ${TENANT_ID}.`);
+  await upsertContentView(db, defaultLatestPostsView(), TENANT_ID);
+  console.log(
+    `Seeded default content view '${embedToken(DEFAULT_COLLECTION_SLUG)}' for tenant ${TENANT_ID}.`,
+  );
 } else {
   console.log(`Default content view already exists for tenant ${TENANT_ID}.`);
 }

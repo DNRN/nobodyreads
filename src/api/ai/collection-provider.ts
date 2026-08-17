@@ -4,11 +4,7 @@ import {
   collectionDraftJsonSchema,
   buildCollectionUserPrompt,
 } from "../../content/ai-collection.js";
-import type { StructuredCaller } from "./adapters/shared.js";
-import { createOpenAiCompatibleCaller } from "./adapters/openai-compatible.js";
-import { createAnthropicCaller } from "./adapters/anthropic.js";
-import { createGeminiCaller } from "./adapters/gemini.js";
-import { createLocalCaller } from "./adapters/local.js";
+import { createCaller } from "./create-caller.js";
 
 /**
  * Vendor-neutral AI collection provider — the third sibling of
@@ -23,20 +19,6 @@ export interface AICollectionProvider {
    * previous attempt and why it was rejected — both are just user content.
    */
   generateCollection(input: string): Promise<unknown>;
-}
-
-function createCaller(config: AiProviderConfig): StructuredCaller {
-  switch (config.provider) {
-    case "anthropic":
-      return createAnthropicCaller(config);
-    case "gemini":
-      return createGeminiCaller(config);
-    case "local":
-      return createLocalCaller(config);
-    case "openai-compatible":
-    default:
-      return createOpenAiCompatibleCaller(config);
-  }
 }
 
 export function createCollectionProvider(config: AiProviderConfig): AICollectionProvider {

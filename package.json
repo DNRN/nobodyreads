@@ -32,6 +32,10 @@
       "types": "./dist/shared/embed-token.d.ts",
       "import": "./dist/shared/embed-token.js"
     },
+    "./slugify": {
+      "types": "./dist/shared/slugify.d.ts",
+      "import": "./dist/shared/slugify.js"
+    },
     "./collection-template": {
       "types": "./dist/content/collection-template.d.ts",
       "import": "./dist/content/collection-template.js"

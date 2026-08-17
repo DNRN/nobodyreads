@@ -2148,6 +2148,83 @@
 	text-overflow: ellipsis;
 }
 
+/* ----- Collection picker -----
+   Shares the media modal's shell; a collection has nothing to preview, so the
+   body is a list of names rather than a grid of thumbnails. */
+
+.nbr-collection-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.nbr-collection-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+	padding: 10px 12px;
+	text-align: left;
+	font: inherit;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-control);
+	cursor: pointer;
+}
+
+.nbr-collection-row:hover,
+.nbr-collection-row:focus-visible {
+	border-color: var(--nr-accent);
+	background: var(--nr-surface);
+}
+
+.nbr-collection-row-main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.nbr-collection-row-title {
+	font-weight: 600;
+	font-size: 13.5px;
+}
+
+.nbr-collection-row-slug {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	opacity: 0.6;
+}
+
+.nbr-collection-row-meta {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	flex-shrink: 0;
+	font-size: 11.5px;
+	opacity: 0.7;
+}
+
+.nbr-collection-row-draft {
+	color: var(--nr-warning);
+	opacity: 1;
+}
+
+.nbr-collection-create {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.nbr-collection-footnote {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid var(--nr-border);
+}
+
 /* ========================================
    Utility
    ======================================== */

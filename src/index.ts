@@ -22,7 +22,19 @@ export {
   SETTING_AI_BASE_URL,
   SETTING_AI_API_KEY_ENC,
 } from "./api/ai/config.js";
-export { recordThemeGeneration, recordModerationCheck } from "./api/ai/metering.js";
+export {
+  resolvePlatformComfyConfig,
+  getTenantComfyConfig,
+  isComfyConfigured,
+  SETTING_COMFY_BASE_URL,
+  SETTING_COMFY_API_KEY_ENC,
+} from "./api/ai/comfy/config.js";
+export type { ComfyProviderConfig } from "./api/ai/comfy/config.js";
+export {
+  recordThemeGeneration,
+  recordModerationCheck,
+  recordCoverImageGeneration,
+} from "./api/ai/metering.js";
 export {
   encryptSecret,
   decryptSecret,

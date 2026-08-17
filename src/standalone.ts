@@ -15,6 +15,7 @@ import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/routes.js";
 import { createAiApiRoutes } from "./api/ai/ai.routes.js";
 import { resolveAiProviderConfig, resolveModerationAiConfig } from "./api/ai/config.js";
+import { resolvePlatformComfyConfig } from "./api/ai/comfy/config.js";
 import { createFeedRoutes } from "./content/feed.js";
 import { createRobotsRoutes, createSitemapRoutes } from "./content/robots.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
@@ -334,7 +335,12 @@ async function start() {
 	// ---- Admin routes ----
 	app.route(
 		"/admin",
-		createAdminRoutes({ db, storage, ai: resolveAiProviderConfig() }),
+		createAdminRoutes({
+			db,
+			storage,
+			ai: resolveAiProviderConfig(),
+			comfy: resolvePlatformComfyConfig(),
+		}),
 	);
 	app.route("/admin", createSubscriptionAdminRoutes({ db }));
 

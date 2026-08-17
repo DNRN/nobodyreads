@@ -4,10 +4,12 @@ import type { Database } from "../../db/index.js";
 import type { MediaStorage } from "../../media/storage.js";
 import type { EmailResolvable } from "../../subscription/email.js";
 import type { AdminModuleContext, AiProviderConfig } from "./modules/types.js";
+import type { ComfyProviderConfig } from "../../api/ai/comfy/config.js";
 import { mountAuthRoutes } from "./modules/auth-routes.js";
 import { createContentRoutes } from "./modules/content.js";
 import { createThemeRoutes } from "./modules/theme.js";
 import { createAiRoutes } from "./modules/ai.js";
+import { createCoverImageRoutes } from "./modules/cover-image.js";
 import { createModerationRoutes } from "./modules/moderation.js";
 import { createMediaRoutes } from "./modules/media.js";
 import { createViewRoutes } from "./modules/views.js";
@@ -38,6 +40,11 @@ export interface AdminRouterOptions {
    * endpoint; when omitted, AI routes return 503 and the AI panel is hidden.
    */
   ai?: AiProviderConfig;
+  /**
+   * Comfy Cloud config for AI cover-image generation. The host owns the key;
+   * when omitted, cover-image routes return 503 and the generate UI is hidden.
+   */
+  comfy?: ComfyProviderConfig;
 }
 
 /** @deprecated Use AdminRouterOptions */
@@ -60,6 +67,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     siteUrl: options.siteUrl,
     siteName: options.siteName,
     ai: options.ai,
+    comfy: options.comfy,
   };
 }
 
@@ -71,6 +79,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
   app.route("/", createMediaRoutes(ctx));
   app.route("/", createThemeRoutes(ctx));
   app.route("/", createAiRoutes(ctx));
+  app.route("/", createCoverImageRoutes(ctx));
   app.route("/", createModerationRoutes(ctx));
   app.route("/", createContentRoutes(ctx));
   app.route("/", createViewRoutes(ctx));

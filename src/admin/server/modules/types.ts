@@ -1,6 +1,7 @@
 import type { Database } from "../../../db/index.js";
 import type { MediaStorage } from "../../../media/storage.js";
 import type { EmailResolvable } from "../../../subscription/email.js";
+import type { ComfyProviderConfig } from "../../../api/ai/comfy/config.js";
 
 /** AI backend an {@link AiProviderConfig} targets. */
 export type AiProvider = "openai-compatible" | "anthropic" | "gemini" | "local";
@@ -38,4 +39,6 @@ export interface AdminModuleContext {
   siteName?: string;
   /** OpenAI-compatible provider config for AI theming. When absent, AI is off. */
   ai?: AiProviderConfig;
+  /** Comfy Cloud config for AI cover-image generation. When absent, it's off. */
+  comfy?: ComfyProviderConfig;
 }

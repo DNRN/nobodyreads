@@ -70,6 +70,15 @@
   );
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
+
+  // --- AI cover image ------------------------------------------------------
+  let coverPanelOpen = $state(false);
+  let coverPromptText = $state("");
+  let coverDrafting = $state(false);
+  let coverGenerating = $state(false);
+  let coverError = $state("");
+  /** Held for review before the author commits it as the Share image. */
+  let generatedCoverUrl = $state<string | null>(null);
   let content = $state(p.content ?? "");
   let slugManuallyEdited = false;
 
@@ -333,6 +342,59 @@
   function openPicker(target: "body" | "seo") {
     pickerTarget = target;
     pickerOpen = true;
+  }
+
+  /** Draft an image prompt from the saved post's content (cheap text call, no image spend yet). */
+  async function draftCoverPrompt() {
+    if (!currentId || coverDrafting) return;
+    coverDrafting = true;
+    coverError = "";
+    try {
+      const res = await fetch(`${adminBase}/ai/cover-image/draft-prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ postId: currentId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.prompt) throw new Error(data.error || `Drafting failed (${res.status})`);
+      coverPromptText = data.prompt;
+    } catch (err) {
+      coverError = err instanceof Error ? err.message : "Drafting failed";
+    } finally {
+      coverDrafting = false;
+    }
+  }
+
+  /** Spend Comfy Cloud credits on the current (author-reviewed) prompt. */
+  async function generateCoverImagePreview() {
+    const prompt = coverPromptText.trim();
+    if (!prompt || coverGenerating) return;
+    coverGenerating = true;
+    coverError = "";
+    try {
+      const res = await fetch(`${adminBase}/ai/cover-image/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || `Generation failed (${res.status})`);
+      generatedCoverUrl = data.url as string;
+    } catch (err) {
+      coverError = err instanceof Error ? err.message : "Generation failed";
+    } finally {
+      coverGenerating = false;
+    }
+  }
+
+  /** Adopt the generated image as the Share image — same field the picker sets. */
+  function useGeneratedCover() {
+    if (!generatedCoverUrl) return;
+    seoOgImage = generatedCoverUrl;
+    generatedCoverUrl = null;
+    coverPanelOpen = false;
   }
 
   function closePicker() {
@@ -842,6 +904,13 @@
                 <button type="button" class="btn btn-sm btn-ghost" onclick={() => openPicker("seo")}>
                   Choose…
                 </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost"
+                  onclick={() => (coverPanelOpen = !coverPanelOpen)}
+                >
+                  Generate with AI
+                </button>
               </div>
               {#if seoOgImage}
                 <img
@@ -850,6 +919,57 @@
                   class="nbr-image-preview"
                   onerror={(e) => { (e.target as HTMLImageElement).hidden = true; }}
                 />
+              {/if}
+
+              {#if coverPanelOpen}
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for="cover-prompt">Image prompt</label>
+                  <textarea
+                    id="cover-prompt"
+                    class="nbr-ai-prompt"
+                    rows="3"
+                    bind:value={coverPromptText}
+                    disabled={coverGenerating}
+                    placeholder="Describe the cover image, or draft one from the post below"
+                  ></textarea>
+
+                  <div class="nbr-ai-actions">
+                    <button
+                      type="button"
+                      class="btn btn-sm"
+                      onclick={draftCoverPrompt}
+                      disabled={!currentId || coverDrafting || coverGenerating}
+                    >
+                      {coverDrafting ? "Drafting…" : "Draft from post"}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      onclick={generateCoverImagePreview}
+                      disabled={coverGenerating || !coverPromptText.trim()}
+                    >
+                      {coverGenerating ? "Generating…" : generatedCoverUrl ? "Regenerate" : "Generate"}
+                    </button>
+                  </div>
+                  {#if !currentId}
+                    <p class="hint">Save the post first to draft a prompt from its content — or just write one above.</p>
+                  {/if}
+                  {#if coverError}
+                    <p class="nbr-nudge">{coverError}</p>
+                  {/if}
+
+                  {#if generatedCoverUrl}
+                    <img src={generatedCoverUrl} alt="Generated cover preview" class="nbr-image-preview" />
+                    <div class="nbr-ai-actions">
+                      <button type="button" class="btn btn-primary btn-sm" onclick={useGeneratedCover}>
+                        Use this image
+                      </button>
+                      <button type="button" class="btn btn-sm" onclick={() => (generatedCoverUrl = null)}>
+                        Discard
+                      </button>
+                    </div>
+                  {/if}
+                </div>
               {/if}
             </div>
             <div class="nbr-field">

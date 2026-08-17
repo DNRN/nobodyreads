@@ -7,11 +7,7 @@ import {
   parseModerationVerdict,
   type ModerationCallInput,
 } from "../../moderation/verdict.js";
-import type { StructuredCaller } from "./adapters/shared.js";
-import { createOpenAiCompatibleCaller } from "./adapters/openai-compatible.js";
-import { createAnthropicCaller } from "./adapters/anthropic.js";
-import { createGeminiCaller } from "./adapters/gemini.js";
-import { createLocalCaller } from "./adapters/local.js";
+import { createCaller } from "./create-caller.js";
 
 /**
  * Vendor-neutral AI moderation provider — the moderation sibling of
@@ -22,20 +18,6 @@ import { createLocalCaller } from "./adapters/local.js";
  */
 export interface AIModerationProvider {
   generateVerdict(input: ModerationCallInput): Promise<ModerationVerdict>;
-}
-
-function createCaller(config: AiProviderConfig): StructuredCaller {
-  switch (config.provider) {
-    case "anthropic":
-      return createAnthropicCaller(config);
-    case "gemini":
-      return createGeminiCaller(config);
-    case "local":
-      return createLocalCaller(config);
-    case "openai-compatible":
-    default:
-      return createOpenAiCompatibleCaller(config);
-  }
 }
 
 /**

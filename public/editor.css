@@ -3181,6 +3181,82 @@
 	height: 17px;
 }
 
+/* ----- Editor mode switch -----
+   Both modes on screen at once, the current one filled in. A lone toggle could
+   not say where you were: its icon named the destination while its highlight
+   named the origin.
+
+   Shares the look of .nr-segmented but not its markup — that one is radios in
+   a <label>, and this sits inside the editor's <form>, where a named input
+   would be submitted. Hence buttons plus aria-pressed. */
+.nr-admin .nbr-modeswitch {
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-modeswitch-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px;
+	border: 0;
+	border-radius: calc(var(--nr-radius-control) - 2px);
+	background: transparent;
+	color: var(--nr-muted);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.nr-admin .nbr-modeswitch-option svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nbr-modeswitch-option:hover:not([aria-pressed="true"]) {
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-modeswitch-option[aria-pressed="true"] {
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-modeswitch-option:focus-visible {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 1px;
+}
+
+/* Swapping modes tears down and rebuilds the editor; the control goes quiet
+   rather than inviting a second click into the middle of that. */
+.nr-admin .nbr-modeswitch-option:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.nr-admin .nbr-modeswitch-loading {
+	font-size: 12.5px;
+	color: var(--nr-faint);
+	white-space: nowrap;
+}
+
+/* The label is the first thing to go when the bar gets tight; the icons still
+   distinguish the two. */
+@media (max-width: 720px) {
+	.nr-admin .nbr-modeswitch-option span {
+		display: none;
+	}
+}
+
 /* ----- Canvas ----- */
 .nr-admin .nbr-canvas {
 	flex: 1;

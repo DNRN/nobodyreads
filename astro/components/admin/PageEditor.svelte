@@ -87,6 +87,7 @@
 
   let editorReady = $state(false);
   let sourceMode = $state(false);
+  let switchingMode = $state(false);
   let pickerOpen = $state(false);
   // Which field an open MediaPicker selection should land in: the post body
   // (inserted at the caret) or the Share image field (replaces its value).
@@ -608,18 +609,31 @@
     editorReady = true;
   }
 
-  async function toggleSource() {
-    if (!sourceMode) {
-      if (crepe) {
-        content = crepe.getMarkdown();
-        await crepe.destroy();
-        crepe = null;
+  /**
+   * Switch between the visual editor and raw Markdown.
+   *
+   * Guarded because each direction tears down or rebuilds Crepe: a second
+   * click landing mid-swap would destroy an editor that is still being
+   * created, or create a second one over the first.
+   */
+  async function setSourceMode(next: boolean) {
+    if (next === sourceMode || switchingMode) return;
+    switchingMode = true;
+    try {
+      if (next) {
+        if (crepe) {
+          content = crepe.getMarkdown();
+          await crepe.destroy();
+          crepe = null;
+        }
+        sourceMode = true;
+      } else {
+        sourceMode = false;
+        await tick();
+        await createCrepe(content);
       }
-      sourceMode = true;
-    } else {
-      sourceMode = false;
-      await tick();
-      await createCrepe(content);
+    } finally {
+      switchingMode = false;
     }
   }
 
@@ -685,26 +699,46 @@
 
       <span class="nbr-wordcount">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
 
-      <span class="nr-tip">
-        <button
-          type="button"
-          class="nbr-icon-btn"
-          class:is-active={sourceMode}
-          onclick={toggleSource}
-          aria-pressed={sourceMode}
-          aria-describedby="tip-source"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>
-        </button>
-        <span class="nr-tip-panel" role="tooltip" id="tip-source">
-          <b class="nr-tip-label">{sourceMode ? "Visual editor" : "Markdown source"}</b>
-          <span class="nr-tip-desc">
-            {sourceMode
-              ? "Go back to the formatted view."
-              : "Edit the raw Markdown behind this post."}
-          </span>
+      <!--
+        Which mode you are in, not what the button will do. A single toggle
+        left that ambiguous: the icon showed the destination while the active
+        styling showed the origin, so neither answered "where am I?".
+
+        Buttons rather than the radio-based .nr-segmented: the topbar sits
+        inside the editor's <form>, and named radios here would ride along on
+        a no-JS submit.
+      -->
+      {#if editorReady}
+        <span class="nbr-modeswitch" role="group" aria-label="Editor mode">
+          <button
+            type="button"
+            class="nbr-modeswitch-option"
+            aria-pressed={!sourceMode}
+            disabled={switchingMode}
+            onclick={() => setSourceMode(false)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+            <span>Visual</span>
+          </button>
+          <button
+            type="button"
+            class="nbr-modeswitch-option"
+            aria-pressed={sourceMode}
+            disabled={switchingMode}
+            onclick={() => setSourceMode(true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>
+            <span>Markdown</span>
+          </button>
         </span>
-      </span>
+      {:else}
+        <!--
+          Until Crepe is up the textarea is the only editor there is, and it
+          looks exactly like Markdown mode — so say which it is rather than
+          leaving a dead switch that implies the choice is available.
+        -->
+        <span class="nbr-modeswitch-loading" aria-live="polite">Loading editor…</span>
+      {/if}
 
       {#if previewHref}
         <span class="nr-tip">

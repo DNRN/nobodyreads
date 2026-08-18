@@ -448,6 +448,11 @@
 	text-decoration: none;
 }
 
+.nr-admin .btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
 /* The fill is --nr-accent-strong, not --nr-accent: white text needs the
    accent darkened to clear 4.5:1, which is the same tone the body links use. */
 .nr-admin .btn-primary {

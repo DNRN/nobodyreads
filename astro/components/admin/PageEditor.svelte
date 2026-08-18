@@ -6,7 +6,10 @@
   import "@milkdown/crepe/theme/frame.css";
   import type { Page, PageKind } from "nobodyreads";
   import { altFromName, altWithDefaultWidth, imageMarkdown } from "nobodyreads/image-markdown";
+  import { embedToken } from "nobodyreads/embed-token";
+  import { slugify } from "nobodyreads/slugify";
   import MediaPicker from "./MediaPicker.svelte";
+  import CollectionPicker from "./CollectionPicker.svelte";
 
   interface Props {
     page?: Page;
@@ -84,11 +87,13 @@
 
   let editorReady = $state(false);
   let sourceMode = $state(false);
+  let switchingMode = $state(false);
   let pickerOpen = $state(false);
   // Which field an open MediaPicker selection should land in: the post body
   // (inserted at the caret) or the Share image field (replaces its value).
   let pickerTarget: "body" | "seo" | "pick" = "body";
   let resolvePick: ((url: string | null) => void) | null = null;
+  let collectionPickerOpen = $state(false);
 
   // --- Chrome state --------------------------------------------------------
   let drawerOpen = $state(false);
@@ -117,10 +122,7 @@
 
   function onTitleInput() {
     if (isNew && kind !== "home" && !slugManuallyEdited) {
-      slug = title
-        .toLowerCase().trim()
-        .replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-")
-        .replace(/-+/g, "-").replace(/^-|-$/g, "");
+      slug = slugify(title);
     }
   }
 
@@ -344,6 +346,41 @@
     pickerOpen = true;
   }
 
+  // --- Collection insertion ------------------------------------------------
+  // Same two-mode split as images above.
+
+  async function insertCollectionWysiwyg(slug: string) {
+    if (!crepe) return;
+    const { editorViewCtx } = await import("@milkdown/kit/core");
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const embedType = view.state.schema.nodes.view_embed;
+      if (!embedType) return;
+      // The node is built directly rather than typing the token: ProseMirror
+      // input rules only fire on real keystrokes, so `viewEmbedInputRule` would
+      // never see a programmatic insert and the token would stay plain text.
+      const node = embedType.create({ slug });
+      view.dispatch(view.state.tr.replaceSelectionWith(node, false).scrollIntoView());
+      view.focus();
+    });
+    content = crepe.getMarkdown();
+  }
+
+  async function insertCollectionSource(slug: string) {
+    const token = embedToken(slug);
+    const start = sourceEl?.selectionStart ?? content.length;
+    const end = sourceEl?.selectionEnd ?? start;
+    content = content.slice(0, start) + token + content.slice(end);
+    await tick(); // let bind:value flush before moving the caret
+    sourceEl?.focus();
+    sourceEl?.setSelectionRange(start + token.length, start + token.length);
+  }
+
+  function insertCollection({ slug }: { slug: string }) {
+    collectionPickerOpen = false;
+    return sourceMode ? insertCollectionSource(slug) : insertCollectionWysiwyg(slug);
+  }
+
   /** Draft an image prompt from the saved post's content (cheap text call, no image spend yet). */
   async function draftCoverPrompt() {
     if (!currentId || coverDrafting) return;
@@ -468,6 +505,16 @@
               },
             };
 
+            const collectionMenuItem = {
+              key: "collection",
+              label: "Collection",
+              icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.4"/><rect x="3" y="12" width="18" height="3.2" rx="1.2"/><rect x="3" y="18" width="12" height="3.2" rx="1.2"/></svg>`,
+              onRun: (menuCtx: any) => {
+                menuCtx.get(commandsCtx).call(clearTextInCurrentBlockCommand.key);
+                collectionPickerOpen = true;
+              },
+            };
+
             const take = (groupKey: string, itemKey: string) => {
               try {
                 return builder
@@ -497,7 +544,7 @@
                 // feature is on, and we keep that off so `![alt|400px|right]`
                 // survives (see `features` above). Without this entry the Media
                 // group would offer everything except the obvious thing.
-                items: [imageMenuItem, take("advanced", "code")],
+                items: [imageMenuItem, collectionMenuItem, take("advanced", "code")],
               },
               {
                 key: "structure",
@@ -562,18 +609,31 @@
     editorReady = true;
   }
 
-  async function toggleSource() {
-    if (!sourceMode) {
-      if (crepe) {
-        content = crepe.getMarkdown();
-        await crepe.destroy();
-        crepe = null;
+  /**
+   * Switch between the visual editor and raw Markdown.
+   *
+   * Guarded because each direction tears down or rebuilds Crepe: a second
+   * click landing mid-swap would destroy an editor that is still being
+   * created, or create a second one over the first.
+   */
+  async function setSourceMode(next: boolean) {
+    if (next === sourceMode || switchingMode) return;
+    switchingMode = true;
+    try {
+      if (next) {
+        if (crepe) {
+          content = crepe.getMarkdown();
+          await crepe.destroy();
+          crepe = null;
+        }
+        sourceMode = true;
+      } else {
+        sourceMode = false;
+        await tick();
+        await createCrepe(content);
       }
-      sourceMode = true;
-    } else {
-      sourceMode = false;
-      await tick();
-      await createCrepe(content);
+    } finally {
+      switchingMode = false;
     }
   }
 
@@ -639,26 +699,46 @@
 
       <span class="nbr-wordcount">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
 
-      <span class="nr-tip">
-        <button
-          type="button"
-          class="nbr-icon-btn"
-          class:is-active={sourceMode}
-          onclick={toggleSource}
-          aria-pressed={sourceMode}
-          aria-describedby="tip-source"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>
-        </button>
-        <span class="nr-tip-panel" role="tooltip" id="tip-source">
-          <b class="nr-tip-label">{sourceMode ? "Visual editor" : "Markdown source"}</b>
-          <span class="nr-tip-desc">
-            {sourceMode
-              ? "Go back to the formatted view."
-              : "Edit the raw Markdown behind this post."}
-          </span>
+      <!--
+        Which mode you are in, not what the button will do. A single toggle
+        left that ambiguous: the icon showed the destination while the active
+        styling showed the origin, so neither answered "where am I?".
+
+        Buttons rather than the radio-based .nr-segmented: the topbar sits
+        inside the editor's <form>, and named radios here would ride along on
+        a no-JS submit.
+      -->
+      {#if editorReady}
+        <span class="nbr-modeswitch" role="group" aria-label="Editor mode">
+          <button
+            type="button"
+            class="nbr-modeswitch-option"
+            aria-pressed={!sourceMode}
+            disabled={switchingMode}
+            onclick={() => setSourceMode(false)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg>
+            <span>Visual</span>
+          </button>
+          <button
+            type="button"
+            class="nbr-modeswitch-option"
+            aria-pressed={sourceMode}
+            disabled={switchingMode}
+            onclick={() => setSourceMode(true)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></svg>
+            <span>Markdown</span>
+          </button>
         </span>
-      </span>
+      {:else}
+        <!--
+          Until Crepe is up the textarea is the only editor there is, and it
+          looks exactly like Markdown mode — so say which it is rather than
+          leaving a dead switch that implies the choice is available.
+        -->
+        <span class="nbr-modeswitch-loading" aria-live="polite">Loading editor…</span>
+      {/if}
 
       {#if previewHref}
         <span class="nr-tip">
@@ -1063,6 +1143,16 @@
       upload={uploadImage}
       onSelect={insertImage}
       onClose={closePicker}
+      onError={(m) => showToast(m, "error", 4000)}
+    />
+  {/if}
+
+  {#if collectionPickerOpen}
+    <CollectionPicker
+      listUrl={`${adminBase}/collections/list`}
+      collectionsBase={`${adminBase}/collections`}
+      onSelect={insertCollection}
+      onClose={() => (collectionPickerOpen = false)}
       onError={(m) => showToast(m, "error", 4000)}
     />
   {/if}

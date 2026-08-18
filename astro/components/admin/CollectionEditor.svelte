@@ -9,6 +9,7 @@
     validateCollectionTemplate,
   } from "nobodyreads/collection-template";
   import { embedToken } from "nobodyreads/embed-token";
+  import { slugify } from "nobodyreads/slugify";
   import { COLLECTION_PRESETS } from "nobodyreads/collection-presets";
   import type { ContentView, CustomViewConfig, PostListViewConfig } from "nobodyreads";
 
@@ -81,10 +82,7 @@
 
   function onTitleInput() {
     if (slugTouched) return;
-    slug = title
-      .toLowerCase().trim()
-      .replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-")
-      .replace(/-+/g, "-").replace(/^-|-$/g, "");
+    slug = slugify(title);
   }
 
   /** Picking a preset fills every field it owns — including the prompt box. */

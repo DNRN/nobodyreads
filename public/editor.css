@@ -2148,6 +2148,83 @@
 	text-overflow: ellipsis;
 }
 
+/* ----- Collection picker -----
+   Shares the media modal's shell; a collection has nothing to preview, so the
+   body is a list of names rather than a grid of thumbnails. */
+
+.nbr-collection-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.nbr-collection-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	width: 100%;
+	padding: 10px 12px;
+	text-align: left;
+	font: inherit;
+	color: var(--nr-text);
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border);
+	border-radius: var(--nr-radius-control);
+	cursor: pointer;
+}
+
+.nbr-collection-row:hover,
+.nbr-collection-row:focus-visible {
+	border-color: var(--nr-accent);
+	background: var(--nr-surface);
+}
+
+.nbr-collection-row-main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.nbr-collection-row-title {
+	font-weight: 600;
+	font-size: 13.5px;
+}
+
+.nbr-collection-row-slug {
+	font-family: var(--nr-font-mono);
+	font-size: 11.5px;
+	opacity: 0.6;
+}
+
+.nbr-collection-row-meta {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	flex-shrink: 0;
+	font-size: 11.5px;
+	opacity: 0.7;
+}
+
+.nbr-collection-row-draft {
+	color: var(--nr-warning);
+	opacity: 1;
+}
+
+.nbr-collection-create {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.nbr-collection-footnote {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid var(--nr-border);
+}
+
 /* ========================================
    Utility
    ======================================== */
@@ -3102,6 +3179,82 @@
 .nr-admin .nbr-icon-btn svg {
 	width: 17px;
 	height: 17px;
+}
+
+/* ----- Editor mode switch -----
+   Both modes on screen at once, the current one filled in. A lone toggle could
+   not say where you were: its icon named the destination while its highlight
+   named the origin.
+
+   Shares the look of .nr-segmented but not its markup — that one is radios in
+   a <label>, and this sits inside the editor's <form>, where a named input
+   would be submitted. Hence buttons plus aria-pressed. */
+.nr-admin .nbr-modeswitch {
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border: 1px solid var(--nr-border-strong);
+	border-radius: var(--nr-radius-control);
+	background: var(--nr-card);
+}
+
+.nr-admin .nbr-modeswitch-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px;
+	border: 0;
+	border-radius: calc(var(--nr-radius-control) - 2px);
+	background: transparent;
+	color: var(--nr-muted);
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.nr-admin .nbr-modeswitch-option svg {
+	width: 15px;
+	height: 15px;
+}
+
+.nr-admin .nbr-modeswitch-option:hover:not([aria-pressed="true"]) {
+	color: var(--nr-text);
+}
+
+.nr-admin .nbr-modeswitch-option[aria-pressed="true"] {
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
+.nr-admin .nbr-modeswitch-option:focus-visible {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 1px;
+}
+
+/* Swapping modes tears down and rebuilds the editor; the control goes quiet
+   rather than inviting a second click into the middle of that. */
+.nr-admin .nbr-modeswitch-option:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.nr-admin .nbr-modeswitch-loading {
+	font-size: 12.5px;
+	color: var(--nr-faint);
+	white-space: nowrap;
+}
+
+/* The label is the first thing to go when the bar gets tight; the icons still
+   distinguish the two. */
+@media (max-width: 720px) {
+	.nr-admin .nbr-modeswitch-option span {
+		display: none;
+	}
 }
 
 /* ----- Canvas ----- */

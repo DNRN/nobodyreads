@@ -5,6 +5,8 @@ import { viewFormSchema } from "../../../db/validation.js";
 import {
   deleteContentView,
   getContentViewById,
+  getContentViewBySlug,
+  listContentViews,
   upsertContentView,
   validateCustomQuery,
   executeCustomViewQuery,
@@ -74,6 +76,20 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
       config = { order: "newest" as const, limit };
     }
 
+    // `(slug, tenant_id)` is unique, and `upsertContentView` only conflicts on
+    // the primary key — so a clashing slug would raise out of the route and
+    // reach the author as a bare 500. Check first and say which slug is taken.
+    const clash = await getContentViewBySlug(db, data.slug, tenantId);
+    if (clash && clash.id !== viewId) {
+      return c.json(
+        {
+          error: "Validation failed",
+          details: [{ message: `The slug "${data.slug}" is already used by "${clash.title}".` }],
+        },
+        409,
+      );
+    }
+
     const view: ContentView = {
       id: viewId,
       slug: data.slug,
@@ -85,7 +101,18 @@ export function createViewRoutes(ctx: AdminModuleContext): Hono {
     };
 
     await upsertContentView(db, view, tenantId);
+
+    // The picker in the page editor needs the saved slug back to insert its
+    // token; the collections screen ignores the body and follows the redirect.
+    if (c.req.header("accept")?.includes("application/json")) {
+      return c.json({ id: viewId, slug: view.slug, title: view.title });
+    }
     return c.redirect(`${adminBase}/collections/${viewId}`);
+  });
+
+  /** Collections as JSON, for the page editor's insert picker. */
+  app.get("/collections/list", async (c) => {
+    return c.json(await listContentViews(db, tenantId));
   });
 
   /**

@@ -182,6 +182,12 @@ If you are unsure whether a change warrants a doc update, update
   commit identity, or rewrite `user.name`/`user.email` to attribute work to
   someone else. The human is the author; no agent co-author trailers or
   "Generated with …" footers in the PR body (see Commits above).
+- **Base branch.** Every PR targets `main`, and every feature branch is cut
+  from an up-to-date local `main` (`git fetch origin && git checkout -b
+  <branch> origin/main`) — never stacked on another unmerged branch. This
+  keeps history linear and diffs scoped to just the PR's own change; if work
+  genuinely depends on an unmerged PR, land that one first instead of
+  stacking.
 - **Precision.** Title under ~70 characters, written as a specific summary
   of the change (not "fix bug" or "update code"). The body must describe
   what changed and why, grounded in the actual diff — read every commit

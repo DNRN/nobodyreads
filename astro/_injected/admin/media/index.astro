@@ -84,6 +84,29 @@ function isImage(mimeType: string): boolean {
         </div>
       </div>
 
+      <!-- Generate with AI -->
+      <div class="editor-list-section">
+        <div class="media-generate-area" id="media-generate-area" data-generate-url={`${mediaBase}/generate`}>
+          <button type="button" class="media-generate-toggle" id="media-generate-toggle">
+            <span class="media-generate-icon">&#10022;</span>
+            Generate with AI
+          </button>
+          <div class="media-generate-panel" id="media-generate-panel" hidden>
+            <textarea
+              id="media-generate-prompt"
+              class="media-generate-prompt"
+              rows="2"
+              placeholder="Describe the image you want&hellip;"
+            ></textarea>
+            <div class="media-generate-buttons">
+              <button type="button" class="btn btn-primary" id="media-generate-btn">Generate</button>
+              <button type="button" class="btn btn-ghost" id="media-generate-cancel-btn">Cancel</button>
+            </div>
+            <p class="media-generate-status" id="media-generate-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+
       <!-- Media grid -->
       <div class="nr-empty" id="media-empty" hidden={items.length !== 0}>
         <div class="nr-empty-icon">
@@ -225,6 +248,62 @@ function isImage(mimeType: string): boolean {
     .media-upload-buttons {
       display: flex;
       gap: 0.5rem;
+    }
+
+    .media-generate-area {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.25rem;
+    }
+    .media-generate-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: none;
+      border: none;
+      padding: 0.75rem;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      color: inherit;
+      text-align: left;
+    }
+    .media-generate-icon {
+      opacity: 0.6;
+    }
+    .media-generate-panel {
+      padding: 0 0.75rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .media-generate-panel[hidden] {
+      display: none;
+    }
+    .media-generate-prompt {
+      width: 100%;
+      resize: vertical;
+      font: inherit;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary, #f5f5f5);
+      color: inherit;
+    }
+    .media-generate-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .media-generate-status {
+      margin: 0;
+      font-size: 0.85em;
+      opacity: 0.75;
+      min-height: 1.2em;
+    }
+    .media-generate-status.error {
+      color: var(--danger, #dc2626);
+      opacity: 1;
     }
 
     .media-grid {
@@ -569,6 +648,70 @@ function isImage(mimeType: string): boolean {
       }
 
       bindCardActions();
+
+      // --- Generate with AI ---
+      const generateArea = document.getElementById("media-generate-area");
+      const generateToggle = document.getElementById("media-generate-toggle");
+      const generatePanel = document.getElementById("media-generate-panel");
+      const generatePrompt = document.getElementById("media-generate-prompt");
+      const generateBtn = document.getElementById("media-generate-btn");
+      const generateCancelBtn = document.getElementById("media-generate-cancel-btn");
+      const generateStatus = document.getElementById("media-generate-status");
+
+      if (generateArea && generateToggle) {
+        const generateUrl = generateArea.dataset.generateUrl;
+        let generating = false;
+
+        function setGenerateStatus(msg, isError) {
+          generateStatus.textContent = msg || "";
+          generateStatus.classList.toggle("error", !!isError);
+        }
+
+        generateToggle.addEventListener("click", () => {
+          generatePanel.hidden = !generatePanel.hidden;
+          if (!generatePanel.hidden) generatePrompt.focus();
+        });
+
+        generateCancelBtn.addEventListener("click", () => {
+          if (generating) return;
+          generatePanel.hidden = true;
+          generatePrompt.value = "";
+          setGenerateStatus("", false);
+        });
+
+        async function generate() {
+          if (generating) return;
+          const prompt = generatePrompt.value.trim();
+          if (!prompt) {
+            setGenerateStatus("Describe the image first.", true);
+            return;
+          }
+
+          generating = true;
+          generateBtn.disabled = true;
+          setGenerateStatus("Generating… this can take a little while.", false);
+
+          try {
+            const res = await fetch(generateUrl, {
+              method: "POST",
+              headers: { "content-type": "application/json", accept: "application/json" },
+              body: JSON.stringify({ prompt: prompt, width: 1024, height: 1024 }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Generation failed");
+            setGenerateStatus("Added to your library.", false);
+            generatePrompt.value = "";
+            await refreshGrid();
+          } catch (err) {
+            setGenerateStatus((err && err.message) || "Generation failed", true);
+          } finally {
+            generating = false;
+            generateBtn.disabled = false;
+          }
+        }
+
+        generateBtn.addEventListener("click", generate);
+      }
     })();
   </script>
 </AdminLayout>

@@ -14,12 +14,13 @@ export async function recordModerationCheck(_tenantId: string): Promise<void> {
 }
 
 /**
- * Same seam for AI cover-image generations. Unlike theming/moderation (cheap
- * LLM calls), a Comfy Cloud generation costs real GPU credits per call, and
- * the platform-default key means the host absorbs that cost with no cap until
+ * Same seam for AI image generations (cover images, the media library's
+ * "Generate with AI" action, …). Unlike theming/moderation (cheap LLM calls),
+ * a Comfy Cloud generation costs real GPU credits per call, and the
+ * platform-default key means the host absorbs that cost with no cap until
  * this lands — treat this one as higher priority than its siblings above.
  */
-export async function recordCoverImageGeneration(_tenantId: string): Promise<void> {
+export async function recordImageGeneration(_tenantId: string): Promise<void> {
   // TODO(phase-9): count per-tenant generations and enforce plan limits for
   // the platform-default key. BYO-key tenants skip the cap (their own spend).
 }

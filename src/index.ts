@@ -25,6 +25,7 @@ export {
 export {
   resolvePlatformComfyConfig,
   getTenantComfyConfig,
+  resolveEffectiveComfyConfig,
   isComfyConfigured,
   SETTING_COMFY_BASE_URL,
   SETTING_COMFY_API_KEY_ENC,
@@ -33,7 +34,7 @@ export type { ComfyProviderConfig } from "./api/ai/comfy/config.js";
 export {
   recordThemeGeneration,
   recordModerationCheck,
-  recordCoverImageGeneration,
+  recordImageGeneration,
 } from "./api/ai/metering.js";
 export {
   encryptSecret,

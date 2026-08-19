@@ -314,6 +314,7 @@ export {
   deleteSiteSetting,
   resolveMediaValue,
   resolveSiteIdentity,
+  resolveSiteName,
   resolveSiteDiscovery,
   SITE_IDENTITY_FIELDS,
   SITE_DISCOVERY_FIELDS,

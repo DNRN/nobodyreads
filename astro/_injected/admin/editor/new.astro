@@ -2,7 +2,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, findPageByKind, type PageKind } from "nobodyreads";
+import { initDb, findPageByKind, resolveSiteName, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
@@ -11,12 +11,17 @@ const requested = Astro.url.searchParams.get("kind");
 const kind: PageKind =
   requested === "home" || requested === "page" || requested === "post" ? requested : "post";
 
+const db = await initDb();
+
 // Only one home page per site — if it already exists, edit it instead.
 if (kind === "home") {
-  const db = await initDb();
   const existing = await findPageByKind(db, "home", ctx.tenantId);
   if (existing) return Astro.redirect(`${ctx.editorBase}/${existing.id}`);
 }
+
+// A home page has no title field, so the editor submits the site's name to
+// satisfy the schema. Nothing renders it.
+const siteName = await resolveSiteName(db, ctx.tenantId, ctx.siteName);
 
 const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
 ---
@@ -31,5 +36,6 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
     adminBase={ctx.adminBase}
     previewBase={previewBase}
     kind={kind}
+    siteName={siteName}
   />
 </AdminLayout>

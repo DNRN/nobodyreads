@@ -10,6 +10,7 @@ import {
   getLatestSiteTemplateRevisionId,
 } from "../../../src/shared/site-bundle.js";
 import { getDbClient } from "../../lib/db.js";
+import { resolveSiteName } from "../../../src/shared/site-settings.js";
 
 if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 
@@ -17,9 +18,10 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai")
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const previewUrlPrefix = "/preview";
-const siteName = process.env.SITE_NAME || "nobodyreads.me";
 
 const db = await getDbClient();
+// Brand wins over SITE_NAME — see resolveSiteName.
+const siteName = await resolveSiteName(db, tenantId);
 const [siteTemplate, latestRevisionId, rawPage, navItems] = await Promise.all([
   getLatestSiteTemplateRevision(db, tenantId),
   getLatestSiteTemplateRevisionId(db, tenantId),

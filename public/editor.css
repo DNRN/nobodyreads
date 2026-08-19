@@ -2408,7 +2408,8 @@
 
 /* Custom-token chips rendered inside the editor */
 .nr-admin .nbr-wiki-link,
-.nr-admin .nbr-view-embed {
+.nr-admin .nbr-view-embed,
+.nr-admin .nbr-site-token {
 	padding: 0.05em 0.35em;
 	border-radius: 4px;
 	white-space: nowrap;
@@ -2419,7 +2420,8 @@
 	color: var(--nr-chip-text);
 }
 
-.nr-admin .nbr-view-embed {
+.nr-admin .nbr-view-embed,
+.nr-admin .nbr-site-token {
 	background: var(--nr-accent-soft);
 	color: var(--nr-muted);
 	font-family: var(--nr-font-mono, ui-monospace, monospace);

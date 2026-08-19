@@ -7,13 +7,15 @@ import { heroMetaLine } from "../../src/content/templates.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { isAuthenticatedRequest } from "../../src/admin/server/auth.js";
 import { getDbClient } from "../lib/db.js";
+import { resolveSiteName } from "../../src/shared/site-settings.js";
 import { gatePage } from "../lib/gate.js";
 
 const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
 const urlPrefix = process.env.URL_PREFIX || "";
-const siteName = process.env.SITE_NAME || "nobodyreads.me";
 
 const db = await getDbClient();
+// Brand wins over SITE_NAME — see resolveSiteName.
+const siteName = await resolveSiteName(db, tenantId);
 const loggedIn = isAuthenticatedRequest(Astro.request);
 const adminHref = `${urlPrefix}/admin`;
 
@@ -55,7 +57,10 @@ const menuItems = [
 ];
 const options = page
   ? {
-      title: page.title || siteName,
+      // The home page has no title of its own — the site's name is its name.
+      // Taken from Brand rather than from the row so there is one name to
+      // change, and the browser tab always agrees with the header.
+      title: siteName,
       navItems,
       activePageId: page.id,
       description: page.seo?.metaDescription || page.excerpt,

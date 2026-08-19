@@ -155,6 +155,29 @@ All content tables carry a `tenant_id` column (default `_default`) so the same s
 
 Navigation is optional per page via `nav_label` and `nav_order` columns (set from frontmatter `nav:` block or the admin editor).
 
+#### Titles
+
+`post` and `page` render their `title` as the document's `<h1>`, and `renderMarkdown`
+is given that title so a leading `# ` in the body is dropped or demoted — the chrome
+heading stays the only `<h1>`.
+
+The home page is the exception: it renders **no chrome title**. The site's name is its
+name, the header already carries it, and the visible heading comes from the body —
+which is why `index.astro` calls `renderContent` without `pageTitle` and takes its
+`<title>` from `resolveSiteName`. The `title` column is therefore vestigial on a home
+row: the editor submits it hidden to satisfy `NOT NULL`, and nothing reads it (the
+admin content list names the home row after the site too). An author who wants the
+name *in* the page writes `{{siteName}}` in the body.
+
+#### Site name resolution
+
+`resolveSiteName(db, tenantId, fallback)` is the one answer to "what is this site
+called": **Brand setting → `SITE_NAME` → caller's fallback**. Public pages must use it
+rather than reading `process.env` and passing the result to `SiteLayout` as
+`options.siteName` — that option outranks the layout's own resolution, which is what
+made the Brand field editable but inert. A multi-tenant host names each site itself
+(`.me` passes the plot owner's display name) and supplies its own fallback.
+
 ---
 
 ## Content pipeline
@@ -212,6 +235,21 @@ The visual design of the public site is data-driven, not hand-coded per deployme
 - **Editing** — `/admin/layout` is the Design screen: visual tabs over the template, with the raw HTML/CSS/JS/tokens/JSON panes behind *Edit template code* (site-editor bundle).
 
 `DEFAULT_TEMPLATE` in `src/template/defaults.ts` is used when no template exists yet; `site:bootstrap` seeds the first revision.
+
+#### Template tokens
+
+`SiteLayout.astro` substitutes in two passes, and which pass a token belongs to decides
+where an author may write it:
+
+1. **Before `{{content}}` is injected** — structural tokens that place chrome:
+   `{{nav}}`, `{{hero}}`, `{{subscribe}}`, `{{navToggle}}`, `{{siteBranding}}`,
+   `{{communityBlock}}`, `{{authLinksBlock}}`, `{{homeHref}}`, `{{brandHref}}`. These
+   mean nothing inside a paragraph, so they are spent before content arrives.
+2. **After** — `{{siteName}}`, `{{siteTagline}}`, `{{siteLogo}}`, `{{year}}` and every
+   `customTokens` key. Because this pass runs over the assembled page, these work in
+   **page bodies as well as the theme** — writing `{{siteName}}` in a post is the
+   supported way to put the site's name in content. Values are escaped, so a token can
+   never introduce markup.
 
 ---
 

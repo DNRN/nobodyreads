@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { getTenantAiConfig, isAiConfigured } from "../../../api/ai/config.js";
 import {
-  getTenantComfyConfig,
+  resolveEffectiveComfyConfig,
   isComfyConfigured,
   SETTING_COMFY_BASE_URL,
   SETTING_COMFY_API_KEY_ENC,
 } from "../../../api/ai/comfy/config.js";
 import { generateCoverPrompt } from "../../../api/ai/generate-cover-prompt.js";
 import { generateCoverImage } from "../../../api/ai/generate-cover-image.js";
-import { recordCoverImageGeneration } from "../../../api/ai/metering.js";
+import { recordImageGeneration } from "../../../api/ai/metering.js";
 import { getPageById } from "../../../content/db.js";
 import {
   getSiteSettings,
@@ -70,7 +70,7 @@ export function createCoverImageRoutes(ctx: AdminModuleContext): Hono {
     if (!storage) {
       return c.json({ error: "Media storage is not configured" }, 503);
     }
-    const effectiveComfy = (await getTenantComfyConfig(db, tenantId)) ?? comfy;
+    const effectiveComfy = await resolveEffectiveComfyConfig(db, tenantId, comfy);
     if (!isComfyConfigured(effectiveComfy)) {
       return c.json({ error: "Image generation is not configured" }, 503);
     }
@@ -94,7 +94,7 @@ export function createCoverImageRoutes(ctx: AdminModuleContext): Hono {
         width: body.width,
         height: body.height,
       });
-      await recordCoverImageGeneration(tenantId);
+      await recordImageGeneration(tenantId);
       return c.json(result);
     } catch (err) {
       console.error("Cover image generation failed:", err);

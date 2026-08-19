@@ -7,10 +7,13 @@ import {
   getMediaById,
   deleteMediaRecord,
 } from "../../../content/db.js";
+import { resolveEffectiveComfyConfig, isComfyConfigured } from "../../../api/ai/comfy/config.js";
+import { generateImage } from "../../../api/ai/generate-image.js";
+import { recordImageGeneration } from "../../../api/ai/metering.js";
 import type { AdminModuleContext } from "./types.js";
 
 export function createMediaRoutes(ctx: AdminModuleContext): Hono {
-  const { db, storage, tenantId, adminBase } = ctx;
+  const { db, storage, tenantId, adminBase, comfy } = ctx;
   const keyPrefix = ctx.keyPrefix ?? "";
   const app = new Hono();
 
@@ -58,6 +61,45 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
       });
     }
     return c.redirect(`${adminBase}/media`);
+  });
+
+  // Generate an image with AI straight into the library — same generator the
+  // post editor's cover-image panel uses (`generate-cover-image.ts`), minus
+  // the "cover" filename framing.
+  app.post("/media/generate", async (c) => {
+    const effectiveComfy = await resolveEffectiveComfyConfig(db, tenantId, comfy);
+    if (!isComfyConfigured(effectiveComfy)) {
+      return c.json({ error: "Image generation is not configured" }, 503);
+    }
+
+    const body = await c
+      .req.json<{ prompt?: string; width?: number; height?: number }>()
+      .catch(() => ({}) as { prompt?: string; width?: number; height?: number });
+    const prompt = body.prompt?.trim();
+    if (!prompt) {
+      return c.json({ error: "A prompt is required" }, 400);
+    }
+
+    try {
+      const result = await generateImage({
+        db,
+        storage,
+        tenantId,
+        comfy: effectiveComfy,
+        keyPrefix,
+        prompt,
+        width: body.width,
+        height: body.height,
+      });
+      await recordImageGeneration(tenantId);
+      return c.json(result);
+    } catch (err) {
+      console.error("Media image generation failed:", err);
+      return c.json(
+        { error: err instanceof Error ? err.message : "Image generation failed" },
+        502,
+      );
+    }
   });
 
   app.post("/media/delete/:id", async (c) => {

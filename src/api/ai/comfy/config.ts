@@ -54,3 +54,17 @@ export async function getTenantComfyConfig(
   };
   return isComfyConfigured(config) ? config : undefined;
 }
+
+/**
+ * The config a route should actually generate with: the tenant's BYO key when
+ * they've set one, else the platform default passed down from `ctx.comfy`.
+ * Every image-generation entry point (cover image, media library, …) resolves
+ * the same way, so this is the one place that precedence is spelled out.
+ */
+export async function resolveEffectiveComfyConfig(
+  db: Database,
+  tenantId: string,
+  platformComfy: ComfyProviderConfig | undefined,
+): Promise<ComfyProviderConfig | undefined> {
+  return (await getTenantComfyConfig(db, tenantId)) ?? platformComfy;
+}

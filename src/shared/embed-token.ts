@@ -39,3 +39,27 @@ export function embedToken(slug: string): string {
 export function hasEmbedToken(text: string): boolean {
   return embedTokenPattern().test(text);
 }
+
+// --- Site tokens — `{{siteName}}`, `{{year}}`, `{{any_custom_key}}` ---------
+
+/**
+ * Key grammar for a site token, matching the `customTokens` key validation in
+ * `theme-io.ts` (a JS identifier). Underscores are legal and load-bearing here:
+ * a key like `my_token` is what forced these to be modelled as a Milkdown atom
+ * node, because the Markdown serializer escapes `_` in plain text and would
+ * write back `{{my\_token}}`.
+ */
+const TOKEN_KEY = "[a-zA-Z_][a-zA-Z0-9_]*";
+
+/**
+ * Alternation fragment for a site token. Group 1 is the key.
+ *
+ * Does **not** match `{{collection:slug}}` — a colon is not an identifier
+ * character — so the two can sit in one alternation without competing.
+ */
+export const SITE_TOKEN_SOURCE = `\\{\\{(${TOKEN_KEY})\\}\\}`;
+
+/** A **fresh** global regex matching a site token; group 1 is the key. */
+export function siteTokenPattern(): RegExp {
+  return new RegExp(SITE_TOKEN_SOURCE, "g");
+}

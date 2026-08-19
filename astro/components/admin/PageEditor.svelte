@@ -18,6 +18,11 @@
     /** Owner-only draft preview base, e.g. "/alice/preview". Empty hides Preview. */
     previewBase?: string;
     kind?: PageKind;
+    /**
+     * The resolved site name. The home page's title mirrors it rather than
+     * being separately editable — see the title field below.
+     */
+    siteName?: string;
   }
 
   let {
@@ -26,6 +31,7 @@
     adminBase = "/admin",
     previewBase = "",
     kind: kindProp,
+    siteName = "",
   }: Props = $props();
 
   const isNew = !page;
@@ -54,7 +60,9 @@
 
   // --- Form state ---
   let currentId = $state(p.id);
-  let title = $state(p.title);
+  // The home page's title is a mirror of the site name, so prefer the live
+  // setting over the stored copy: saving then refreshes a mirror that drifted.
+  let title = $state(kind === "home" ? siteName || p.title : p.title);
   let slug = $state(p.slug);
   let excerpt = $state(p.excerpt ?? "");
   let tags = $state((p.tags ?? []).join(", "));
@@ -787,17 +795,32 @@
     -->
     <div class="nbr-canvas">
       <div class="nbr-canvas-col">
-        <label class="visually-hidden" for="title">Title</label>
-        <input
-          type="text"
-          id="title"
-          name="title"
-          class="nbr-doc-title"
-          placeholder="Title"
-          bind:value={title}
-          oninput={onTitleInput}
-          required
-        />
+        {#if kind === "home"}
+          <!--
+            No title field: the home page has no name of its own — the site's
+            name is its name, it is set once in Design → Brand, and the header
+            already renders it. Showing it here, editable or not, put something
+            on the canvas that no visitor sees, which is the opposite of what
+            this editor is for. An author who wants the name *in* the page
+            writes {{siteName}} in the body like any other token.
+
+            The hidden field only satisfies the schema's NOT NULL title; nothing
+            renders it.
+          -->
+          <input type="hidden" name="title" value={title} />
+        {:else}
+          <label class="visually-hidden" for="title">Title</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            class="nbr-doc-title"
+            placeholder="Title"
+            bind:value={title}
+            oninput={onTitleInput}
+            required
+          />
+        {/if}
 
         <div bind:this={crepeMount} class="nbr-milkdown" class:hidden={sourceMode}></div>
 

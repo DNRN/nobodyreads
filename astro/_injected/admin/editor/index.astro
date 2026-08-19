@@ -1,12 +1,17 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listAllPages, type Page } from "nobodyreads";
+import { initDb, listAllPages, resolveSiteName, type Page } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 
 const db = await initDb();
 const pages = await listAllPages(db, ctx.tenantId);
+
+// The home row is listed under the site's name: the home page has no title of
+// its own, so its stored one is vestigial and would show whatever it was seeded
+// with long after the site was renamed.
+const siteName = await resolveSiteName(db, ctx.tenantId, ctx.siteName);
 
 const groups: Record<string, Page[]> = { home: [], page: [], post: [] };
 for (const page of pages) {
@@ -78,7 +83,7 @@ const createOptions = [
         <div class="editor-home-main">
           <span class="editor-home-label">Home</span>
           {homePage ? (
-            <a href={`${ctx.editorBase}/${homePage.id}`} class="editor-home-title">{homePage.title}</a>
+            <a href={`${ctx.editorBase}/${homePage.id}`} class="editor-home-title">{siteName}</a>
           ) : (
             <p class="editor-home-empty">The front page of your site. Every site has exactly one.</p>
           )}

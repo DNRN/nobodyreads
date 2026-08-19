@@ -198,6 +198,31 @@ export function resolveSiteIdentity(
   };
 }
 
+/**
+ * The site's name, as the site itself will render it.
+ *
+ * Brand wins over the environment. `SITE_NAME` seeds a fresh install and is a
+ * perfectly good default, but once an owner has named their site in Design →
+ * Brand that is the answer — an env var that outranked them would make the
+ * field look editable while changing nothing.
+ *
+ * Public pages resolve through this rather than reading `process.env` and
+ * passing the result to `SiteLayout` as `options.siteName`: that override beats
+ * the layout's own resolution, which is how the two came to disagree.
+ *
+ * `fallback` is the last resort only, for a site with neither a setting nor the
+ * env var. A multi-tenant host names each site itself and should pass its own.
+ */
+export async function resolveSiteName(
+  db: Database,
+  tenantId: string,
+  fallback = "nobodyreads.me",
+): Promise<string> {
+  const settings = await getSiteSettings(db, tenantId);
+  return resolveSiteIdentity(settings, { siteName: fallback, siteTagline: "" })
+    .siteName;
+}
+
 export async function getSiteSettings(
   db: Database,
   tenantId: string,

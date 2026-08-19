@@ -170,19 +170,21 @@ const navToggle = menuItems.length
 
 const templateHtml = generateHtml(templateDef);
 const hasSubscribeToken = templateHtml.includes("{{subscribe}}");
+
+/**
+ * Tokens the *theme* fills. Structural — they place a nav or a hero, and mean
+ * nothing inside a paragraph — so they are spent before the content lands and
+ * are never offered to an author.
+ */
 let bodyHtml = templateHtml
   .replaceAll("{{nav}}", navHtml)
   .replaceAll("{{communityBlock}}", communityBlock)
   .replaceAll("{{authLinksBlock}}", authLinksBlock)
   .replaceAll("{{navToggle}}", navToggle)
-  .replaceAll("{{siteName}}", escapeHtml(siteName))
-  .replaceAll("{{siteTagline}}", escapeHtml(siteTagline))
   .replaceAll("{{hero}}", heroHtml())
   .replaceAll("{{siteBranding}}", brandingHtml)
-  .replaceAll("{{siteLogo}}", logoUrl ? escapeHtml(logoUrl) : "")
   .replaceAll("{{homeHref}}", escapeHtml(homeHref))
   .replaceAll("{{brandHref}}", escapeHtml(brandHref))
-  .replaceAll("{{year}}", `${new Date().getFullYear()}`)
   .replaceAll("{{subscribe}}", subscribeFormHtml);
 
 const autoInjectSubscribe =
@@ -192,6 +194,23 @@ const contentHtml = autoInjectSubscribe ? `${slotHtml}\n${subscribeFormHtml}` : 
 bodyHtml = bodyHtml.includes("{{content}}")
   ? bodyHtml.replaceAll("{{content}}", contentHtml)
   : `${bodyHtml}\n${contentHtml}`;
+
+/**
+ * Tokens an author may also write in a page body, resolved *after* the content
+ * is in place so they work in both halves. These are the site's own details —
+ * writing "{{siteName}}" in a paragraph is the one supported way to put the
+ * name in a page, which is why no editor renders it as chrome the author cannot
+ * touch. Values are escaped, so a token can never introduce markup.
+ */
+const identityTokens: Record<string, string> = {
+  siteName: escapeHtml(siteName),
+  siteTagline: escapeHtml(siteTagline),
+  siteLogo: logoUrl ? escapeHtml(logoUrl) : "",
+  year: `${new Date().getFullYear()}`,
+};
+for (const [key, value] of Object.entries(identityTokens)) {
+  bodyHtml = bodyHtml.replaceAll(`{{${key}}}`, value);
+}
 
 if (templateDef.customTokens?.length) {
   for (const token of templateDef.customTokens) {

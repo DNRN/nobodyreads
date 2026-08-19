@@ -2,7 +2,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, getPageById } from "nobodyreads";
+import { initDb, getPageById, resolveSiteName } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
@@ -17,9 +17,14 @@ const page = await getPageById(db, id, ctx.tenantId);
 if (!page) {
   return Astro.redirect(`${ctx.editorBase}`);
 }
+
+// The home page has no title of its own, so it is named after the site both in
+// this tab and in the hidden field the editor submits.
+const siteName = await resolveSiteName(db, ctx.tenantId, ctx.siteName);
+const editorTitle = page.kind === "home" ? siteName : page.title;
 ---
 <AdminLayout
-  title={`Edit: ${page.title} — Admin`}
+  title={`Edit: ${editorTitle} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
 >
@@ -29,5 +34,6 @@ if (!page) {
     editorBase={ctx.editorBase}
     adminBase={ctx.adminBase}
     previewBase={previewBase}
+    siteName={siteName}
   />
 </AdminLayout>

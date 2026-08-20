@@ -27,6 +27,11 @@ const paymentsEnabled = getAdminContext(Astro.locals)?.paymentsEnabled ?? false;
 // "Sign out" posts; otherwise fall back to the package's own EDITOR_PASSWORD
 // logout endpoint.
 const logoutHref = getAdminContext(Astro.locals)?.logoutHref ?? `${adminBase}/logout`;
+// A multi-tenant host points the wordmark at its own apex — a "back to the
+// central hub" link distinct from "Home", which goes to this plot's own site
+// (siteBase). A self-hosted, single-tenant deployment has no wider hub, so it
+// falls back to the dashboard's own root.
+const homeUrl = getAdminContext(Astro.locals)?.homeUrl ?? adminBase;
 
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
@@ -35,6 +40,10 @@ const devReload = import.meta.env.DEV
 const currentPath = Astro.url.pathname;
 
 function isActive(href: string): boolean {
+  // Only hrefs inside the admin app itself can be "active" — the Home nav item
+  // now points at siteBase, which is a prefix of every path and would
+  // otherwise always match.
+  if (!href.startsWith(adminBase)) return false;
   if (href === adminBase) return currentPath === adminBase || currentPath === adminBase + "/";
   return currentPath.startsWith(href);
 }
@@ -72,7 +81,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Create",
     items: [
-      { href: adminBase, label: "Home" },
+      { href: siteBase, label: "Home" },
       { href: `${adminBase}/editor`, label: "Content" },
       { href: `${adminBase}/media`, label: "Media" },
     ],
@@ -150,7 +159,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
           <button class="nr-admin-hamburger" id="sidebar-toggle" type="button" aria-label="Toggle navigation">
             <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
           </button>
-          <a class="nr-admin-logo" href={adminBase}>nobodyreads<span class="nr-dot">.</span></a>
+          <a class="nr-admin-logo" href={homeUrl}>nobodyreads<span class="nr-dot">.</span></a>
         </div>
         <div class="nr-admin-header-right">
           <a href={siteBase} target="_blank">View site ↗</a>

@@ -49,6 +49,14 @@ export interface NobodyreadsAdminContext {
    * hosts pass the tenant's display name.
    */
   siteName?: string;
+  /**
+   * Where the admin header's wordmark links to. Defaults to `adminBase` (the
+   * dashboard's own root) for a self-hosted, single-tenant deployment that has
+   * no wider platform to point back to. A multi-tenant host sets this to its
+   * own apex/home so the wordmark acts as a "back to the central hub" link
+   * instead of duplicating the "Home" nav item, which points at `siteBase`.
+   */
+  homeUrl?: string;
 }
 
 export const ADMIN_CONTEXT_LOCALS_KEY = "nobodyreadsAdmin" as const;
@@ -102,5 +110,6 @@ export function makeAdminContext(
     paymentsEnabled: input.paymentsEnabled,
     payoutSettingsHref: input.payoutSettingsHref,
     siteName: input.siteName,
+    homeUrl: input.homeUrl ?? adminBase,
   };
 }

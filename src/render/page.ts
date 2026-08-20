@@ -103,6 +103,7 @@ export async function resolvePageView(
         apiBase: ctx.apiBase,
         siteName: ctx.siteName,
         siteTagline: ctx.siteTagline,
+        avatarColor: ctx.avatarColor,
         ...menu,
       },
     };
@@ -184,6 +185,7 @@ export async function resolvePageView(
       heroEyebrow: ctx.heroEyebrow,
       heroMonogram: stats ? stats.total > 0 : undefined,
       heroMeta: stats ? heroMetaLine(stats) : undefined,
+      avatarColor: ctx.avatarColor,
       ...menu,
     },
   };

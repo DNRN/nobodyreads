@@ -211,6 +211,8 @@ export interface LayoutOptions {
   heroMeta?: string;
   /** Show the avatar/monogram beside the name. */
   heroMonogram?: boolean;
+  /** Background color for the letter monogram, overriding the theme's default. */
+  avatarColor?: string;
 
   // Topbar account dropdown
   /** Items rendered in the topbar account dropdown. When non-empty, the menu trigger shows. */

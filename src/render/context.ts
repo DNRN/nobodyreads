@@ -67,6 +67,9 @@ export interface SiteContext {
   /** Small line above the site name in the hero, typically the site's host. */
   heroEyebrow?: string;
 
+  /** Background color for the letter monogram, overriding the theme's default. */
+  avatarColor?: string;
+
   /** Where an owner with an empty archive goes to write their first post. */
   composeHref: string;
   /** The site's feed, offered under a listing. */

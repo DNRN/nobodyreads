@@ -187,27 +187,34 @@
       specimenDoc = "";
       return;
     }
-    let css = "";
+    let template: SiteTemplateDefinition;
     try {
-      css = generateCss(JSON.parse(editor!.getTemplateJson()) as SiteTemplateDefinition);
+      template = JSON.parse(editor!.getTemplateJson()) as SiteTemplateDefinition;
     } catch (error) {
       console.error("Specimen render failed:", error);
       return;
     }
+    const css = generateCss(template);
     // Same font request the published page makes, from the same theme — a
     // specimen in the wrong typeface is not a specimen.
-    const template = JSON.parse(editor!.getTemplateJson()) as SiteTemplateDefinition;
     const fontHref = fontLinkHref([
       template.tokens?.light?.font,
       template.tokens?.light?.brandFont,
       template.tokens?.light?.fontMono,
     ]);
 
-    specimenDoc = `<!doctype html><html><head><meta charset="utf-8">
+    // The specimen sits in the same wrapper the real page puts its content in,
+    // so it inherits the theme's reading width and gutter. A fixed 28px gutter
+    // at the full width of the frame showed every component at a measure the
+    // site never uses, which is the one thing a specimen must not do.
+    specimenDoc = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
 <style>${css}
-  body { margin: 0; padding: 28px; background: var(--bg); }
-</style></head><body>${selected.specimen}</body></html>`;
+  /* The frame around the specimen. Everything else here is the site's own CSS. */
+  body { margin: 0; padding-block: 28px; background: var(--bg); }
+</style></head>
+<body><main class="container">${selected.specimen}</main></body></html>`;
   }
 
   // --- AI ------------------------------------------------------------------
@@ -482,6 +489,28 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
   let publishing = $state(false);
 
   /**
+   * Whose eyes the preview renders through.
+   *
+   * A paywalled post is the design surface an author can least afford to guess
+   * at — the teaser fade and the call-to-action below it are theirs to style,
+   * and until now the preview always showed them the full body, because they
+   * own the site. The axis already existed on the server; this is the control
+   * for it.
+   */
+  const VIEWERS = [
+    { id: null, label: "You" },
+    { id: "member", label: "Subscriber" },
+    { id: "public", label: "Reader" },
+  ] as const;
+  let previewAs = $state<string | null>(null);
+
+  function viewAs(value: string | null) {
+    if (previewAs === value) return;
+    previewAs = value;
+    editor?.setPreviewAs(value);
+  }
+
+  /**
    * The AI tab previews its proposal rather than the editor's state, so moving
    * away has to restore the preview or another tab shows a theme it is not
    * editing.
@@ -616,6 +645,18 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
       <p class="nbr-design-sub">Your site's look and identity. Changes save as a draft first.</p>
     </div>
     <div class="nbr-design-actions">
+      <div class="nbr-viewas" role="group" aria-label="Preview as">
+        <span class="nbr-viewas__label">Preview as</span>
+        {#each VIEWERS as viewer (viewer.label)}
+          <button
+            type="button"
+            class="nbr-viewas__option"
+            class:is-active={previewAs === viewer.id}
+            aria-pressed={previewAs === viewer.id}
+            onclick={() => viewAs(viewer.id)}
+          >{viewer.label}</button>
+        {/each}
+      </div>
       <span bind:this={saveStatus} class="editor-save-status" aria-live="polite">Saved</span>
       <button type="submit" class="btn btn-sm">Save draft</button>
       <button type="button" class="btn btn-primary btn-sm" onclick={publish} disabled={publishing}>

@@ -1297,6 +1297,7 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
       <iframe
         bind:this={preview}
         id="site-preview"
+        name="nbr-site-preview"
         title="Site preview"
         data-preview-url={previewUrl}
         class:hidden={!codeMode && activeTab === "components"}

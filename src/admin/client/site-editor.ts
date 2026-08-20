@@ -36,6 +36,8 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   let editMode: "tabs" | "advanced" = "tabs";
   let previewDebounce: number | undefined;
   let previewLoaded = false;
+  /** Structure the preview currently shows, so only real changes reload it. */
+  let lastFingerprint: string | null = null;
 
   function ensurePreviewLoaded() {
     if (previewLoaded) return;
@@ -189,6 +191,73 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     return JSON.stringify(base, null, 2);
   }
 
+  /**
+   * A fingerprint of everything about a template that `generateCss` cannot
+   * express on its own.
+   *
+   * The preview's stylesheet can be swapped in place, which is why dragging a
+   * colour is instant. That shortcut is only honest while the *markup* is
+   * unchanged. Switching the hero off, picking a different post arrangement or
+   * editing the layout HTML changes what the page is made of, and no amount of
+   * CSS makes the old document into the new one — so those go back to the
+   * server instead of silently showing the previous layout.
+   *
+   * Listed explicitly rather than as "everything except tokens". A component's
+   * `variant` is the awkward case: it changes the generated CSS *and* the
+   * markup, so it belongs here even though a CSS patch would appear to work.
+   */
+  function structuralFingerprint(template: SiteTemplateDefinition): string {
+    const variants = Object.fromEntries(
+      Object.entries(template.components ?? {}).map(([name, config]) => [
+        name,
+        config?.variant ?? null,
+      ]),
+    );
+
+    return JSON.stringify({
+      layoutHtml: template.layoutHtml ?? "",
+      customJs: template.customJs ?? "",
+      customTokens: template.customTokens ?? [],
+      sections: template.sections ?? [],
+      variants,
+    });
+  }
+
+  /**
+   * Render the in-flight template by asking the server for it.
+   *
+   * Submitted as a form targeting the preview iframe rather than fetched: this
+   * is a real navigation, so the document that comes back behaves like the page
+   * it is previewing — its scripts run, its stylesheets load, relative URLs
+   * resolve. Nothing is stored server-side; the template travels with the
+   * request and is rendered for it alone.
+   */
+  function renderScratch(templateJson?: string) {
+    let body: string;
+    try {
+      body = templateJson ?? buildTemplateJson();
+    } catch (error) {
+      console.error("Preview render failed to serialise the template:", error);
+      return;
+    }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = buildPreviewUrl();
+    form.target = preview.getAttribute("name") ?? "";
+    form.hidden = true;
+
+    const field = document.createElement("input");
+    field.type = "hidden";
+    field.name = "template";
+    field.value = body;
+    form.appendChild(field);
+
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  }
+
   function applyLivePreviewCss() {
     try {
       const template = JSON.parse(buildTemplateJson()) as SiteTemplateDefinition;
@@ -212,19 +281,41 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
    */
   function previewTemplate(template: SiteTemplateDefinition) {
     ensurePreviewLoaded();
-    try {
-      const doc = preview.contentDocument;
-      const styleEl = doc?.getElementById("nr-generated-css");
-      if (styleEl) styleEl.textContent = generateCss(template);
-    } catch (error) {
-      console.error("Proposal preview failed:", error);
-    }
+    // Rendered rather than restyled: a proposal moves sections and swaps
+    // component variants as readily as it changes colour, and reviewing one
+    // through the previous layout's markup is not reviewing it.
+    renderScratch(JSON.stringify(template));
   }
 
+  /**
+   * Push the current edit to the preview, by whichever route is truthful.
+   *
+   * A token-only change is patched straight into the open document, which costs
+   * nothing and lands on the next frame. A structural change goes back to the
+   * server on a longer debounce, because it is a page load and firing one per
+   * keystroke would fight the typing.
+   */
   function scheduleLivePreview() {
     ensurePreviewLoaded();
     if (previewDebounce) window.clearTimeout(previewDebounce);
-    previewDebounce = window.setTimeout(applyLivePreviewCss, 150);
+
+    let structural = false;
+    try {
+      const fingerprint = structuralFingerprint(
+        JSON.parse(buildTemplateJson()) as SiteTemplateDefinition,
+      );
+      structural = fingerprint !== lastFingerprint;
+      lastFingerprint = fingerprint;
+    } catch {
+      // An unparseable template means the author is mid-edit in a code pane.
+      // Leave the preview showing the last good render rather than blanking it.
+      return;
+    }
+
+    previewDebounce = window.setTimeout(
+      structural ? renderScratch : applyLivePreviewCss,
+      structural ? 300 : 150,
+    );
   }
 
   function activateTab(target: string) {
@@ -472,6 +563,15 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     event.preventDefault();
     void save();
   });
+
+  try {
+    lastFingerprint = structuralFingerprint(
+      JSON.parse(buildTemplateJson()) as SiteTemplateDefinition,
+    );
+  } catch {
+    // Leave it null: the first edit will then be treated as structural, which
+    // costs one render and is the safe way to be wrong.
+  }
 
   setSaveStatus("ready");
   activateTab("html");

@@ -38,6 +38,13 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
   let previewLoaded = false;
   /** Structure the preview currently shows, so only real changes reload it. */
   let lastFingerprint: string | null = null;
+  /**
+   * Whose eyes the preview renders through, as `?preview=`.
+   *
+   * Null is the author's own view. The server ignores this for anyone who does
+   * not own the site, so it shows a reader's page without being a way into one.
+   */
+  let previewAs: string | null = null;
 
   function ensurePreviewLoaded() {
     if (previewLoaded) return;
@@ -76,6 +83,11 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
 
   function buildPreviewUrl(forceRefresh = false): string {
     const url = new URL(previewUrl, window.location.origin);
+    if (previewAs) {
+      url.searchParams.set("preview", previewAs);
+    } else {
+      url.searchParams.delete("preview");
+    }
     if (forceRefresh) {
       url.searchParams.set("t", String(Date.now()));
     } else {
@@ -295,6 +307,21 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
    * server on a longer debounce, because it is a page load and firing one per
    * keystroke would fight the typing.
    */
+  /**
+   * Render the preview through someone else's eyes.
+   *
+   * A re-render rather than a restyle: the gate decides how much of the body
+   * exists at all, and a paywalled post's teaser is not its full text with CSS
+   * over the top. Goes through the scratch path so unsaved edits survive the
+   * switch — an author checking what a reader sees should not lose the change
+   * they are checking.
+   */
+  function setPreviewAs(value: string | null) {
+    previewAs = value;
+    ensurePreviewLoaded();
+    renderScratch();
+  }
+
   function scheduleLivePreview() {
     ensurePreviewLoaded();
     if (previewDebounce) window.clearTimeout(previewDebounce);
@@ -583,6 +610,7 @@ export function createSiteEditor(options: SiteEditorOptions): SiteEditorInstance
     getTemplateJson: buildTemplateJson,
     save,
     refreshPreviewCss: scheduleLivePreview,
+    setPreviewAs,
     destroy() {
       if (previewDebounce) window.clearTimeout(previewDebounce);
       document.removeEventListener("click", onRemoveToken);

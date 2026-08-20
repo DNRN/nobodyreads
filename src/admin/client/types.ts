@@ -118,6 +118,12 @@ export interface SiteEditorInstance {
   getTemplateJson(): string;
   /** Re-generate and inject the preview stylesheet now. */
   refreshPreviewCss(): void;
+  /**
+   * Render the preview through a given viewer — `"public"`, `"member"`, or
+   * null for the author's own view. Server-enforced: it is ignored for anyone
+   * who does not own the site.
+   */
+  setPreviewAs(value: string | null): void;
 }
 
 export interface ViewEditorOptions {

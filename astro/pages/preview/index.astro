@@ -1,42 +1,128 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
-import PlotPage from "../../components/PlotPage.astro";
-import { getDbClient } from "../../lib/db.js";
-import { previewContext, previewViewer } from "../../lib/context.js";
-import { autoReloadScript } from "../../lib/preview.js";
-import { resolvePageView } from "../../../src/render/page.js";
+import { getPageByKind, getNavItems } from "../../../src/content/db.js";
+import { renderContent } from "../../../src/content/render.js";
+import { gatePreviewPage } from "../../lib/gate.js";
 import { guardAuth } from "../../../src/admin/server/auth.js";
+import { DEFAULT_TENANT_ID } from "../../../src/shared/types.js";
 import {
   getLatestSiteTemplateRevision,
   getLatestSiteTemplateRevisionId,
 } from "../../../src/shared/site-bundle.js";
+import { getDbClient } from "../../lib/db.js";
+import { resolveSiteName } from "../../../src/shared/site-settings.js";
 
 if (guardAuth(Astro.request)) return Astro.redirect("/admin/login");
 
-const db = await getDbClient();
-const ctx = await previewContext(db);
-const viewer = previewViewer(Astro.request);
-
-const [template, revisionId] = await Promise.all([
-  getLatestSiteTemplateRevision(db, ctx.tenantId),
-  getLatestSiteTemplateRevisionId(db, ctx.tenantId),
-]);
-
-const view = await resolvePageView(db, ctx, viewer, { kind: "home" }, template, Astro.response);
-
-// Set after resolving: a draft is never indexable, whatever the page itself
-// asked for, so this deliberately overwrites the per-page rule.
 Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
 
-if (!view.page) Astro.response.status = 404;
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const previewUrlPrefix = "/preview";
 
-const reload = autoReloadScript({
-  revisionId,
-  endpoint: `${ctx.urlPrefix}/revision.json`,
-  loginHref: "/admin/login",
-});
+const db = await getDbClient();
+// Brand wins over SITE_NAME — see resolveSiteName.
+const siteName = await resolveSiteName(db, tenantId);
+const [siteTemplate, latestRevisionId, rawPage, navItems] = await Promise.all([
+  getLatestSiteTemplateRevision(db, tenantId),
+  getLatestSiteTemplateRevisionId(db, tenantId),
+  getPageByKind(db, "home", tenantId),
+  getNavItems(db, tenantId),
+]);
+
+const autoReloadScript = `(() => {
+  let currentRevisionId = ${latestRevisionId ?? "null"};
+  const pollIntervalMs = 1500;
+  const endpoint = "/preview/revision.json";
+
+  const schedule = () => window.setTimeout(check, pollIntervalMs);
+
+  async function check() {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        window.location.assign("/admin/login");
+        return;
+      }
+
+      if (!response.ok) {
+        schedule();
+        return;
+      }
+
+      const data = await response.json();
+      const nextRevisionId = typeof data.revisionId === "number" ? data.revisionId : null;
+      if (nextRevisionId !== currentRevisionId) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Keep polling even on transient network/runtime errors.
+    }
+
+    schedule();
+  }
+
+  schedule();
+})();`;
+
+// Owner preview: `?preview=public` renders what a non-paying reader sees.
+const gate = rawPage ? await gatePreviewPage(db, rawPage, tenantId, Astro.request) : null;
+const page = gate?.page ?? null;
+
+let htmlBody = "";
+if (page?.content?.trim()) {
+  htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
+    includeDrafts: true,
+    showMissingPlaceholders: true,
+    // The draft revision this page is rendering, so a listing takes its
+    // arrangement from the theme on screen rather than the published one.
+    template: siteTemplate,
+  });
+}
+
+if (!page) {
+  Astro.response.status = 404;
+}
+
+const options = page
+  ? {
+      title: page.title || siteName,
+      navItems,
+      activePageId: page.id,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: previewUrlPrefix,
+      ogType: "website",
+      seo: page.seo,
+      page,
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    }
+  : {
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix: previewUrlPrefix,
+      siteName,
+    };
 ---
-<SiteLayout options={view.layout} templateOverride={view.template}>
-  <PlotPage view={view} ctx={ctx} />
-  <script is:inline set:html={reload}></script>
+<SiteLayout options={options} templateOverride={siteTemplate}>
+  {page ? (
+    <>
+      {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h1 class="post-title">Not found</h1>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
+    </>
+  )}
+  <script is:inline set:html={autoReloadScript}></script>
 </SiteLayout>

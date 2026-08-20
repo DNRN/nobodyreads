@@ -1,27 +1,100 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
-import PlotPage from "../components/PlotPage.astro";
+import Paywall from "../components/Paywall.astro";
+import { getPageBySlug, getNavItems } from "../../src/content/db.js";
+import { renderContent } from "../../src/content/render.js";
+import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
+import { isAuthenticatedRequest } from "../../src/admin/server/auth.js";
 import { getDbClient } from "../lib/db.js";
-import { siteContext, siteViewer } from "../lib/context.js";
-import { resolvePageView } from "../../src/render/page.js";
-import { getSiteTemplate } from "../../src/shared/site-bundle.js";
+import { resolveSiteName } from "../../src/shared/site-settings.js";
+import { gatePage } from "../lib/gate.js";
+import { pagePath } from "../lib/format.js";
+
+const tenantId = process.env.TENANT_ID || DEFAULT_TENANT_ID;
+const urlPrefix = process.env.URL_PREFIX || "";
 
 const db = await getDbClient();
-const ctx = await siteContext(db);
-const viewer = await siteViewer(db, Astro.request);
-const template = await getSiteTemplate(db, ctx.tenantId);
+// Brand wins over SITE_NAME — see resolveSiteName.
+const siteName = await resolveSiteName(db, tenantId);
+const slug = Astro.params.slug || "";
 
-const view = await resolvePageView(
-  db,
-  ctx,
-  viewer,
-  { kind: "page", slug: Astro.params.slug || "" },
-  template,
-  Astro.response,
-);
+const [rawPage, navItems] = await Promise.all([
+  getPageBySlug(db, slug, "page", tenantId),
+  getNavItems(db, tenantId),
+]);
 
-if (!view.page) Astro.response.status = 404;
+if (rawPage?.seo?.noAiTraining) {
+  Astro.response.headers.set("X-Robots-Tag", "noai, noimageai");
+}
+
+// Redacted page shadows the raw one — see astro/lib/gate.ts.
+const gate = rawPage
+  ? await gatePage(db, rawPage, tenantId, Astro.request, Astro.response)
+  : null;
+const page = gate?.page ?? null;
+
+let htmlBody = "";
+if (page) {
+  htmlBody = await renderContent(db, page.content, tenantId, urlPrefix, {
+    pageTitle: page.title,
+  });
+} else {
+  Astro.response.status = 404;
+}
+
+const adminHref = `${urlPrefix}/admin`;
+const loggedIn = isAuthenticatedRequest(Astro.request);
+const menuItems = [
+  loggedIn ? { label: "Admin", href: adminHref } : { label: "Log in", href: adminHref },
+];
+const options = page
+  ? {
+      title: `${page.title} — ${siteName}`,
+      navItems,
+      activePageId: page.id,
+      scripts: page.scripts,
+      description: page.seo?.metaDescription || page.excerpt,
+      pathname: pagePath(page, urlPrefix),
+      seo: page.seo,
+      page,
+      urlPrefix,
+      siteName,
+      menuItems,
+    }
+  : {
+      title: `404 — ${siteName}`,
+      navItems,
+      seo: { noIndex: true },
+      urlPrefix,
+      siteName,
+      menuItems,
+    };
 ---
-<SiteLayout options={view.layout} templateOverride={view.template}>
-  <PlotPage view={view} ctx={ctx} />
+<SiteLayout options={options}>
+  {page ? (
+    <>
+      <div class="post-header">
+        <h1 class="post-title">{page.title}</h1>
+      </div>
+      <div class="page-body" set:html={htmlBody} />
+      {gate?.gated && gate.decision.visibility === "teaser" && (
+        <Paywall
+          decision={gate.decision}
+          apiBase={`${urlPrefix}/api`}
+          pageId={page.id}
+          loginHref={`${urlPrefix}/login`}
+          signedIn={gate.signedIn}
+        />
+      )}
+      <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
+    </>
+  ) : (
+    <>
+      <div class="post-header">
+        <h1 class="post-title">Not found</h1>
+      </div>
+      <p>There's nothing here.</p>
+      <a href={urlPrefix || "/"} class="back-link">&larr; back to home</a>
+    </>
+  )}
 </SiteLayout>

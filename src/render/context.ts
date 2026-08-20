@@ -38,20 +38,9 @@ export interface SiteContext {
 
   /**
    * Path every in-site link is built under: `""` on a site that owns its host,
-   * `"/preview"` on the owner-only draft surface. Following a link stays on
-   * whichever surface you are already on.
+   * `"/preview"` on the owner-only draft surface.
    */
   urlPrefix: string;
-
-  /**
-   * Path the same content lives under *for a reader*.
-   *
-   * Equal to `urlPrefix` on the public site, and deliberately not equal on the
-   * draft surface: a share link built from `/preview` hands someone an
-   * owner-only URL they cannot open. Anything a visitor is meant to receive —
-   * a share target above all — belongs under this one.
-   */
-  publicUrlPrefix: string;
 
   /** Where the header wordmark points. */
   brandHref: string;

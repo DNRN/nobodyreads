@@ -100,7 +100,6 @@ export async function resolvePageView(
         siteUrl: ctx.siteUrl,
         brandHref: ctx.brandHref,
         loginHref: ctx.loginHref,
-        apiBase: ctx.apiBase,
         siteName: ctx.siteName,
         siteTagline: ctx.siteTagline,
         ...menu,
@@ -119,14 +118,6 @@ export async function resolvePageView(
 
   if (response && requiresPrivateCache(rawPage, gate.decision)) {
     response.headers.set("Cache-Control", "private, no-store");
-  }
-
-  // An author's opt-out travels with the page, so it is set here rather than in
-  // each route that happens to render one. A surface that wants a broader rule
-  // (the draft preview asks for `noindex` as well) sets its own header after
-  // this call and overwrites it.
-  if (response && rawPage.seo?.noAiTraining) {
-    response.headers.set("X-Robots-Tag", "noai, noimageai");
   }
 
   // Post stats drive the hero's shape, and the hero is a front-page thing.
@@ -177,7 +168,6 @@ export async function resolvePageView(
       siteUrl: ctx.siteUrl,
       brandHref: ctx.brandHref,
       loginHref: ctx.loginHref,
-      apiBase: ctx.apiBase,
       siteName: ctx.siteName,
       siteTagline: ctx.siteTagline,
       heroEyebrow: ctx.heroEyebrow,

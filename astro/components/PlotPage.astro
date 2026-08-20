@@ -90,7 +90,7 @@ const showComments = kind === "post" && hasFeature(ctx, "comments");
 
       {showShare && (
         <ShareBar
-          url={`${ctx.siteUrl}${ctx.publicUrlPrefix}/posts/${page.slug}`}
+          url={`${ctx.siteUrl}${ctx.urlPrefix}/posts/${page.slug}`}
           title={page.title}
           excerpt={page.excerpt}
         />

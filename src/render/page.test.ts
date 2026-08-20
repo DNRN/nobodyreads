@@ -25,6 +25,7 @@ function context(overrides: Partial<SiteContext> = {}): SiteContext {
     siteTagline: "Notes from a shed",
     siteUrl: "https://alice.example.com",
     urlPrefix: "",
+    publicUrlPrefix: "",
     brandHref: "/",
     loginHref: "https://example.com/login",
     spaceNoun: "plot",

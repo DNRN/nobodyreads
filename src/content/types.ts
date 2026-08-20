@@ -184,6 +184,11 @@ export interface LayoutOptions {
   brandHref?: string;
   /** Login target for the community widget (e.g. join button). Defaults to `${urlPrefix}/login`. */
   loginHref?: string;
+  /**
+   * Base path for the JSON API the community widget calls. Defaults to
+   * `${urlPrefix}/api`, which is only right where links and API share a prefix.
+   */
+  apiBase?: string;
   siteName?: string;
   siteTagline?: string;
   /** Site-wide default social image, used when a page has no `seo.ogImage`. */

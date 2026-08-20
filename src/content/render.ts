@@ -10,6 +10,7 @@ import { renderCollectionTemplate } from "./collection-template.js";
 import { getSiteTemplate } from "../shared/site-bundle.js";
 import { createMediaStorage } from "../media/storage.js";
 import type { LinkTarget, CustomViewConfig } from "./types.js";
+import type { SiteTemplateDefinition } from "../template/types.js";
 
 /**
  * Custom image renderer that supports size and alignment hints in the alt
@@ -76,9 +77,18 @@ export interface ResolveViewsOptions {
   includeDrafts?: boolean;
   showMissingPlaceholders?: boolean;
   /**
+   * The theme this render is using, which a listing takes its layout from.
+   *
+   * Supplied by the caller because it is not always the published theme: the
+   * design editor previews a *draft* revision, and a listing that reads the
+   * database for itself would show that draft the published arrangement.
+   * Omit it and the published theme is used, which is right for a live page.
+   */
+  template?: SiteTemplateDefinition | null;
+  /**
    * Everything a post listing needs beyond the posts themselves — who is
    * looking, what the space is called, where an empty one points a reader.
-   * The layout variant is read from the site's theme and does not belong here.
+   * The layout variant comes from `template` and does not belong here.
    */
   postList?: Omit<PostListRenderOptions, "urlPrefix" | "variant" | "mediaUrl">;
 }
@@ -102,13 +112,19 @@ export async function resolveViews(
 /**
  * The layout a post listing should use, as configured on the site's theme.
  *
- * Read here rather than passed in by every caller: the listing is generated
- * deep inside markdown rendering, and threading a theme value through every
- * page that renders content just to reach it is how the two drift apart.
+ * `template` is the theme the caller is *rendering with*, and it is the answer
+ * whenever there is one. Falling back to a database read looks harmless — the
+ * two agree on a live page — but they part company on the design editor's
+ * preview, which renders a draft revision: read the database there and the
+ * author picks Grid, saves, and watches the preview stay a list until publish.
  */
-async function postListVariant(db: Database, tenantId: string): Promise<PostListVariant> {
-  const template = await getSiteTemplate(db, tenantId);
-  const variant = template?.components?.postPreview?.variant;
+async function postListVariant(
+  db: Database,
+  tenantId: string,
+  template?: SiteTemplateDefinition | null,
+): Promise<PostListVariant> {
+  const resolved = template ?? (await getSiteTemplate(db, tenantId));
+  const variant = resolved?.components?.postPreview?.variant;
   const known: PostListVariant[] = ["default", "compact", "grid", "card"];
   return known.includes(variant as PostListVariant) ? (variant as PostListVariant) : "auto";
 }
@@ -148,7 +164,7 @@ async function resolveViewSlugs(
         const storage = createMediaStorage();
         listDefaults = {
           urlPrefix,
-          variant: await postListVariant(db, tenantId),
+          variant: await postListVariant(db, tenantId, options.template),
           mediaUrl: (key) => storage.url(key),
           ...options.postList,
         };

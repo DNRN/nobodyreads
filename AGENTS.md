@@ -167,13 +167,18 @@ If you are unsure whether a change warrants a doc update, update
 - **One concern per commit**, and never commit this repo and
   `nobodyreads.me` in one go — separate histories, separate visibility. Land
   the change here first when it spans both.
-- Commit or push only when asked. If work is on `main`, branch first.
+- Commit or push only when asked.
+- **Never commit on `main`.** Cut a branch before the first commit of any
+  change (`git fetch origin && git checkout -b <branch> origin/main`) and
+  commit there — don't commit on `main` and branch afterward. Every change
+  reaches `main` only by being merged through a pull request; see Pull
+  requests below.
 - **`main` has a GitHub ruleset that rejects direct pushes** — "Changes must
   be made through a pull request." A `git push` to `main` will fail with
   `GH013: Repository rule violations`, even for the repo owner, even when
   `main` is only ahead of `origin/main` (never behind). If work has piled up
-  on local `main`, push it to a branch and open a PR into `main` instead of
-  retrying the push — see Pull requests below.
+  on local `main` anyway, move it to a branch and open a PR into `main`
+  instead of retrying the push — see Pull requests below.
 
 ## Pull requests
 

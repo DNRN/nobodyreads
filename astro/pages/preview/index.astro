@@ -3,7 +3,7 @@ import SiteLayout from "../../layouts/SiteLayout.astro";
 import PlotPage from "../../components/PlotPage.astro";
 import { getDbClient } from "../../lib/db.js";
 import { previewContext, previewViewer } from "../../lib/context.js";
-import { autoReloadScript } from "../../../src/render/preview.js";
+import { autoReloadScript, readScratchTemplate } from "../../../src/render/preview.js";
 import { resolvePageView } from "../../../src/render/page.js";
 import { guardAuth } from "../../../src/admin/server/auth.js";
 import {
@@ -17,10 +17,14 @@ const db = await getDbClient();
 const ctx = await previewContext(db);
 const viewer = previewViewer(Astro.request);
 
-const [template, revisionId] = await Promise.all([
-  getLatestSiteTemplateRevision(db, ctx.tenantId),
+// A template the editor is holding but has not saved wins over the last saved
+// draft — it is what the author is looking at right now.
+const scratch = await readScratchTemplate(Astro.request);
+const [saved, revisionId] = await Promise.all([
+  scratch ? null : getLatestSiteTemplateRevision(db, ctx.tenantId),
   getLatestSiteTemplateRevisionId(db, ctx.tenantId),
 ]);
+const template = scratch ?? saved;
 
 const view = await resolvePageView(db, ctx, viewer, { kind: "home" }, template, Astro.response);
 
@@ -30,13 +34,18 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai")
 
 if (!view.page) Astro.response.status = 404;
 
-const reload = autoReloadScript({
+// Only a GET render polls for new revisions. A scratch render arrived by POST,
+// so reloading it would re-submit the form — and the editor drives its own
+// updates anyway, so there is nothing to poll for.
+const reload = scratch
+  ? null
+  : autoReloadScript({
   revisionId,
   endpoint: `${ctx.urlPrefix}/revision.json`,
   loginHref: "/admin/login",
-});
+    });
 ---
 <SiteLayout options={view.layout} templateOverride={view.template}>
   <PlotPage view={view} ctx={ctx} />
-  <script is:inline set:html={reload}></script>
+  {reload && <script is:inline set:html={reload}></script>}
 </SiteLayout>

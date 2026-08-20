@@ -7,6 +7,7 @@ import {
   initDb,
   resolvePageView,
   autoReloadScript,
+  readScratchTemplate,
   previewSurface,
   getLatestSiteTemplateRevision,
   getLatestSiteTemplateRevisionId,
@@ -25,10 +26,14 @@ const viewer = {
 } as const;
 
 const db = await initDb();
-const [template, revisionId] = await Promise.all([
-  getLatestSiteTemplateRevision(db, ctx.tenantId),
+// A template the editor is holding but has not saved wins over the last saved
+// draft — it is what the author is looking at right now.
+const scratch = await readScratchTemplate(Astro.request);
+const [saved, revisionId] = await Promise.all([
+  scratch ? null : getLatestSiteTemplateRevision(db, ctx.tenantId),
   getLatestSiteTemplateRevisionId(db, ctx.tenantId),
 ]);
+const template = scratch ?? saved;
 
 const segments = (Astro.params.path ?? "")
   .split("/")
@@ -49,13 +54,18 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai")
 
 if (!view.page) Astro.response.status = 404;
 
-const reload = autoReloadScript({
+// Only a GET render polls for new revisions. A scratch render arrived by POST,
+// so reloading it would re-submit the form — and the editor drives its own
+// updates anyway, so there is nothing to poll for.
+const reload = scratch
+  ? null
+  : autoReloadScript({
   revisionId,
   endpoint: `${ctx.urlPrefix}/revision.json`,
   loginHref: admin.loginHref,
-});
+    });
 ---
 <SiteLayout options={view.layout} templateOverride={view.template}>
   <PlotPage view={view} ctx={ctx} />
-  <script is:inline set:html={reload}></script>
+  {reload && <script is:inline set:html={reload}></script>}
 </SiteLayout>

@@ -17,6 +17,14 @@ export interface NobodyreadsAdminContext {
   siteBase: string;
   /** Where to send users to sign in when their session is missing/invalid. */
   loginHref: string;
+  /**
+   * Where the "Sign out" button should POST. Defaults to `${adminBase}/logout`,
+   * the package's own `EDITOR_PASSWORD`-session endpoint. A host with its own
+   * session mechanism (e.g. a platform-wide cookie) sets this to its real
+   * logout route so the button actually signs the user out instead of clearing
+   * a cookie the host never issued.
+   */
+  logoutHref?: string;
   /** Whether AI theming is configured for this host (shows/hides the AI panel). */
   aiEnabled?: boolean;
   /**
@@ -89,6 +97,7 @@ export function makeAdminContext(
     editorBase: input.editorBase ?? `${adminBase}/editor`,
     siteBase: input.siteBase,
     loginHref: input.loginHref,
+    logoutHref: input.logoutHref,
     aiEnabled: input.aiEnabled,
     paymentsEnabled: input.paymentsEnabled,
     payoutSettingsHref: input.payoutSettingsHref,

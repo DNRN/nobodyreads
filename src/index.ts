@@ -504,5 +504,6 @@ export type {
 // different viewer, which is what keeps the design editor honest.
 export { resolvePageView } from "./render/page.js";
 export type { PageView, RenderTarget } from "./render/page.js";
-export { pagePath, hasFeature } from "./render/context.js";
+export { pagePath, hasFeature, previewSurface } from "./render/context.js";
+export { autoReloadScript } from "./render/preview.js";
 export type { SiteContext, SiteFeatures, Viewer } from "./render/context.js";

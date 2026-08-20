@@ -69,7 +69,18 @@ const brandingHtml = logoUrl
 // below the fold. Compared against `homeHref` rather than a page kind so a
 // host that renders its own front page still gets the same answer.
 const trimSlash = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
-const isHomePage = trimSlash(Astro.url.pathname) === trimSlash(homeHref || "/");
+/**
+ * Prefer what the caller knows over what the URL suggests.
+ *
+ * Comparing `Astro.url.pathname` to the home href is a guess, and it is wrong
+ * on any host that rewrites: the multi-tenant platform serves a plot's home
+ * from an internal `/plot` namespace, so this compared "/plot" against "/" and
+ * silently dropped the hero from every live plot home page while the draft
+ * preview — which is not rewritten — kept it. `resolvePageView` already knows
+ * the page's kind, so it says so and nothing has to be inferred.
+ */
+const isHomePage =
+  options.isHome ?? trimSlash(Astro.url.pathname) === trimSlash(homeHref || "/");
 
 const showTagline =
   templateDef.sections.find((s) => s.type === "header")?.showTagline ?? true;

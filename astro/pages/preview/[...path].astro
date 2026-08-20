@@ -3,7 +3,7 @@ import SiteLayout from "../../layouts/SiteLayout.astro";
 import PlotPage from "../../components/PlotPage.astro";
 import { getDbClient } from "../../lib/db.js";
 import { previewContext, previewViewer } from "../../lib/context.js";
-import { autoReloadScript } from "../../lib/preview.js";
+import { autoReloadScript } from "../../../src/render/preview.js";
 import { resolvePageView, type RenderTarget } from "../../../src/render/page.js";
 import { guardAuth } from "../../../src/admin/server/auth.js";
 import {

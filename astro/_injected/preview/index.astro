@@ -1,139 +1,54 @@
 ---
 import SiteLayout from "../../layouts/SiteLayout.astro";
-import { requireAdminContext } from "nobodyreads/astro/context";
+import PlotPage from "../../components/PlotPage.astro";
+import { requireAdminContext, requireSiteContext } from "nobodyreads/astro/context";
+
 import {
   initDb,
-  getPageByKind,
-  getNavItems,
-  renderContent,
-  getReadableContent,
+  resolvePageView,
+  autoReloadScript,
+  previewSurface,
   getLatestSiteTemplateRevision,
   getLatestSiteTemplateRevisionId,
 } from "nobodyreads";
 
 // Preview shows unsaved drafts, so it is owner-only. The host middleware is
-// responsible for auth + populating the admin context; injected pages only
-// read from it (parity with single-tenant `/preview`, but tenant-scoped).
-const ctx = requireAdminContext(Astro.locals);
+// responsible for auth and for publishing both contexts; injected pages only
+// read from them.
+const admin = requireAdminContext(Astro.locals);
+const ctx = previewSurface(requireSiteContext(Astro.locals));
 
-Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
-
-const tenantId = ctx.tenantId;
-const previewUrlPrefix = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
-const siteName = ctx.siteName || "nobodyreads.me";
+// Owner-only route by construction, so the viewer is the owner. `?preview=`
+// lets them look at their own page through a reader's eyes; the gate ignores
+// it for anyone else, so it is not a way in.
+const param = new URL(Astro.request.url).searchParams.get("preview");
+const viewer = {
+  isOwner: true,
+  member: null,
+  previewAs:
+    param === "public" || param === "member" || param === "owner" ? param : null,
+} as const;
 
 const db = await initDb();
-const [siteTemplate, latestRevisionId, rawPage, navItems] = await Promise.all([
-  getLatestSiteTemplateRevision(db, tenantId),
-  getLatestSiteTemplateRevisionId(db, tenantId),
-  getPageByKind(db, "home", tenantId),
-  getNavItems(db, tenantId),
+const [template, revisionId] = await Promise.all([
+  getLatestSiteTemplateRevision(db, ctx.tenantId),
+  getLatestSiteTemplateRevisionId(db, ctx.tenantId),
 ]);
 
-const autoReloadScript = `(() => {
-  let currentRevisionId = ${latestRevisionId ?? "null"};
-  const pollIntervalMs = 1500;
-  const endpoint = "${previewUrlPrefix}/revision.json";
+const view = await resolvePageView(db, ctx, viewer, { kind: "home" }, template, Astro.response);
 
-  const schedule = () => window.setTimeout(check, pollIntervalMs);
+// Set after resolving: a draft is never indexable, whatever the page asked for.
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow, noai, noimageai");
 
-  async function check() {
-    try {
-      const response = await fetch(endpoint, {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "no-store",
-      });
+if (!view.page) Astro.response.status = 404;
 
-      if (response.status === 401) {
-        window.location.assign("${ctx.loginHref}");
-        return;
-      }
-
-      if (!response.ok) {
-        schedule();
-        return;
-      }
-
-      const data = await response.json();
-      const nextRevisionId = typeof data.revisionId === "number" ? data.revisionId : null;
-      if (nextRevisionId !== currentRevisionId) {
-        window.location.reload();
-        return;
-      }
-    } catch {
-      // Keep polling even on transient network/runtime errors.
-    }
-
-    schedule();
-  }
-
-  schedule();
-})();`;
-
-// Owner-only route: full body by default, `?preview=public` shows what a
-// non-paying reader sees. Rendering always goes through the redacted page.
-const previewParam = new URL(Astro.request.url).searchParams.get("preview");
-const previewAs =
-  previewParam === "public" || previewParam === "member" || previewParam === "owner"
-    ? previewParam
-    : null;
-const gate = rawPage
-  ? await getReadableContent(db, rawPage, tenantId, null, { isOwner: true, previewAs })
-  : null;
-const page = gate?.page ?? null;
-
-let htmlBody = "";
-if (page?.content?.trim()) {
-  htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
-    includeDrafts: true,
-    showMissingPlaceholders: true,
-    // The draft revision this page is rendering, so a listing takes its
-    // arrangement from the theme on screen rather than the published one.
-    template: siteTemplate,
-  });
-}
-
-if (!page) {
-  Astro.response.status = 404;
-}
-
-const options = page
-  ? {
-      tenantId,
-      title: page.title || siteName,
-      navItems,
-      activePageId: page.id,
-      description: page.seo?.metaDescription || page.excerpt,
-      pathname: previewUrlPrefix,
-      ogType: "website",
-      seo: page.seo,
-      page,
-      urlPrefix: previewUrlPrefix,
-      siteName,
-    }
-  : {
-      tenantId,
-      title: `404 — ${siteName}`,
-      navItems,
-      seo: { noIndex: true },
-      urlPrefix: previewUrlPrefix,
-      siteName,
-    };
+const reload = autoReloadScript({
+  revisionId,
+  endpoint: `${ctx.urlPrefix}/revision.json`,
+  loginHref: admin.loginHref,
+});
 ---
-<SiteLayout options={options} templateOverride={siteTemplate}>
-  {page ? (
-    <>
-      {htmlBody ? <div class="home-intro" set:html={htmlBody} /> : null}
-    </>
-  ) : (
-    <>
-      <div class="post-header">
-        <h1 class="post-title">Not found</h1>
-      </div>
-      <p>There's nothing here.</p>
-      <a href={previewUrlPrefix} class="back-link">&larr; back to home</a>
-    </>
-  )}
-  <script is:inline set:html={autoReloadScript}></script>
+<SiteLayout options={view.layout} templateOverride={view.template}>
+  <PlotPage view={view} ctx={ctx} />
+  <script is:inline set:html={reload}></script>
 </SiteLayout>

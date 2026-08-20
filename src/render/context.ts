@@ -122,6 +122,20 @@ export interface Viewer {
   previewAs: "owner" | "member" | "public" | null;
 }
 
+/**
+ * The same site, addressed through its owner-only draft surface.
+ *
+ * Exactly two things move, and this is the one place that decides which: links
+ * are built under `/preview`, so following one keeps you in the draft, and the
+ * wordmark returns to the draft's own home. The name, the tagline, the menu,
+ * the features, the API and the share target are all untouched — a preview that
+ * quietly dropped any of them would be the second renderer all over again.
+ */
+export function previewSurface(ctx: SiteContext): SiteContext {
+  const prefix = `${ctx.publicUrlPrefix}/preview`;
+  return { ...ctx, urlPrefix: prefix, brandHref: prefix };
+}
+
 /** The in-site path of a page, under whichever prefix the context sets. */
 export function pagePath(page: Pick<Page, "kind" | "slug">, urlPrefix: string): string {
   if (page.kind === "home") return urlPrefix || "/";

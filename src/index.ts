@@ -496,3 +496,13 @@ export type {
   StripeProviderOptions,
   StripeTaxOptions,
 } from "./payments/index.js";
+
+// --- Page rendering -------------------------------------------------------
+//
+// One pipeline for every page a site serves. See `src/render/page.ts`: a live
+// page and a draft preview are the same call with a different template and a
+// different viewer, which is what keeps the design editor honest.
+export { resolvePageView } from "./render/page.js";
+export type { PageView, RenderTarget } from "./render/page.js";
+export { pagePath, hasFeature } from "./render/context.js";
+export type { SiteContext, SiteFeatures, Viewer } from "./render/context.js";

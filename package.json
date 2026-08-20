@@ -60,6 +60,7 @@
     "./astro/SiteLayout": "./astro/layouts/SiteLayout.astro",
     "./astro/ShareBar": "./astro/components/ShareBar.astro",
     "./astro/Paywall": "./astro/components/Paywall.astro",
+    "./astro/PlotPage": "./astro/components/PlotPage.astro",
     "./community": {
       "types": "./dist/community/index.d.ts",
       "import": "./dist/community/index.js"

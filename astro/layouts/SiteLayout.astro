@@ -157,7 +157,10 @@ const authLinksBlock = menuItems.length
       ${menuHeaderHtml}${menuItemsHtml}
      </nav>`
   : "";
-const communityApiBase = `${options.urlPrefix || ""}/api`;
+// Falls back to the link prefix, but a surface whose links are not where its
+// API lives (the draft preview) passes its own — otherwise the join widget
+// calls /preview/api and does nothing.
+const communityApiBase = options.apiBase ?? `${options.urlPrefix || ""}/api`;
 const communityLoginHref = options.loginHref ?? `${options.urlPrefix || ""}/login`;
 const communityBlock = showCommunity
   ? `<div class="nb-community nb-community--topbar" data-community data-join-only data-api-base="${escapeHtml(communityApiBase)}" data-login-href="${escapeHtml(communityLoginHref)}"></div>`

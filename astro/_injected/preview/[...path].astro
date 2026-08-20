@@ -127,6 +127,9 @@ if (page) {
     pageTitle: page.title,
     includeDrafts: true,
     showMissingPlaceholders: true,
+    // The draft revision this page is rendering, so a listing takes its
+    // arrangement from the theme on screen rather than the published one.
+    template: siteTemplate,
   });
 } else {
   Astro.response.status = 404;

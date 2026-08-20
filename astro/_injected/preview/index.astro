@@ -88,6 +88,9 @@ if (page?.content?.trim()) {
   htmlBody = await renderContent(db, page.content, tenantId, previewUrlPrefix, {
     includeDrafts: true,
     showMissingPlaceholders: true,
+    // The draft revision this page is rendering, so a listing takes its
+    // arrangement from the theme on screen rather than the published one.
+    template: siteTemplate,
   });
 }
 

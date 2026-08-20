@@ -10,6 +10,9 @@ vi.mock("../shared/db.js", () => ({
 import { resolveViews } from "./render.js";
 import { upsertContentView, upsertPage } from "./db.js";
 import { DEFAULT_COLLECTION_TEMPLATE } from "./collection-template.js";
+import { addSiteTemplateRevision, setCurrentSiteTemplateRevision } from "../shared/site-bundle.js";
+import { DEFAULT_TEMPLATE } from "../template/defaults.js";
+import type { SiteTemplateDefinition } from "../template/types.js";
 
 const TENANT = "_default";
 
@@ -157,5 +160,44 @@ describe("custom collections render without an opt-in flag", () => {
     const out = await resolveViews(t.db, "{{collection:broken}}", TENANT, "");
     expect(out).toContain("content-view-error");
     expect(out).toContain("never closed");
+  });
+});
+
+describe("post list layout", () => {
+  const withVariant = (variant: string) =>
+    ({
+      ...DEFAULT_TEMPLATE,
+      components: { postPreview: { variant } },
+    }) as unknown as SiteTemplateDefinition;
+
+  /** Publish `card`, then leave `grid` sitting unpublished — the editor's state. */
+  async function seedThemes(): Promise<SiteTemplateDefinition> {
+    const published = await addSiteTemplateRevision(t.db, withVariant("card"), TENANT);
+    await setCurrentSiteTemplateRevision(t.db, published, TENANT);
+    const draft = withVariant("grid");
+    await addSiteTemplateRevision(t.db, draft, TENANT);
+    return draft;
+  }
+
+  it("uses the published theme when handed none", async () => {
+    await seedThemes();
+
+    const out = await resolveViews(t.db, "{{collection:latest-posts}}", TENANT);
+
+    expect(out).toContain("post-list--card");
+  });
+
+  it("uses the theme it is handed, not the published one", async () => {
+    const draft = await seedThemes();
+
+    const out = await resolveViews(t.db, "{{collection:latest-posts}}", TENANT, "", {
+      template: draft,
+    });
+
+    // The bug this guards: the preview renders a draft revision, so reading the
+    // published theme here left an author's new arrangement invisible until
+    // they published it.
+    expect(out).toContain("post-list--grid");
+    expect(out).not.toContain("post-list--card");
   });
 });

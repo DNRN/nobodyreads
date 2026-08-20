@@ -170,6 +170,7 @@ export async function resolvePageView(
       description: page.seo?.metaDescription || page.excerpt,
       pathname: pagePath(page, ctx.urlPrefix),
       ogType: target.kind === "home" ? "website" : target.kind === "post" ? "article" : undefined,
+      isHome: target.kind === "home",
       seo: page.seo,
       page,
       tenantId: ctx.tenantId,

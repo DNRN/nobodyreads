@@ -1,5 +1,6 @@
 import type { Database } from "../../src/db/index.js";
 import type { SiteContext, Viewer } from "../../src/render/context.js";
+import { previewSurface } from "../../src/render/context.js";
 import { DEFAULT_TENANT_ID } from "../../src/shared/types.js";
 import { getSiteSettings, resolveSiteIdentity } from "../../src/shared/site-settings.js";
 import { getLocalMemberIdentity } from "../../src/community/auth.js";
@@ -77,17 +78,12 @@ export async function siteContext(db: Database): Promise<SiteContext> {
 /**
  * The owner-only draft surface at `/preview`.
  *
- * Only two things move: in-site links are built under `/preview`, so following
- * one keeps you in the draft, and the wordmark returns to the draft's own home.
- * Everything else — the API the widgets call, the feed, the login target — still
- * points at the real site, because those are not part of the draft.
- *
- * Note what is *not* different: the name, the tagline, the menu, the features.
- * A preview that quietly dropped any of those would be a second renderer.
+ * Derived from the public context rather than built beside it, so the two
+ * cannot drift: `previewSurface` is the single definition of what the draft
+ * surface changes.
  */
 export async function previewContext(db: Database): Promise<SiteContext> {
-  const prefix = `${basePrefix()}/preview`;
-  return { ...(await baseContext(db)), urlPrefix: prefix, brandHref: prefix };
+  return previewSurface(await siteContext(db));
 }
 
 /** Who is asking, on the public site. */

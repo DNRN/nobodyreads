@@ -1,3 +1,5 @@
+import type { SiteContext } from "../render/context.js";
+
 /**
  * Runtime context for the injected admin pages.
  *
@@ -112,4 +114,44 @@ export function makeAdminContext(
     siteName: input.siteName,
     homeUrl: input.homeUrl ?? adminBase,
   };
+}
+
+// --- Site context ---------------------------------------------------------
+
+/**
+ * Where a host publishes the `SiteContext` for the site this request addresses.
+ *
+ * Same contract as the admin context above, for the render layer: the host
+ * resolves which site is being served and what it is called, and the injected
+ * pages only read. It is what lets the draft preview render a *hosted* site
+ * faithfully — with that site's name, tagline, hero and account menu — from
+ * pages that live inside this package and know nothing about tenants.
+ *
+ * Published for every request that addresses a site, not only owner-only ones:
+ * a host's own public pages should read the same context the preview does, or
+ * the two have already diverged.
+ */
+export const SITE_CONTEXT_LOCALS_KEY = "nobodyreadsSite" as const;
+
+export function getSiteContext(
+  locals: Record<string, unknown> | undefined | null
+): SiteContext | undefined {
+  if (!locals) return undefined;
+  const value = (locals as Record<string, unknown>)[SITE_CONTEXT_LOCALS_KEY];
+  return (value ?? undefined) as SiteContext | undefined;
+}
+
+/** Read the site context or throw, so a missing middleware fails loudly. */
+export function requireSiteContext(
+  locals: Record<string, unknown> | undefined | null
+): SiteContext {
+  const ctx = getSiteContext(locals);
+  if (!ctx) {
+    throw new Error(
+      "nobodyreads site context is not set on Astro.locals. " +
+        "Install a middleware that populates Astro.locals.nobodyreadsSite " +
+        "before the request reaches any injected site page."
+    );
+  }
+  return ctx;
 }

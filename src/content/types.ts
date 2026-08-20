@@ -189,6 +189,12 @@ export interface LayoutOptions {
    * `${urlPrefix}/api`, which is only right where links and API share a prefix.
    */
   apiBase?: string;
+  /**
+   * Whether this page is the site's front page, which is the only place the
+   * hero belongs. Stated rather than inferred from the URL: a host that
+   * rewrites its routes makes the URL a lie.
+   */
+  isHome?: boolean;
   siteName?: string;
   siteTagline?: string;
   /** Site-wide default social image, used when a page has no `seo.ogImage`. */

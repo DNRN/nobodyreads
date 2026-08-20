@@ -271,6 +271,7 @@ export type { DefaultHomePageOptions } from "./content/defaults.js";
 
 // Templates & rendering
 export { renderPostListView, heroMetaLine } from "./content/templates.js";
+export { listUnresolvedViews } from "./content/render.js";
 export type { PostListVariant, PostListRenderOptions } from "./content/templates.js";
 export { renderMarkdown, resolveLinks, resolveViews, renderContent } from "./content/render.js";
 export { describeCollection } from "./content/describe-collection.js";

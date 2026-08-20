@@ -74,8 +74,16 @@ export async function resolveLinks(
 // --- {{collection:slug}} resolution ---
 
 export interface ResolveViewsOptions {
+  /**
+   * Resolve a collection even when it is unpublished.
+   *
+   * For the collections admin screen, which previews each collection as a card
+   * and must therefore render the ones not published yet — that is the screen
+   * where they are managed. **Not** for a page render: a reader never sees an
+   * unpublished collection, so neither may any surface that claims to show
+   * them what a reader gets.
+   */
   includeDrafts?: boolean;
-  showMissingPlaceholders?: boolean;
   /**
    * The theme this render is using, which a listing takes its layout from.
    *
@@ -129,6 +137,29 @@ async function postListVariant(
   return known.includes(variant as PostListVariant) ? (variant as PostListVariant) : "auto";
 }
 
+/**
+ * Collection tokens in `markdown` that resolve to nothing.
+ *
+ * An embed whose collection has been deleted, or never published, renders as
+ * empty space and says nothing about why. This is what lets an editor tell the
+ * author, next to the text they can fix, rather than the render trying to
+ * explain itself to a reader who cannot act on it.
+ */
+export async function listUnresolvedViews(
+  db: Database,
+  markdown: string,
+  tenantId: string
+): Promise<string[]> {
+  const slugs = [...new Set([...markdown.matchAll(embedTokenPattern())].map((m) => m[1]!))];
+
+  const missing: string[] = [];
+  for (const slug of slugs) {
+    const view = await getContentViewBySlug(db, slug, tenantId, { publishedOnly: true });
+    if (!view) missing.push(slug);
+  }
+  return missing;
+}
+
 /** Render each distinct {{collection:slug}} in `markdown` to its HTML. */
 async function resolveViewSlugs(
   db: Database,
@@ -150,12 +181,12 @@ async function resolveViewSlugs(
     });
 
     if (!view) {
-      viewHtml.set(
-        slug,
-        options.showMissingPlaceholders
-          ? `<div class="content-view content-view-missing"><p>Missing view: ${escapeHtml(slug)}</p></div>`
-          : ""
-      );
+      // A collection that no longer exists renders as nothing, on every
+      // surface. It used to be able to render a "Missing view" box instead,
+      // which put a message on the page that no reader would ever see and
+      // that told the author about it in the one place they could not act on
+      // it. `listUnresolvedViews` reports it to the editor instead.
+      viewHtml.set(slug, "");
       continue;
     }
 

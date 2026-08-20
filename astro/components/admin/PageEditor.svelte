@@ -91,6 +91,49 @@
   /** Held for review before the author commits it as the Share image. */
   let generatedCoverUrl = $state<string | null>(null);
   let content = $state(p.content ?? "");
+
+  /**
+   * Embedded collections that no longer resolve.
+   *
+   * A collection that was deleted, or never published, leaves the page
+   * rendering empty space where the embed is, and nothing on the page can say
+   * so — a note there would be addressed to a reader, who cannot act on it.
+   * Checked here instead, beside the text the author can actually fix.
+   */
+  let unresolvedViews = $state<string[]>([]);
+  let lintTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function runLint() {
+    // Cheap guard: no token, nothing to resolve, no request.
+    if (!content.includes("{{collection:")) {
+      unresolvedViews = [];
+      return;
+    }
+    try {
+      const res = await fetch(`${editorBase}/lint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) return;
+      unresolvedViews = ((await res.json()) as { unresolvedViews?: string[] }).unresolvedViews ?? [];
+    } catch {
+      // A check that cannot run says nothing rather than crying wolf.
+    }
+  }
+
+  function scheduleLint() {
+    if (lintTimer) clearTimeout(lintTimer);
+    lintTimer = setTimeout(runLint, 600);
+  }
+
+  // Re-check whenever the body changes, and once on load so an author opening
+  // a page that broke while they were away is told immediately.
+  $effect(() => {
+    void content;
+    scheduleLint();
+  });
   let slugManuallyEdited = false;
 
   let editorReady = $state(false);
@@ -820,6 +863,14 @@
             oninput={onTitleInput}
             required
           />
+        {/if}
+
+        {#if unresolvedViews.length > 0}
+          <p class="nbr-lint" role="status">
+            {unresolvedViews.length === 1 ? "This collection renders" : "These collections render"}
+            as nothing for a reader — deleted, or not published yet:
+            {#each unresolvedViews as slug, i (slug)}<code>{slug}</code>{i < unresolvedViews.length - 1 ? ", " : ""}{/each}.
+          </p>
         {/if}
 
         <div bind:this={crepeMount} class="nbr-milkdown" class:hidden={sourceMode}></div>

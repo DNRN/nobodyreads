@@ -3893,6 +3893,28 @@
 	color: var(--nr-muted);
 }
 
+/* ----- Collection lint ----- */
+/* Sits above the canvas, in the author's column, because it is about the text
+   they are editing. Warning-coloured but not an error: the page still saves and
+   still renders — an embed simply resolves to nothing. */
+.nr-admin .nbr-lint {
+	margin: 0 0 12px;
+	padding: 10px 12px;
+	border-left: 3px solid var(--nr-warning, #b26b1f);
+	border-radius: 0 4px 4px 0;
+	background: var(--nr-warning-soft, rgba(178, 107, 31, 0.1));
+	color: var(--nr-text);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.nr-admin .nbr-lint code {
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: rgba(127, 127, 127, 0.18);
+	font-size: 0.92em;
+}
+
 .nr-admin .nbr-design-actions {
 	display: flex;
 	align-items: center;

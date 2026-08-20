@@ -3,7 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { pageFormSchema } from "../../../db/validation.js";
 import { getPageById, findPageByKind, deletePage, upsertPage } from "../../../content/db.js";
-import { renderContent } from "../../../content/render.js";
+import { renderContent, listUnresolvedViews } from "../../../content/render.js";
 import type { Page, PageKind } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
 import type { AdminModuleContext } from "./types.js";
@@ -27,9 +27,9 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
   const app = new Hono();
 
   // Server-side render of unsaved markdown for the editor's live preview.
-  // Mirrors the public page pipeline so {{collection:slug}} embeds and
-  // [[id]] links render faithfully — including unpublished views — which the
-  // client-side `marked` pass cannot resolve (no DB / no SQL / no JS template).
+  // Mirrors the public page pipeline so {{collection:slug}} embeds and [[id]]
+  // links render exactly as they will for a reader — which the client-side
+  // `marked` pass cannot do (no DB, no SQL, no template language).
   app.post("/editor/preview", async (c) => {
     let content = "";
     let pageTitle: string | undefined;
@@ -43,12 +43,11 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
     }
 
     try {
-      const html = await renderContent(db, content, tenantId, urlPrefix, {
-        includeDrafts: true,
-        showMissingPlaceholders: true,
-        pageTitle,
-      });
-      return c.json({ html });
+      const html = await renderContent(db, content, tenantId, urlPrefix, { pageTitle });
+      // Reported rather than rendered: a collection that no longer resolves is
+      // the author's problem to fix, not a message to put on the page.
+      const unresolvedViews = await listUnresolvedViews(db, content, tenantId);
+      return c.json({ html, unresolvedViews });
     } catch (err) {
       console.error("Editor preview render error:", err);
       return c.json({ error: "Failed to render preview" }, 500);
@@ -172,6 +171,33 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       return c.redirect(`${editorBase}/${pageId}`);
     }
   );
+
+  /**
+   * Which {{collection:slug}} embeds in a draft resolve to nothing.
+   *
+   * Its own route because the editor is a WYSIWYG that renders its own text —
+   * it never asks the server for HTML, so there is no render response to carry
+   * this back on. Answering it separately keeps the check available to an
+   * author while they write, which is the only time it is actionable.
+   */
+  app.post("/editor/lint", async (c) => {
+    let content = "";
+    try {
+      const body = (await c.req.json()) as { content?: unknown };
+      if (typeof body.content === "string") content = body.content;
+    } catch {
+      return c.json({ error: "Invalid JSON body" }, 400);
+    }
+
+    try {
+      return c.json({
+        unresolvedViews: await listUnresolvedViews(db, content, tenantId),
+      });
+    } catch (err) {
+      console.error("Editor lint error:", err);
+      return c.json({ error: "Failed to check collections" }, 500);
+    }
+  });
 
   app.post("/editor/delete/:id", async (c) => {
     const pageId = c.req.param("id");

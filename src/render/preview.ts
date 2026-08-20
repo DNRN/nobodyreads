@@ -1,3 +1,5 @@
+import type { SiteTemplateDefinition } from "../template/types.js";
+
 /**
  * The draft preview's reload loop.
  *
@@ -57,4 +59,44 @@ export function autoReloadScript(options: {
 
   schedule();
 })();`;
+}
+
+/**
+ * A template the design editor is holding but has not saved, sent with the
+ * request that renders it.
+ *
+ * The editor patches the preview's stylesheet in place while an author drags a
+ * colour, which is honest for anything `generateCss` fully describes and a lie
+ * for anything else: a hero switched off, a different post arrangement, edited
+ * layout HTML. Those need the page built again, so the editor posts the
+ * in-flight template to this surface and the answer is a real render of it.
+ *
+ * Request-scoped on purpose. Nothing is stored, so there is no slot to expire,
+ * nothing to key by session, no way for one tab's unsaved experiment to reach
+ * another reader, and no behaviour that depends on which instance answered. The
+ * route is owner-only, so the only person who can post a template is the person
+ * already allowed to save one.
+ */
+export async function readScratchTemplate(
+  request: Request,
+): Promise<SiteTemplateDefinition | null> {
+  if (request.method !== "POST") return null;
+
+  const form = await request.formData().catch(() => null);
+  const raw = form?.get("template");
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  // The layout reads `tokens.light` without guarding, so a half-formed body
+  // would take the page down rather than showing the previous render.
+  const tokens = (parsed as { tokens?: { light?: unknown } } | null)?.tokens;
+  if (!tokens || typeof tokens !== "object" || !tokens.light) return null;
+
+  return parsed as SiteTemplateDefinition;
 }

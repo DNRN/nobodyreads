@@ -505,5 +505,5 @@ export type {
 export { resolvePageView } from "./render/page.js";
 export type { PageView, RenderTarget } from "./render/page.js";
 export { pagePath, hasFeature, previewSurface } from "./render/context.js";
-export { autoReloadScript } from "./render/preview.js";
+export { autoReloadScript, readScratchTemplate } from "./render/preview.js";
 export type { SiteContext, SiteFeatures, Viewer } from "./render/context.js";

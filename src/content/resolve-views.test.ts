@@ -7,7 +7,7 @@ vi.mock("../shared/db.js", () => ({
   getSiteTemplate: async () => null,
 }));
 
-import { resolveViews } from "./render.js";
+import { resolveViews, listUnresolvedViews } from "./render.js";
 import { upsertContentView, upsertPage } from "./db.js";
 import { DEFAULT_COLLECTION_TEMPLATE } from "./collection-template.js";
 import { addSiteTemplateRevision, setCurrentSiteTemplateRevision } from "../shared/site-bundle.js";
@@ -70,11 +70,13 @@ describe("resolveViews", () => {
     expect(out).not.toContain("{{collection:");
   });
 
-  it("shows a placeholder for an unknown slug when asked", async () => {
-    const out = await resolveViews(t.db, "{{collection:nope}}", TENANT, "", {
-      showMissingPlaceholders: true,
-    });
-    expect(out).toContain("nope");
+  it("renders an unknown slug as nothing, on every surface", async () => {
+    // It used to be able to render a "Missing view" box instead. That put a
+    // message on the page addressed to a reader, who cannot act on it, and it
+    // made the draft preview show markup the live page never would.
+    const out = await resolveViews(t.db, "{{collection:nope}}", TENANT);
+
+    expect(out.trim()).toBe("");
   });
 
   it("leaves markdown with no token untouched", async () => {
@@ -199,5 +201,46 @@ describe("post list layout", () => {
     // they published it.
     expect(out).toContain("post-list--grid");
     expect(out).not.toContain("post-list--card");
+  });
+});
+
+describe("listUnresolvedViews", () => {
+  it("names the collections a page embeds but no longer has", async () => {
+    const markdown = "{{collection:latest-posts}} and {{collection:gone}}";
+
+    expect(await listUnresolvedViews(t.db, markdown, TENANT)).toEqual(["gone"]);
+  });
+
+  it("says nothing when every embed resolves", async () => {
+    expect(await listUnresolvedViews(t.db, "{{collection:latest-posts}}", TENANT)).toEqual([]);
+  });
+
+  it("reports each missing collection once, however often it appears", async () => {
+    const markdown = "{{collection:gone}}\n\n{{collection:gone}}";
+
+    expect(await listUnresolvedViews(t.db, markdown, TENANT)).toEqual(["gone"]);
+  });
+
+  /**
+   * The lint reports what a *reader* will not see, so an unpublished collection
+   * counts as missing. It is the likeliest case by far — far more pages embed a
+   * collection that was never published than one that was deleted — and the old
+   * "Missing view" placeholder never caught it either.
+   */
+  it("counts an unpublished collection as missing", async () => {
+    await upsertContentView(
+      t.db,
+      {
+        id: "v-draft",
+        slug: "not-yet",
+        title: "Not yet",
+        kind: "post_list",
+        config: { order: "newest" },
+        published: false,
+      } as ContentView,
+      TENANT,
+    );
+
+    expect(await listUnresolvedViews(t.db, "{{collection:not-yet}}", TENANT)).toEqual(["not-yet"]);
   });
 });

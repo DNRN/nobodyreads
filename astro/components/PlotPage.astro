@@ -1,0 +1,125 @@
+---
+/**
+ * The body of a site page — everything inside `SiteLayout`'s content slot.
+ *
+ * This exists because a shared `LayoutOptions` is only half the fix. The page
+ * *markup* was hand-written at every call site too, and it drifted: the live
+ * plot wrapped a post's date and tags in `.post-meta` while the design
+ * editor's preview of the same post emitted a bare `<time>`. The Design tab
+ * generates CSS against `.post-preview .post-tags`, so the tag toggle styled
+ * markup that existed on only one of the two surfaces.
+ *
+ * Everything here is driven by the resolved `view` and the site's `ctx`. There
+ * is no branch on *which page called* — that is the whole point.
+ */
+import type { PageView } from "../../src/render/page.js";
+import { type SiteContext, hasFeature } from "../../src/render/context.js";
+import Paywall from "./Paywall.astro";
+import ShareBar from "./ShareBar.astro";
+
+interface Props {
+  view: PageView;
+  ctx: SiteContext;
+}
+
+const { view, ctx } = Astro.props;
+const { page, kind } = view;
+
+const homeHref = ctx.urlPrefix || "/";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// A teaser is a partial body, so it carries the fade whichever kind of page it
+// is on. `page-body` and `post-body` differ only in their own spacing rules.
+const bodyClass = kind === "post" ? "post-body" : "page-body";
+
+const showShare = kind === "post" && hasFeature(ctx, "sharing");
+const showCommunity = kind === "post" && hasFeature(ctx, "community");
+const showComments = kind === "post" && hasFeature(ctx, "comments");
+---
+{
+  !page ? (
+    <>
+      <div class="post-header">
+        <h1 class="post-title">Not found</h1>
+      </div>
+      <div class="page-body">
+        <p>There's nothing at this address.</p>
+        <p><a href={homeHref} class="back-link">&larr; back to home</a></p>
+      </div>
+    </>
+  ) : (
+    <>
+      {kind === "home" ? (
+        view.bodyHtml && <div class="home-intro" set:html={view.bodyHtml} />
+      ) : (
+        <>
+          <div class="post-header">
+            <h1 class="post-title">{page.title}</h1>
+            {kind === "post" && (
+              <div class="post-meta">
+                <time class="post-date" datetime={page.date}>{formatDate(page.date)}</time>
+                {page.tags.map((tag) => <span class="post-tag">{tag}</span>)}
+              </div>
+            )}
+          </div>
+          <div
+            class:list={[bodyClass, view.teaser && "post-body--teaser"]}
+            set:html={view.bodyHtml}
+          />
+        </>
+      )}
+
+      {view.teaser && view.decision?.visibility === "teaser" && (
+        <Paywall
+          decision={view.decision}
+          apiBase={ctx.apiBase}
+          pageId={page.id}
+          loginHref={ctx.loginHref}
+          signedIn={view.signedIn}
+          siteName={ctx.siteName}
+          spaceNoun={ctx.spaceNoun}
+        />
+      )}
+
+      {showShare && (
+        <ShareBar
+          url={`${ctx.siteUrl}${ctx.urlPrefix}/posts/${page.slug}`}
+          title={page.title}
+          excerpt={page.excerpt}
+        />
+      )}
+
+      {showCommunity && (
+        <div
+          class="nb-community"
+          data-community
+          data-likes-only
+          data-api-base={ctx.apiBase}
+          data-login-href={ctx.loginHref}
+          data-slug={page.slug}
+        />
+      )}
+
+      {showComments && (
+        <section
+          class="nb-comments"
+          data-comments
+          data-api-base={ctx.apiBase}
+          data-login-href={ctx.loginHref}
+          data-slug={page.slug}
+          data-enabled={String(page.commentsEnabled)}
+          data-can-moderate={String(view.isOwner)}
+        />
+      )}
+
+      {kind === "page" && <a href={homeHref} class="back-link">&larr; back to home</a>}
+    </>
+  )
+}

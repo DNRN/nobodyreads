@@ -16,6 +16,7 @@ import ClientRouter from "astro/components/ClientRouter.astro";
 import type { SiteTemplateDefinition } from "../../src/template/types.js";
 import { generateCss, generateHtml } from "../../src/template/generate.js";
 import { DEFAULT_TEMPLATE } from "../../src/template/defaults.js";
+import { resolveHeroShape } from "../../src/template/components/hero.js";
 import { isEmailEnabled } from "../../src/subscription/email.js";
 
 const { options, templateOverride, showCommunity = true } = Astro.props as {
@@ -85,18 +86,28 @@ const isHomePage =
 const showTagline =
   templateDef.sections.find((s) => s.type === "header")?.showTagline ?? true;
 
+// Read off the theme being rendered, never re-fetched: on the design editor's
+// preview the draft revision is the only place this answer is correct.
+const heroVariant = templateDef.components?.hero?.variant;
+
 function heroHtml(): string {
   if (!isHomePage) return "";
 
-  // A meta line means there is an archive worth leading with, so the hero steps
-  // back to one row and drops the tagline rather than stacking both.
-  const compact = Boolean(options.heroMeta);
+  // Both markup decisions belong to the theme's `hero` variant, which defaults
+  // to reading them off the site: a meta line means there is an archive worth
+  // leading with, so the hero steps back to one row and drops the tagline
+  // rather than stacking both, and the avatar waits until something is
+  // published behind it.
+  const { compact, monogram: showMonogram } = resolveHeroShape(heroVariant, {
+    hasMeta: Boolean(options.heroMeta),
+    hasPosts: options.heroMonogram ?? false,
+  });
   const letter = siteName.trim().charAt(0).toUpperCase();
 
   const avatarStyle = options.avatarColor
     ? ` style="background:${escapeHtml(options.avatarColor)}"`
     : "";
-  const monogram = !options.heroMonogram
+  const monogram = !showMonogram
     ? ""
     : logoUrl
       ? `<span class="site-monogram"><img class="site-monogram__disc" src="${escapeHtml(logoUrl)}" alt=""></span>`

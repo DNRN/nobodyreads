@@ -42,6 +42,8 @@ export {
 } from "./palette-css.js";
 export type { ThemeName } from "./palette-css.js";
 export { generateCss, generateHtml } from "./generate.js";
+export { resolveHeroShape } from "./components/hero.js";
+export type { HeroVariant, HeroSignals, HeroShape } from "./components/hero.js";
 export { DEFAULT_TEMPLATE } from "./defaults.js";
 export {
   siteTemplateDefinitionSchema,

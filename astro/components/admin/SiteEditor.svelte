@@ -117,6 +117,7 @@
   // --- Layout --------------------------------------------------------------
   const headerSection = stored.sections?.find((s) => s.type === "header");
 
+  let heroStyle = $state(stored.components?.hero?.variant ?? "auto");
   let postArrangement = $state(stored.components?.postPreview?.variant ?? "auto");
   let readingWidth = $state(parseInt(stored.tokens?.light?.maxWidth ?? "900", 10) || 900);
   let showHero = $state(headerSection?.type === "header" ? headerSection.showHero : true);
@@ -390,6 +391,7 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
     densityStep = matchDensityStep(t.tokens.light) ?? densityStep;
     cornerStep = matchCornerStep(t.tokens.light.radius) ?? cornerStep;
     readingWidth = parseInt(t.tokens?.light?.maxWidth ?? "900", 10) || readingWidth;
+    heroStyle = t.components?.hero?.variant ?? heroStyle;
     postArrangement = t.components?.postPreview?.variant ?? postArrangement;
 
     editor?.loadTemplate(t as unknown as Record<string, unknown>);
@@ -405,6 +407,13 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
     await loadTrials();
   }
 
+
+  const heroStyles = [
+    { id: "auto", label: "Automatic" },
+    { id: "full", label: "Full" },
+    { id: "compact", label: "Compact" },
+    { id: "bare", label: "Name only" },
+  ];
 
   const arrangements = [
     { id: "auto", label: "Automatic" },
@@ -434,6 +443,7 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
     // Components come from the Components tab's DOM. Merge rather than replace,
     // or picking a home arrangement would wipe every token override.
     const components = { ...((base.components as ComponentMap) ?? {}) };
+    components.hero = { ...components.hero, variant: heroStyle };
     components.postPreview = { ...components.postPreview, variant: postArrangement };
 
     return {
@@ -959,6 +969,30 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
 
       {#if !codeMode && activeTab === "layout"}
         <div class="nbr-control">
+          <span class="nr-eyebrow">Site intro</span>
+          <div class="nr-segmented" role="radiogroup" aria-label="Site intro">
+            {#each heroStyles as option}
+              <label class="nr-segmented-option">
+                <input
+                  type="radio"
+                  name="hero-style"
+                  value={option.id}
+                  bind:group={heroStyle}
+                  onchange={touched}
+                  disabled={!showHero}
+                />
+                {option.label}
+              </label>
+            {/each}
+          </div>
+          <p class="hint">
+            The avatar and name above your posts. Automatic shows the avatar once you have published
+            something and steps back to a single row once there are more than four posts; Name only
+            drops the avatar for good.
+          </p>
+        </div>
+
+        <div class="nbr-control">
           <span class="nr-eyebrow">Home page posts</span>
           <div class="nr-segmented" role="radiogroup" aria-label="Home page posts">
             {#each arrangements as option}
@@ -1000,7 +1034,7 @@ ${fontHref ? `<link rel="stylesheet" href="${fontHref}">` : ""}
           <span class="nr-eyebrow">In the header</span>
           <label class="nbr-check">
             <input type="checkbox" bind:checked={showHero} onchange={touched} />
-            <span>Site name &amp; tagline</span>
+            <span>Site intro (avatar, name, tagline)</span>
           </label>
           <label class="nbr-check">
             <input type="checkbox" bind:checked={showNav} onchange={touched} />

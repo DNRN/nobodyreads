@@ -341,6 +341,7 @@ export type {
 export {
   generateCss,
   generateHtml,
+  resolveHeroShape,
   DEFAULT_TEMPLATE,
   componentRegistry,
   getComponentByName,
@@ -367,6 +368,7 @@ export {
   GENERATED_END,
 } from "./template/index.js";
 export type { ThemeDiff } from "./template/index.js";
+export type { HeroVariant, HeroSignals, HeroShape } from "./template/index.js";
 export type { Palette, ThemeName } from "./template/index.js";
 export type { FontFamily, FontRole } from "./template/index.js";
 export type {

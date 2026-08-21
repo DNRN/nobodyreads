@@ -3022,6 +3022,17 @@
 	outline-offset: 2px;
 }
 
+/* Still readable, plainly inert: a segmented control whose whole feature is
+   switched off elsewhere shows what is waiting rather than vanishing. */
+.nr-admin .nr-segmented-option:has(input:disabled) {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.nr-admin .nr-segmented-option:has(input:disabled):hover {
+	border-color: var(--nr-border-strong);
+}
+
 /* ----- Help disc -----
    The reopenable `?`, pinned bottom-right of the canvas. Everything explains
    itself, but only when asked. */

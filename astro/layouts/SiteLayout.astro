@@ -93,11 +93,14 @@ function heroHtml(): string {
   const compact = Boolean(options.heroMeta);
   const letter = siteName.trim().charAt(0).toUpperCase();
 
+  const avatarStyle = options.avatarColor
+    ? ` style="background:${escapeHtml(options.avatarColor)}"`
+    : "";
   const monogram = !options.heroMonogram
     ? ""
     : logoUrl
       ? `<span class="site-monogram"><img class="site-monogram__disc" src="${escapeHtml(logoUrl)}" alt=""></span>`
-      : `<span class="site-monogram" aria-hidden="true"><span class="site-monogram__disc">${escapeHtml(letter)}</span></span>`;
+      : `<span class="site-monogram" aria-hidden="true"><span class="site-monogram__disc"${avatarStyle}>${escapeHtml(letter)}</span></span>`;
   const eyebrow = options.heroEyebrow
     ? `<p class="site-hero__eyebrow">${escapeHtml(options.heroEyebrow)}</p>`
     : "";

@@ -69,6 +69,7 @@ export const DEFAULT_TEMPLATE: SiteTemplateDefinition = {
     },
   ],
   components: {
+    hero: { variant: "auto" },
     postPreview: { variant: "auto" },
     nav: { variant: "inline" },
   },

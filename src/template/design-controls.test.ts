@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DEFAULT_TEMPLATE } from "./defaults.js";
 import { generateCss, generateHtml } from "./generate.js";
 import { validateTheme } from "./theme-io.js";
+import { resolveHeroShape, heroComponent } from "./components/hero.js";
 import type { HeaderSectionConfig, SiteTemplateDefinition } from "./types.js";
 
 function withHeader(patch: Partial<HeaderSectionConfig>): SiteTemplateDefinition {
@@ -118,5 +119,78 @@ describe("grid post listing", () => {
       components: { ...DEFAULT_TEMPLATE.components, postPreview: { variant: "grid" } },
     });
     expect(result.ok).toBe(true);
+  });
+});
+
+/**
+ * The hero used to make both of these decisions by itself, from post counts the
+ * author never saw. The variant is that guess turned into a choice, so what is
+ * pinned here is that `auto` still guesses exactly as it always did and that
+ * each explicit variant beats the signals rather than blending with them.
+ */
+describe("hero shape", () => {
+  it("guesses from the site when left automatic", () => {
+    expect(resolveHeroShape("auto", { hasMeta: false, hasPosts: false })).toEqual({
+      compact: false,
+      monogram: false,
+    });
+    expect(resolveHeroShape("auto", { hasMeta: false, hasPosts: true })).toEqual({
+      compact: false,
+      monogram: true,
+    });
+    expect(resolveHeroShape("auto", { hasMeta: true, hasPosts: true })).toEqual({
+      compact: true,
+      monogram: true,
+    });
+  });
+
+  // A theme stored before the variant existed has no `hero` entry at all, and
+  // has to keep rendering exactly as it did.
+  it("treats a missing variant as automatic", () => {
+    const signals = { hasMeta: true, hasPosts: true };
+    expect(resolveHeroShape(undefined, signals)).toEqual(resolveHeroShape("auto", signals));
+    expect(resolveHeroShape("nonsense", signals)).toEqual(resolveHeroShape("auto", signals));
+  });
+
+  it("lets an explicit choice override the signals in both directions", () => {
+    const empty = { hasMeta: false, hasPosts: false };
+    const archive = { hasMeta: true, hasPosts: true };
+
+    // Full keeps the stacked hero over a long archive that auto would compact.
+    expect(resolveHeroShape("full", archive)).toEqual({ compact: false, monogram: true });
+    // Compact steps back on a plot auto would still be introducing.
+    expect(resolveHeroShape("compact", empty)).toEqual({ compact: true, monogram: true });
+  });
+
+  it("drops the avatar for Name only without touching density", () => {
+    expect(resolveHeroShape("bare", { hasMeta: false, hasPosts: true })).toEqual({
+      compact: false,
+      monogram: false,
+    });
+    expect(resolveHeroShape("bare", { hasMeta: true, hasPosts: true })).toEqual({
+      compact: true,
+      monogram: false,
+    });
+  });
+
+  it("offers every resolvable variant in the editor's picker", () => {
+    expect(Object.keys(heroComponent.variants)).toEqual(["auto", "full", "compact", "bare"]);
+    expect(heroComponent.defaultVariant).toBe("auto");
+
+    for (const variant of Object.keys(heroComponent.variants)) {
+      const result = validateTheme({
+        ...DEFAULT_TEMPLATE,
+        components: { ...DEFAULT_TEMPLATE.components, hero: { variant } },
+      });
+      expect(result.ok).toBe(true);
+    }
+  });
+
+  it("rejects a variant nothing resolves", () => {
+    const result = validateTheme({
+      ...DEFAULT_TEMPLATE,
+      components: { ...DEFAULT_TEMPLATE.components, hero: { variant: "nonsense" } },
+    });
+    expect(result.ok).toBe(false);
   });
 });

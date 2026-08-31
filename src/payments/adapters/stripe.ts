@@ -92,6 +92,30 @@ export interface StripeProviderOptions {
   client?: Stripe;
 }
 
+/**
+ * Sanitise text for `statement_descriptor_suffix`.
+ *
+ * Stripe rejects `<`, `>`, `\`, `"`, `'` and `*` outright, requires at least
+ * one letter, and caps the *combined* prefix + suffix at 22 characters. The
+ * prefix is account-level and not visible from here, so the suffix is held to a
+ * conservative 10 — enough for a plot name, short enough to survive most
+ * prefixes without Stripe truncating the whole thing.
+ *
+ * Returns undefined rather than a fallback when nothing usable survives: an
+ * absent suffix leaves the account descriptor alone, which is always valid,
+ * whereas a mangled one is a confusing line on a stranger's bank statement.
+ */
+function sanitizeDescriptorSuffix(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined;
+  const cleaned = raw
+    .replace(/[<>\\"'*]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 10)
+    .trim();
+  return /[A-Za-z]/.test(cleaned) ? cleaned : undefined;
+}
+
 export function createStripeProvider(options: StripeProviderOptions): PaymentProvider {
   const stripe = options.client ?? new Stripe(options.secretKey);
   const webhookSecret = options.webhookSecret;
@@ -158,9 +182,18 @@ export function createStripeProvider(options: StripeProviderOptions): PaymentPro
       // **subscription's** metadata. Without this, every renewal arrives with
       // no idea which member it belongs to.
       if (isSubscription) {
+        // Checkout offers no statement-descriptor field on `subscription_data`,
+        // so a recurring charge always shows the account's own descriptor.
+        // `statementDescriptorSuffix` is deliberately not applied here rather
+        // than silently dropped somewhere less obvious.
         params.subscription_data = { metadata };
       } else {
         params.payment_intent_data = { metadata };
+        const suffix = sanitizeDescriptorSuffix(req.statementDescriptorSuffix);
+        // `statement_descriptor` (no suffix) is for non-card charges only —
+        // setting it on a card charge is an outright API error. The suffix form
+        // is the one that works, and it concatenates onto the account prefix.
+        if (suffix) params.payment_intent_data.statement_descriptor_suffix = suffix;
       }
 
       const session = await stripe.checkout.sessions.create(params);

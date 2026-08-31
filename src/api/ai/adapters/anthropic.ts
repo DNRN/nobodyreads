@@ -10,6 +10,31 @@ import {
 } from "./shared.js";
 
 /**
+ * Build the user turn. Text-only calls pass a plain string, which is what every
+ * caller did before vision existed; an image call becomes a content-block array
+ * with the images *before* the text, because Claude attends better to a
+ * question asked after the thing it is about.
+ */
+function buildUserContent(
+  spec: StructuredCallSpec
+): string | Anthropic.Messages.ContentBlockParam[] {
+  if (!spec.images || spec.images.length === 0) return spec.user;
+  return [
+    ...spec.images.map(
+      (image): Anthropic.Messages.ContentBlockParam => ({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: image.mediaType as Anthropic.Messages.Base64ImageSource["media_type"],
+          data: image.data,
+        },
+      })
+    ),
+    { type: "text", text: spec.user },
+  ];
+}
+
+/**
  * Anthropic (Claude) structured caller. Maps a JSON Schema to Claude's native
  * constraint mechanism: a single forced tool (named after the spec's
  * `schemaName`) whose `input_schema` is that schema. The model can only return
@@ -42,7 +67,7 @@ export function createAnthropicCaller(config: AiProviderConfig): StructuredCalle
           },
         ],
         tool_choice: { type: "tool", name: spec.schemaName },
-        messages: [{ role: "user", content: spec.user }],
+        messages: [{ role: "user", content: buildUserContent(spec) }],
       });
 
       const toolUse = res.content.find((block) => block.type === "tool_use");

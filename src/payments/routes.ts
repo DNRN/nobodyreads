@@ -38,6 +38,13 @@ export interface PaymentsRouterOptions {
    * so `null` stays the documented off switch. Same shape as `RulesetSource`.
    */
   paymentProvider?: PaymentProviderSource;
+  /**
+   * Text appended to the card statement descriptor for one-off purchases, so a
+   * reader recognises the charge. A multi-tenant host passes the plot's name;
+   * a self-hoster's account descriptor is already their own name, so this
+   * defaults to unset.
+   */
+  statementDescriptorSuffix?: string;
 }
 
 /**
@@ -113,6 +120,7 @@ export function createPaymentsRoutes(options: PaymentsRouterOptions): Hono {
         successUrl,
         cancelUrl,
         customerRef: await getPaymentCustomerRef(db, tenantId, member, provider.id),
+        statementDescriptorSuffix: options.statementDescriptorSuffix,
       });
       return c.redirect(session.url, 303);
     } catch (err) {

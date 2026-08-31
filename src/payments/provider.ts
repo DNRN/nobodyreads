@@ -25,6 +25,17 @@ export interface CheckoutRequest {
   customerRef?: string | null;
   /** Reader's email, when known — prefills Checkout. */
   email?: string | null;
+  /**
+   * Appended to the account's statement descriptor prefix on the card
+   * statement, e.g. the plot being bought from.
+   *
+   * Exists because an unrecognised descriptor is the single largest avoidable
+   * source of disputes: a reader who subscribed to a writer remembers the
+   * writer's name, not the platform's. Only one-off payments can carry it —
+   * Stripe's Checkout API has no descriptor field on `subscription_data` at
+   * all, so a subscription inherits the account default and this is ignored.
+   */
+  statementDescriptorSuffix?: string | null;
 }
 
 /**

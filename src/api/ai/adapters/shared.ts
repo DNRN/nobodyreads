@@ -37,11 +37,50 @@ export const MAX_TOKENS = 8192;
  * mechanism (OpenAI `json_schema`, Anthropic forced tool use, Gemini
  * `responseJsonSchema`, Ollama `format`).
  */
+/**
+ * An image handed to a vision-capable backend alongside the text prompt.
+ *
+ * Raw bytes as base64 rather than a URL: the only caller today is content
+ * screening, which runs on freshly uploaded media that may not be reachable
+ * from the provider (private buckets, a not-yet-public key), and handing the
+ * model a URL would make the check depend on the storage layer being world
+ * readable — which is precisely the thing we do not want for content nobody
+ * has reviewed yet.
+ */
+export interface StructuredCallImage {
+  /** Base64-encoded image bytes, with no `data:` URI prefix. */
+  data: string;
+  /** IANA media type, e.g. `image/png`, `image/jpeg`, `image/webp`. */
+  mediaType: string;
+}
+
+/**
+ * Guard for adapters that cannot see images.
+ *
+ * Vision is implemented on the Anthropic adapter only, because that is the one
+ * `.me` pins for moderation and adding it to four backends on spec would be
+ * four untested code paths. The rest throw rather than silently judging an
+ * image on its filename — a screening call that quietly saw nothing is worse
+ * than one that failed, because the caller records the former as "clear".
+ */
+export function assertNoImages(spec: StructuredCallSpec, backend: string): void {
+  if (spec.images && spec.images.length > 0) {
+    throw new Error(
+      `The ${backend} adapter cannot accept images; use an image-capable provider for this call.`
+    );
+  }
+}
+
 export interface StructuredCallSpec {
   /** System instruction for the call. */
   system: string;
   /** User content the model responds to. */
   user: string;
+  /**
+   * Images to judge alongside {@link user}. Only backends that support vision
+   * accept these; the others throw via {@link assertNoImages}.
+   */
+  images?: StructuredCallImage[];
   /** snake_case name for the schema/tool (e.g. "theme_diff", "set_verdict"). */
   schemaName: string;
   /** JSON Schema the response must conform to. */

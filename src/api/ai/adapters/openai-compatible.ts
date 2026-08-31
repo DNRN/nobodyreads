@@ -3,6 +3,7 @@ import { themeDiffJsonSchema, type ThemeDiff } from "../../../template/ai-theme.
 import type { AiProviderConfig } from "../../../admin/server/modules/types.js";
 import type { AIThemeProvider } from "../provider.js";
 import {
+  assertNoImages,
   MAX_TOKENS,
   SYSTEM_PROMPT,
   parseLooseJson,
@@ -104,6 +105,7 @@ export function createOpenAiCompatibleCaller(config: AiProviderConfig): Structur
 
   return {
     async callStructured(spec: StructuredCallSpec): Promise<unknown> {
+      assertNoImages(spec, "openai-compatible");
       // Prefer strict structured output (rock-solid on OpenAI). Fall back to
       // plain JSON mode when the provider's grammar compiler rejects the
       // schema, or when the "structured" response is truncated / isn't JSON

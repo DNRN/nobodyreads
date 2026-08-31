@@ -3,7 +3,12 @@ import { DEFAULT_TENANT_ID } from "../../shared/types.js";
 import type { Database } from "../../db/index.js";
 import type { MediaStorage } from "../../media/storage.js";
 import type { EmailResolvable } from "../../subscription/email.js";
-import type { AdminModuleContext, AiProviderConfig } from "./modules/types.js";
+import type {
+  AdminModuleContext,
+  AiProviderConfig,
+  ContentPublishedEvent,
+  MediaUploadedEvent,
+} from "./modules/types.js";
 import type { ComfyProviderConfig } from "../../api/ai/comfy/config.js";
 import { mountAuthRoutes } from "./modules/auth-routes.js";
 import { createContentRoutes } from "./modules/content.js";
@@ -45,6 +50,14 @@ export interface AdminRouterOptions {
    * when omitted, cover-image routes return 503 and the generate UI is hidden.
    */
   comfy?: ComfyProviderConfig;
+  /**
+   * Fired (never awaited) when a post or page is first published — for hosts
+   * that screen, index or announce content they did not write. Errors are
+   * logged and swallowed; this can never fail an author's save.
+   */
+  onContentPublished?: (event: ContentPublishedEvent) => void | Promise<void>;
+  /** Same contract as {@link onContentPublished}, for media library uploads. */
+  onMediaUploaded?: (event: MediaUploadedEvent) => void | Promise<void>;
 }
 
 /** @deprecated Use AdminRouterOptions */
@@ -68,6 +81,8 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     siteName: options.siteName,
     ai: options.ai,
     comfy: options.comfy,
+    onContentPublished: options.onContentPublished,
+    onMediaUploaded: options.onMediaUploaded,
   };
 }
 

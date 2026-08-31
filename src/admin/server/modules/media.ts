@@ -51,6 +51,23 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
       tenantId
     );
 
+    if (ctx.onMediaUploaded) {
+      const event = {
+        tenantId,
+        mediaId,
+        storageKey: stored.key,
+        filename: file.name,
+        mimeType: file.type,
+        size: buffer.length,
+        data: buffer,
+      };
+      // Fire-and-forget, like the publish hook: an upload must not fail because
+      // the host's screening provider is having a bad day.
+      Promise.resolve()
+        .then(() => ctx.onMediaUploaded!(event))
+        .catch((err) => console.error("onMediaUploaded hook failed:", err));
+    }
+
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) {
       return c.json({

@@ -76,6 +76,7 @@ export type {
 // Moderation (file-sourced ruleset + AI-assisted comment review)
 export {
   reviewComment,
+  reviewContent,
   DEFAULT_RULESET_PATH,
   loadRulesetFile,
   clearRulesetCache,
@@ -96,6 +97,11 @@ export {
 } from "./moderation/index.js";
 export type {
   ModerationDecision,
+  ContentSubjectKind,
+  ContentReviewSubject,
+  ContentReviewOutcome,
+  ContentReviewUnreviewed,
+  ReviewContentOptions,
   ReviewCommentOptions,
   ModerationCallInput,
   RulesetSource,
@@ -116,7 +122,14 @@ export { createMediaRoutes } from "./admin/server/modules/media.js";
 export { createViewRoutes } from "./admin/server/modules/views.js";
 export { createPaymentsAdminRoutes } from "./admin/server/modules/payments.js";
 export { mountAuthRoutes } from "./admin/server/modules/auth-routes.js";
-export type { AdminModuleContext, AiProviderConfig, AiProvider } from "./admin/server/modules/types.js";
+export type {
+  AdminModuleContext,
+  AiProviderConfig,
+  AiProvider,
+  ContentPublishedEvent,
+  MediaUploadedEvent,
+} from "./admin/server/modules/types.js";
+export type { StructuredCallImage } from "./api/ai/adapters/shared.js";
 export {
   createSubscriptionApiRoutes,
   createSubscriptionAdminRoutes,

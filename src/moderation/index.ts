@@ -1,4 +1,14 @@
 export { reviewComment } from "./pipeline.js";
+export { reviewContent } from "./content.js";
+export type {
+  ContentSubjectKind,
+  ContentReviewSubject,
+  ContentReviewOutcome,
+  ContentReviewClear,
+  ContentReviewFlagged,
+  ContentReviewUnreviewed,
+  ReviewContentOptions,
+} from "./content.js";
 export type { ModerationDecision, ReviewCommentOptions } from "./pipeline.js";
 export {
   DEFAULT_RULESET_PATH,

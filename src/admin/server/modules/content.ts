@@ -149,6 +149,26 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
 
       await upsertPage(db, p, tenantId);
 
+      // The publish transition, not every save. Screening and notification hang
+      // off the same moment for the same reason: this is when the content stops
+      // being the author's draft and starts being something readers can reach.
+      if (p.published && !wasPreviouslyPublished && ctx.onContentPublished) {
+        const event = {
+          tenantId,
+          pageId,
+          kind: p.kind,
+          slug: p.slug,
+          title: p.title,
+          content: p.content,
+          excerpt: p.excerpt,
+          accessTier: p.accessTier ?? "public",
+        };
+        // Fire-and-forget: a host's screening must never fail an author's save.
+        Promise.resolve()
+          .then(() => ctx.onContentPublished!(event))
+          .catch((err) => console.error("onContentPublished hook failed:", err));
+      }
+
       if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
         notifySubscribers(
           db,

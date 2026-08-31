@@ -2,6 +2,7 @@ import { themeDiffJsonSchema, type ThemeDiff } from "../../../template/ai-theme.
 import type { AiProviderConfig } from "../../../admin/server/modules/types.js";
 import type { AIThemeProvider } from "../provider.js";
 import {
+  assertNoImages,
   SYSTEM_PROMPT,
   parseLooseJson,
   type StructuredCallSpec,
@@ -19,6 +20,7 @@ export function createLocalCaller(config: AiProviderConfig): StructuredCaller {
 
   return {
     async callStructured(spec: StructuredCallSpec): Promise<unknown> {
+      assertNoImages(spec, "local");
       const res = await fetch(`${baseURL}/api/chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },

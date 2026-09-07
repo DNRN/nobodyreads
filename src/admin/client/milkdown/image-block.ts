@@ -190,9 +190,10 @@ const imageNodeView: NodeViewConstructor = (node, view, getPos) => {
     // the real thing, not an approximation.
     const dim = size?.match(/^(\d+)x(\d+)$/);
     img.style.width = dim ? `${dim[1]}px` : "";
-    img.style.height = dim ? `${dim[2]}px` : "";
+    img.style.height = dim ? "auto" : "";
+    img.style.aspectRatio = dim ? `${dim[1]} / ${dim[2]}` : "";
     img.style.objectFit = dim ? "cover" : "";
-    img.style.maxWidth = size && !dim ? size : "";
+    img.style.maxWidth = dim ? "100%" : size ? `min(${size}, 100%)` : "";
 
     dom.dataset.align = align ?? "";
     for (const button of alignButtons) {

@@ -4,9 +4,9 @@
  * The hints live in the image alt text, pipe-separated:
  *
  *   ![alt](url)                  → default (centred block, full column width)
- *   ![alt|600px](url)            → max-width: 600px
- *   ![alt|50%](url)              → max-width: 50%
- *   ![alt|300x200](url)          → fixed 300×200 (object-fit: cover)
+ *   ![alt|600px](url)            → max-width: min(600px, 100%)
+ *   ![alt|50%](url)              → max-width: min(50%, 100%)
+ *   ![alt|300x200](url)          → up to 300×200, shrinking to fit (object-fit: cover)
  *   ![alt|left](url)             → float left, text wraps on the right
  *   ![alt|400px|right](url)      → 400px wide, floated right
  *   ![alt|center](url)           → centred block (explicit)
@@ -151,9 +151,20 @@ export function renderImage({ href, title, text }: ImageToken): string {
   if (size) {
     const dim = size.match(DIM_RE);
     if (dim) {
-      styles.push(`width: ${dim[1]}px`, `height: ${dim[2]}px`, "object-fit: cover");
+      // aspect-ratio + height: auto keeps the box's shape when max-width caps
+      // it below the requested pixel width; object-fit crops the source image
+      // to that shape.
+      styles.push(
+        `width: ${dim[1]}px`,
+        `aspect-ratio: ${dim[1]} / ${dim[2]}`,
+        "height: auto",
+        "max-width: 100%",
+        "object-fit: cover",
+      );
     } else {
-      styles.push(`max-width: ${size}`);
+      // min(…, 100%) so a fixed-pixel/em/rem/vw hint still shrinks on a
+      // viewport narrower than the hint, instead of overflowing it.
+      styles.push(`max-width: min(${size}, 100%)`);
     }
   }
   if (align) classes.push(`nbr-img-${align}`);

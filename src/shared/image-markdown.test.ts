@@ -107,16 +107,18 @@ describe("renderImage", () => {
     );
   });
 
-  it("applies a max-width for a size hint", () => {
+  it("applies a max-width for a size hint, capped to the container", () => {
     expect(renderImage({ href: "/m/a.png", text: "sunset|600px" })).toContain(
-      'style="max-width: 600px"',
+      'style="max-width: min(600px, 100%)"',
     );
   });
 
-  it("applies fixed dimensions with cover", () => {
+  it("applies fixed dimensions with cover, capped to the container", () => {
     const html = renderImage({ href: "/m/a.png", text: "x|300x200" });
     expect(html).toContain("width: 300px");
-    expect(html).toContain("height: 200px");
+    expect(html).toContain("aspect-ratio: 300 / 200");
+    expect(html).toContain("height: auto");
+    expect(html).toContain("max-width: 100%");
     expect(html).toContain("object-fit: cover");
   });
 

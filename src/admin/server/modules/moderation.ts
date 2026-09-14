@@ -11,6 +11,7 @@ import {
 import type { ModerationQueueStatus } from "../../../moderation/types.js";
 import { unholdComment, softDeleteComment, getCommentById } from "../../../comments/db.js";
 import type { AdminModuleContext } from "./types.js";
+import { fireSiteSettingsChanged } from "./types.js";
 
 const QUEUE_STATUSES: ModerationQueueStatus[] = ["pending", "dismissed", "actioned"];
 
@@ -43,6 +44,7 @@ export function createModerationRoutes(ctx: AdminModuleContext): Hono {
       tenantId,
       body.autoHide == null || body.autoHide !== "off"
     );
+    fireSiteSettingsChanged(ctx);
     return c.json({ ok: true });
   });
 

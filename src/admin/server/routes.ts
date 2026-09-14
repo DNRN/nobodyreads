@@ -58,6 +58,12 @@ export interface AdminRouterOptions {
   onContentPublished?: (event: ContentPublishedEvent) => void | Promise<void>;
   /** Same contract as {@link onContentPublished}, for media library uploads. */
   onMediaUploaded?: (event: MediaUploadedEvent) => void | Promise<void>;
+  /**
+   * Fired (never awaited) after any write to this tenant's `site_settings` —
+   * for hosts that cache things derived from them. Errors are logged and
+   * swallowed; this can never fail an owner's save.
+   */
+  onSiteSettingsChanged?: (tenantId: string) => void | Promise<void>;
 }
 
 /** @deprecated Use AdminRouterOptions */
@@ -83,6 +89,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     comfy: options.comfy,
     onContentPublished: options.onContentPublished,
     onMediaUploaded: options.onMediaUploaded,
+    onSiteSettingsChanged: options.onSiteSettingsChanged,
   };
 }
 

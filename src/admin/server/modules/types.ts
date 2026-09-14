@@ -91,4 +91,21 @@ export interface AdminModuleContext {
    * contract as {@link onContentPublished}.
    */
   onMediaUploaded?: (event: MediaUploadedEvent) => void | Promise<void>;
+  /**
+   * Fired (never awaited) after any write to this tenant's `site_settings`
+   * — for hosts that cache things derived from them (a composed route tree,
+   * a resolved site name). Same contract as {@link onContentPublished}:
+   * errors are logged and swallowed, so invalidation can never fail a save.
+   */
+  onSiteSettingsChanged?: (tenantId: string) => void | Promise<void>;
+}
+
+/** Fire-and-forget: tell the host this tenant's site_settings just changed. */
+export function fireSiteSettingsChanged(ctx: AdminModuleContext): void {
+  if (!ctx.onSiteSettingsChanged) return;
+  Promise.resolve()
+    .then(() => ctx.onSiteSettingsChanged!(ctx.tenantId))
+    .catch((err) =>
+      console.error("onSiteSettingsChanged hook failed:", err),
+    );
 }

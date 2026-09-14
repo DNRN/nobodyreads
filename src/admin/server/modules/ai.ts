@@ -24,6 +24,7 @@ import { DEFAULT_TEMPLATE } from "../../../template/defaults.js";
 import { validateTheme } from "../../../template/theme-io.js";
 import type { SiteTemplateDefinition } from "../../../template/types.js";
 import type { AiProvider, AdminModuleContext } from "./types.js";
+import { fireSiteSettingsChanged } from "./types.js";
 
 const AI_PROVIDERS: AiProvider[] = ["openai-compatible", "anthropic", "gemini", "local"];
 
@@ -119,7 +120,8 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
       await deleteSiteSetting(db, tenantId, SETTING_AI_MODEL);
       await deleteSiteSetting(db, tenantId, SETTING_AI_BASE_URL);
       await deleteSiteSetting(db, tenantId, SETTING_AI_API_KEY_ENC);
-      return c.json({ ok: true, cleared: true });
+      fireSiteSettingsChanged(ctx);
+    return c.json({ ok: true, cleared: true });
     }
 
     if (!AI_PROVIDERS.includes(provider as AiProvider)) {
@@ -149,6 +151,7 @@ export function createAiRoutes(ctx: AdminModuleContext): Hono {
       }
       await setSiteSetting(db, tenantId, SETTING_AI_API_KEY_ENC, encryptSecret(apiKey));
     }
+    fireSiteSettingsChanged(ctx);
     return c.json({ ok: true });
   });
 

@@ -25,6 +25,7 @@ import { validateTheme, themeHasScripts } from "../../../template/theme-io.js";
 import { serializeRegistry } from "../../../template/registry.js";
 import { DEFAULT_TEMPLATE } from "../../../template/defaults.js";
 import type { AdminModuleContext } from "./types.js";
+import { fireSiteSettingsChanged } from "./types.js";
 
 export function createThemeRoutes(ctx: AdminModuleContext): Hono {
   const { db, tenantId, adminBase, editorBase } = ctx;
@@ -152,6 +153,7 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
         await setSiteSetting(db, tenantId, settingKey, value);
       }
     }
+    fireSiteSettingsChanged(ctx);
 
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) {
@@ -188,6 +190,7 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
       if (value === "") await deleteSiteSetting(db, tenantId, field.key);
       else await setSiteSetting(db, tenantId, field.key, value);
     }
+    fireSiteSettingsChanged(ctx);
 
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) return c.json({ ok: true });
@@ -218,6 +221,7 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
         await setSiteSetting(db, tenantId, settingKey, value);
       }
     }
+    fireSiteSettingsChanged(ctx);
 
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) {

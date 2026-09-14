@@ -17,6 +17,7 @@ import {
 } from "../../../shared/site-settings.js";
 import { encryptSecret, isSecretsEncryptionAvailable } from "../../../shared/secrets.js";
 import type { AdminModuleContext } from "./types.js";
+import { fireSiteSettingsChanged } from "./types.js";
 
 /**
  * AI cover-image routes (per-tenant). Two-step, credit-conscious flow: draft a
@@ -127,6 +128,7 @@ export function createCoverImageRoutes(ctx: AdminModuleContext): Hono {
     if (clear || (!baseUrl && !apiKey)) {
       await deleteSiteSetting(db, tenantId, SETTING_COMFY_BASE_URL);
       await deleteSiteSetting(db, tenantId, SETTING_COMFY_API_KEY_ENC);
+      fireSiteSettingsChanged(ctx);
       return c.json({ ok: true, cleared: true });
     }
 
@@ -141,6 +143,7 @@ export function createCoverImageRoutes(ctx: AdminModuleContext): Hono {
     } else {
       await deleteSiteSetting(db, tenantId, SETTING_COMFY_BASE_URL);
     }
+    fireSiteSettingsChanged(ctx);
     return c.json({ ok: true });
   });
 

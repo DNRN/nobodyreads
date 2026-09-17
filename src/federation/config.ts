@@ -8,13 +8,11 @@
 export interface FederationConfig {
   /** Base URL of the community hub, without a trailing slash. */
   issuerUrl: string;
-  /** Stable issuer identity (the hub origin) used to key federated members. */
-  issuer: string;
   /** Human-friendly hub name for sign-in UI. */
   issuerName: string;
   /** OAuth2 client id issued by the hub when this plot registered. */
   clientId: string;
-  /** OAuth2 client secret issued by the hub. */
+  /** OAuth2 client secret issued by the hub when this plot registered. */
   clientSecret: string;
 }
 
@@ -36,17 +34,9 @@ export function getFederationConfig(): FederationConfig | null {
     ""
   );
 
-  let issuer: string;
-  try {
-    issuer = new URL(issuerUrl).origin;
-  } catch {
-    issuer = issuerUrl;
-  }
-
   return {
     issuerUrl,
-    issuer,
-    issuerName: process.env.FEDERATION_ISSUER_NAME || issuer,
+    issuerName: process.env.FEDERATION_ISSUER_NAME || issuerUrl,
     clientId: process.env.FEDERATION_CLIENT_ID as string,
     clientSecret: process.env.FEDERATION_CLIENT_SECRET as string,
   };

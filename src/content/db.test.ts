@@ -78,6 +78,41 @@ describe("upsertPage", () => {
   });
 });
 
+describe("episodes", () => {
+  const episode = { audioMediaId: "m-audio", number: 4, season: 2 };
+
+  it("round-trips through upsert and read", async () => {
+    await upsertPage(t.db, makePage({ episode }), TENANT);
+
+    expect((await getPageById(t.db, "p1", TENANT))!.episode).toEqual(episode);
+  });
+
+  it("turns back into a plain post when the episode is removed", async () => {
+    await upsertPage(t.db, makePage({ episode }), TENANT);
+    await upsertPage(t.db, makePage({ episode: null }), TENANT);
+
+    expect((await getPageById(t.db, "p1", TENANT))!.episode).toBeNull();
+    const row = await testClient.execute(
+      "SELECT content_type, audio_media_id, episode_number FROM page WHERE page_id = 'p1'",
+    );
+    expect(row.rows[0]).toMatchObject({ content_type: null, audio_media_id: null, episode_number: null });
+  });
+
+  it("reads a row marked audio but missing its file as a plain post", async () => {
+    await upsertPage(t.db, makePage(), TENANT);
+    await testClient.execute("UPDATE page SET content_type = 'audio' WHERE page_id = 'p1'");
+
+    expect((await getPageById(t.db, "p1", TENANT))!.episode).toBeNull();
+  });
+
+  it("ignores a file id left on a row not marked audio", async () => {
+    await upsertPage(t.db, makePage(), TENANT);
+    await testClient.execute("UPDATE page SET audio_media_id = 'm-stray' WHERE page_id = 'p1'");
+
+    expect((await getPageById(t.db, "p1", TENANT))!.episode).toBeNull();
+  });
+});
+
 describe("getPageBySlug", () => {
   it("returns a published page by slug and kind", async () => {
     await upsertPage(t.db, makePage(), TENANT);

@@ -2,9 +2,17 @@ import type { Database } from "../db/index.js";
 import type { LayoutOptions, Page } from "../content/types.js";
 import type { AccessDecision } from "../payments/types.js";
 import type { SiteTemplateDefinition } from "../template/types.js";
-import { getPageByKind, getPageBySlug, getNavItems, getPostStats } from "../content/db.js";
+import {
+  getPageByKind,
+  getPageBySlug,
+  getNavItems,
+  getPostStats,
+  getMediaById,
+} from "../content/db.js";
 import { renderContent } from "../content/render.js";
 import { heroMetaLine } from "../content/templates.js";
+import { createMediaStorage } from "../media/storage.js";
+import { resolveMediaValue } from "../shared/site-settings.js";
 import { getReadableContent, requiresPrivateCache } from "../payments/access.js";
 import { type SiteContext, type Viewer, pagePath } from "./context.js";
 
@@ -42,6 +50,19 @@ export interface PageView {
    * should not have to be handed the viewer separately to find out.
    */
   isOwner: boolean;
+  /** The player for an episode the viewer may hear; null for everything else. */
+  episode: EpisodeView | null;
+}
+
+/** What the episode player needs, with media references already turned into URLs. */
+export interface EpisodeView {
+  audioUrl: string;
+  mimeType: string;
+  durationSeconds: number;
+  number: number | null;
+  season: number | null;
+  /** Cover art: the post's social image, when it has one. */
+  artUrl: string | null;
 }
 
 /**
@@ -90,6 +111,7 @@ export async function resolvePageView(
       teaser: false,
       signedIn: viewer.member !== null,
       isOwner: viewer.isOwner,
+      episode: null,
       layout: {
         title: `Not found — ${ctx.siteName}`,
         navItems,
@@ -150,6 +172,27 @@ export async function resolvePageView(
       })
     : "";
 
+  // From the redacted page: a gated episode has already lost its audio
+  // reference, so it resolves to no player without a check of its own here.
+  let episode: EpisodeView | null = null;
+  if (page.episode) {
+    const storage = createMediaStorage();
+    const audio = await getMediaById(db, page.episode.audioMediaId, ctx.tenantId, (key) =>
+      storage.url(key),
+    );
+    // A deleted file degrades to a plain post rather than a dead player.
+    if (audio && audio.durationSeconds !== null) {
+      episode = {
+        audioUrl: audio.url,
+        mimeType: audio.mimeType,
+        durationSeconds: audio.durationSeconds,
+        number: page.episode.number,
+        season: page.episode.season,
+        artUrl: resolveMediaValue(page.seo?.ogImage, (key) => storage.url(key)),
+      };
+    }
+  }
+
   return {
     page,
     kind: target.kind,
@@ -160,6 +203,7 @@ export async function resolvePageView(
     teaser: gate.gated && gate.decision.visibility === "teaser",
     signedIn: viewer.member !== null,
     isOwner: viewer.isOwner,
+    episode,
     layout: {
       // A home page has no title of its own — the site's name is its name, and
       // taking it from the context keeps the browser tab agreeing with the
@@ -174,6 +218,7 @@ export async function resolvePageView(
       isHome: target.kind === "home",
       seo: page.seo,
       page,
+      audio: episode ? { url: episode.audioUrl, type: episode.mimeType } : undefined,
       tenantId: ctx.tenantId,
       urlPrefix: ctx.urlPrefix,
       siteUrl: ctx.siteUrl,

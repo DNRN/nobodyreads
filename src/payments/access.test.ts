@@ -356,6 +356,24 @@ describe("redactPage", () => {
     redactPage(p, decision);
     expect(p.content).toContain("The secret body.");
   });
+
+  it("drops a gated episode's audio reference along with its body", async () => {
+    // The media id alone is enough to guess the file's URL, so it must not
+    // survive into anything rendered or serialized for a teaser viewer.
+    const episode = { audioMediaId: "m-secret", number: 3, season: 1 };
+    const p = makePage({ accessTier: "members", episode });
+    const decision = await resolvePageAccess(t.db, p, TENANT, null);
+
+    expect(redactPage(p, decision).episode).toBeNull();
+  });
+
+  it("keeps the episode for a viewer who may hear it", async () => {
+    const episode = { audioMediaId: "m-open", number: null, season: null };
+    const p = makePage({ episode });
+    const decision = await resolvePageAccess(t.db, p, TENANT, null);
+
+    expect(redactPage(p, decision).episode).toEqual(episode);
+  });
 });
 
 // ---------- getReadableContent ----------

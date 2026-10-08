@@ -9,7 +9,7 @@ vi.mock("../shared/db.js", () => ({
 
 import { resolvePageView } from "./page.js";
 import type { SiteContext, Viewer } from "./context.js";
-import { upsertPage, upsertContentView } from "../content/db.js";
+import { upsertPage, upsertContentView, insertMedia, deleteMediaRecord } from "../content/db.js";
 import { DEFAULT_TEMPLATE } from "../template/defaults.js";
 
 const TENANT = "_default";
@@ -176,5 +176,92 @@ describe("resolvePageView", () => {
     // Still the site's own chrome: a 404 on a plot is not a 404 on the engine.
     expect(view.layout.siteName).toBe("Alice's plot");
     expect(view.layout.menuHeader).toBe("@alice");
+  });
+});
+
+describe("episodes", () => {
+  async function seedEpisode(id: string, slug: string, accessTier: string) {
+    await upsertPage(
+      t.db,
+      {
+        id,
+        slug,
+        title: "An episode",
+        content: "Show notes.",
+        excerpt: "Notes.",
+        tags: [],
+        date: "2026-08-03",
+        published: true,
+        kind: "post",
+        commentsEnabled: true,
+        inFeed: true,
+        accessTier,
+        seo: { ogImage: "https://cdn.example.com/art.png" },
+        episode: { audioMediaId: "m-ep", number: 7, season: 2 },
+      },
+      TENANT,
+    );
+  }
+
+  beforeEach(async () => {
+    await insertMedia(
+      t.db,
+      {
+        id: "m-ep",
+        storageKey: "tenants/t/m-ep.mp3",
+        originalName: "ep7.mp3",
+        mimeType: "audio/mpeg",
+        size: 1000,
+        durationSeconds: 2700,
+      },
+      TENANT,
+    );
+  });
+
+  it("resolves a public episode to a player with its file, length, numbers and art", async () => {
+    await seedEpisode("e1", "open-ep", "public");
+
+    const view = await resolvePageView(t.db, context(), reader, { kind: "post", slug: "open-ep" }, null);
+
+    expect(view.episode).toMatchObject({
+      mimeType: "audio/mpeg",
+      durationSeconds: 2700,
+      number: 7,
+      season: 2,
+      artUrl: "https://cdn.example.com/art.png",
+    });
+    // The URL comes from whichever storage backend is configured; its key is
+    // the part this module is responsible for.
+    expect(view.episode!.audioUrl).toContain("tenants/t/m-ep.mp3");
+  });
+
+  it("gives no player — and no audio reference — to a reader outside a gated episode", async () => {
+    await seedEpisode("e2", "members-ep", "members");
+
+    const view = await resolvePageView(t.db, context(), reader, { kind: "post", slug: "members-ep" }, null);
+
+    expect(view.gated).toBe(true);
+    expect(view.episode).toBeNull();
+    expect(view.page!.episode).toBeNull();
+    // Nor may the share metadata hand out the file the player withholds.
+    expect(view.layout.audio).toBeUndefined();
+  });
+
+  it("gives the owner the player on their own gated episode", async () => {
+    await seedEpisode("e3", "members-ep-own", "members");
+
+    const view = await resolvePageView(t.db, context(), owner, { kind: "post", slug: "members-ep-own" }, null);
+
+    expect(view.episode?.durationSeconds).toBe(2700);
+  });
+
+  it("renders a plain post when the episode's file has been deleted", async () => {
+    await seedEpisode("e4", "orphan-ep", "public");
+    await deleteMediaRecord(t.db, "m-ep", TENANT);
+
+    const view = await resolvePageView(t.db, context(), reader, { kind: "post", slug: "orphan-ep" }, null);
+
+    expect(view.page).not.toBeNull();
+    expect(view.episode).toBeNull();
   });
 });

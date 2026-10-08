@@ -45,6 +45,13 @@ CREATE TABLE IF NOT EXISTS page (
   -- in pageFormSchema and coerced in toPage() instead.
   access_tier      TEXT NOT NULL DEFAULT 'public',
   price_amount     INTEGER,
+  -- NULL (a plain post) | 'audio' (an episode). No CHECK, same reason as
+  -- access_tier; toPage() only treats a row as an episode when this says
+  -- 'audio' AND audio_media_id is set.
+  content_type     TEXT,
+  audio_media_id   TEXT,
+  episode_number   INTEGER,
+  season_number    INTEGER,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );
@@ -105,8 +112,34 @@ CREATE TABLE IF NOT EXISTS media (
   original_name TEXT NOT NULL,
   mime_type     TEXT NOT NULL,
   size          INTEGER NOT NULL,
+  -- Whole seconds from the file's own headers; NULL for non-time media.
+  duration_seconds INTEGER,
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (media_id, tenant_id)
+);
+
+-- Chunked upload sessions: a file too large for one request arrives as
+-- fixed-size parts stored as separate objects until `complete` assembles them.
+-- Which parts arrived lives in its own table so concurrent part uploads cannot
+-- overwrite each other's bookkeeping. created_at is epoch seconds (compared
+-- numerically by the stale-session sweep).
+CREATE TABLE IF NOT EXISTS upload_session (
+  session_id    TEXT NOT NULL,
+  tenant_id     TEXT NOT NULL DEFAULT '_default',
+  original_name TEXT NOT NULL,
+  mime_type     TEXT NOT NULL,
+  size          INTEGER NOT NULL,
+  chunk_bytes   INTEGER NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'open',
+  created_at    INTEGER NOT NULL,
+  PRIMARY KEY (session_id, tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS upload_session_part (
+  session_id  TEXT NOT NULL,
+  tenant_id   TEXT NOT NULL DEFAULT '_default',
+  part_number INTEGER NOT NULL,
+  PRIMARY KEY (session_id, tenant_id, part_number)
 );
 
 -- Members (local accounts; self-hosted mode)
@@ -276,9 +309,11 @@ CREATE TABLE IF NOT EXISTS payment_customer (
 -- Recreated on every boot so it always matches the current `page` shape.
 -- ADD ANY NEW `page` COLUMN HERE TOO — the list is explicit on purpose, so a
 -- future sensitive column is withheld by default rather than auto-exposed.
+-- `audio_media_id` is withheld on purpose: joined to `media` it yields the file
+-- behind a gated episode.
 DROP VIEW IF EXISTS page_public;
 CREATE VIEW page_public AS
 SELECT page_id, tenant_id, slug, title, excerpt, tags, date, updated,
        published, seo, kind, nav_label, nav_order, comments_enabled, in_feed,
-       access_tier, price_amount
+       access_tier, price_amount, content_type, episode_number, season_number
 FROM page;

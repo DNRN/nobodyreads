@@ -21,7 +21,7 @@ export interface FeedOptions {
 }
 
 /** Convert an ISO date string (YYYY-MM-DD) to RFC 822 format for RSS pubDate. */
-function toRfc822(isoDate: string): string {
+export function toRfc822(isoDate: string): string {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return new Date().toUTCString();
   return d.toUTCString();

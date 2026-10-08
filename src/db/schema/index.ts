@@ -18,7 +18,7 @@ export {
   siteSettings,
 } from "../../shared/schema.js";
 export { page, contentView } from "../../content/schema.js";
-export { media } from "../../media/schema.js";
+export { media, uploadSession, uploadSessionPart } from "../../media/schema.js";
 export { member, plotMembership, postLike } from "../../community/schema.js";
 export { comment } from "../../comments/schema.js";
 export { subscriber } from "../../subscription/schema.js";

@@ -96,6 +96,41 @@ export interface Page {
   accessTier: string;
   /** One-off purchase price in minor units. NULL/undefined = not sold separately. */
   priceAmount?: number | null;
+  /**
+   * Present when this post is an episode: its primary content is one audio
+   * file. Null/undefined = a plain post. Only posts carry one.
+   */
+  episode?: Episode | null;
+}
+
+/**
+ * What makes a post an episode. Grouped so "an episode without audio" cannot
+ * be represented: the audio reference is the one required part.
+ */
+export interface Episode {
+  /** `media.media_id` of the episode's audio, in the same tenant. */
+  audioMediaId: string;
+  /** Optional episode / season numbers, for podcast ordering and display. */
+  number: number | null;
+  season: number | null;
+}
+
+/** A public episode as the podcast feed lists it: the post plus its audio file. */
+export interface PodcastEpisode {
+  /** Stable page id — the feed's GUID, since a slug can be renamed. */
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  date: string;
+  number: number | null;
+  season: number | null;
+  audio: {
+    storageKey: string;
+    mimeType: string;
+    size: number;
+    durationSeconds: number;
+  };
 }
 
 /** An uploaded media file (image, video, audio, etc.). */
@@ -105,6 +140,8 @@ export interface Media {
   originalName: string;
   mimeType: string;
   size: number;
+  /** Whole seconds for audio/video, read from the file itself; null otherwise. */
+  durationSeconds: number | null;
   createdAt: string;
   /** Public URL to access the file (computed, not stored). */
   url: string;
@@ -168,6 +205,12 @@ export interface LayoutOptions {
   ogType?: string;
   seo?: PageMeta;
   page?: Page;
+  /**
+   * The episode audio this viewer may hear, for `og:audio`. Set by
+   * `resolvePageView` from the redacted page, so it is absent wherever the
+   * player is.
+   */
+  audio?: { url: string; type: string };
 
   // Multi-tenant support
   /** Tenant whose settings/template the layout should load. Defaults to the single-tenant id. */

@@ -293,6 +293,21 @@ const customJs = templateDef.customJs?.trim() || "";
         href={`${options.urlPrefix}/feed.xml`}
       />
     )}
+    {/* Only where the podcast feed is known to list this very episode — so the
+        link can never point a podcatcher at the feed's 404. The same filters as
+        listPodcastEpisodes; a gated page has already lost `episode` to redaction. */}
+    {options.urlPrefix !== undefined &&
+      options.page?.episode &&
+      options.page.published &&
+      options.page.inFeed &&
+      options.page.accessTier === "public" && (
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title={`${siteName} (podcast)`}
+          href={`${options.urlPrefix}/podcast.xml`}
+        />
+      )}
     {fontHref && (
       <>
         <link rel="preconnect" href="https://fonts.googleapis.com" />

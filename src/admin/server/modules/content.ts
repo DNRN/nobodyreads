@@ -2,7 +2,13 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "node:crypto";
 import { pageFormSchema } from "../../../db/validation.js";
-import { getPageById, findPageByKind, deletePage, upsertPage } from "../../../content/db.js";
+import {
+  getPageById,
+  findPageByKind,
+  deletePage,
+  upsertPage,
+  getMediaById,
+} from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
 import type { Page, PageKind } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
@@ -83,6 +89,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       let existingCommentsEnabled: boolean | undefined;
       let existingInFeed: boolean | undefined;
       let existingSeo: Page["seo"] | undefined;
+      let existingEpisode: Page["episode"] = null;
       let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
@@ -90,6 +97,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         existingCommentsEnabled = existing?.commentsEnabled;
         existingInFeed = existing?.inFeed;
         existingSeo = existing?.seo;
+        existingEpisode = existing?.episode ?? null;
         if (!content && existing?.content) content = existing.content;
       }
 
@@ -107,6 +115,33 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         seoUpdate.twitterCard = data.seo_twitter_card;
       }
       const seo = Object.keys(seoUpdate).length > 0 ? seoUpdate : undefined;
+
+      // Only posts are episodes. A form without the control keeps what the post
+      // already is; an explicit "audio" must name audio this tenant owns, with a
+      // known duration — the podcast feed cannot list an episode without one.
+      let episode: Page["episode"] = null;
+      if (data.kind === "post") {
+        if (data.content_type === undefined) {
+          episode = existingEpisode;
+        } else if (data.content_type === "audio") {
+          const audioMediaId = data.audio_media_id ?? "";
+          const audio = audioMediaId
+            ? await getMediaById(db, audioMediaId, tenantId, (key) => key)
+            : null;
+          if (!audio?.mimeType.startsWith("audio/") || audio.durationSeconds === null) {
+            return c.json(
+              { error: "An episode needs an uploaded audio file — choose or upload one." },
+              400
+            );
+          }
+          episode = {
+            audioMediaId,
+            // Blank or 0 means "unnumbered"; feeds omit the tag rather than say 0.
+            number: Number(data.episode_number) || null,
+            season: Number(data.season_number) || null,
+          };
+        }
+      }
 
       const p: Page = {
         id: pageId,
@@ -145,6 +180,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         priceAmount:
           data.access_tier === "paid" ? parseMinorUnits(data.price_amount) : null,
         seo,
+        episode,
       };
 
       await upsertPage(db, p, tenantId);

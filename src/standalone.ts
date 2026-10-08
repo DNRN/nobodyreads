@@ -17,6 +17,7 @@ import { createAiApiRoutes } from "./api/ai/ai.routes.js";
 import { resolveAiProviderConfig, resolveModerationAiConfig } from "./api/ai/config.js";
 import { resolvePlatformComfyConfig } from "./api/ai/comfy/config.js";
 import { createFeedRoutes } from "./content/feed.js";
+import { createPodcastFeedRoutes } from "./content/podcast.js";
 import { createRobotsRoutes, createSitemapRoutes } from "./content/robots.js";
 import { createAdminRoutes } from "./admin/server/routes.js";
 import {
@@ -260,7 +261,10 @@ async function start() {
 		const key = decodeURIComponent(c.req.param("key"));
 		const nodeRes = (c.env as Record<string, unknown>)
 			.outgoing as ServerResponse;
-		const served = await storage.serve(key, nodeRes);
+		const served = await storage.serve(key, nodeRes, {
+			range: c.req.header("range"),
+			method: c.req.method,
+		});
 		if (served) return alreadySent();
 		return c.text("Not found", 404);
 	});
@@ -269,6 +273,17 @@ async function start() {
 	app.route(
 		"/",
 		createFeedRoutes({
+			db,
+			urlPrefix: process.env.URL_PREFIX || "",
+			siteName: process.env.SITE_NAME,
+			siteTagline: process.env.SITE_TAGLINE,
+		}),
+	);
+
+	// ---- Podcast feed (public episodes; 404 until there is one) ----
+	app.route(
+		"/",
+		createPodcastFeedRoutes({
 			db,
 			urlPrefix: process.env.URL_PREFIX || "",
 			siteName: process.env.SITE_NAME,

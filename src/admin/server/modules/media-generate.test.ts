@@ -28,6 +28,10 @@ const storage: MediaStorage = {
   put: async () => {
     throw new Error("storage.put must not be reached on a rejected request");
   },
+  assemble: async () => {
+    throw new Error("storage.assemble must not be reached on a rejected request");
+  },
+  openRead: async () => null,
   delete: async () => {},
   url: (key) => `/media/${key}`,
   serve: async () => false,

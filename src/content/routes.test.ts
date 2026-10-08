@@ -64,6 +64,25 @@ describe("GET /posts/:slug", () => {
     expect(body.content).not.toContain(SECRET);
   });
 
+  it("drops a gated episode's audio reference", async () => {
+    // Storage keys are built from the media id, so the id alone is enough to
+    // fetch the file this endpoint is withholding.
+    const episode = { audioMediaId: "m-members-only", number: 2, season: null };
+    await upsertPage(t.db, makePage({ accessTier: "members", episode }), TENANT);
+
+    const body = await getPost("a-post");
+
+    expect(body.episode).toBeNull();
+    expect(JSON.stringify(body)).not.toContain("m-members-only");
+  });
+
+  it("keeps a public episode's audio reference", async () => {
+    const episode = { audioMediaId: "m-open", number: 2, season: null };
+    await upsertPage(t.db, makePage({ episode }), TENANT);
+
+    expect((await getPost("a-post")).episode).toEqual(episode);
+  });
+
   it("returns the teaser even though this router has no member identity at all", async () => {
     // The point of the design: `createPublicApiRoutes` is documented as
     // "no member identity required", so this endpoint cannot accidentally be

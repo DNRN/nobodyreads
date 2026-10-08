@@ -29,12 +29,18 @@ function formatDate(iso: string): string {
 function isImage(mimeType: string): boolean {
   return mimeType.startsWith("image/");
 }
+
+// Visible before it is billable: episodes make this number grow fast.
+const totalBytes = items.reduce((sum, item) => sum + item.size, 0);
 ---
 <AdminLayout title="Media — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="editor-list">
       <div class="editor-list-header">
         <h2>Media</h2>
+        <p class="hint" id="media-usage">
+          Using {formatSize(totalBytes)} across {items.length} {items.length === 1 ? "file" : "files"}.
+        </p>
       </div>
 
       <!-- Upload form -->
@@ -55,13 +61,13 @@ function isImage(mimeType: string): boolean {
             <label class="media-upload-label" for="media-file-input" id="media-upload-label">
               <span class="media-upload-icon">+</span>
               <span class="media-upload-text">Click to upload or drag &amp; drop files here</span>
-              <span class="media-upload-hint">Images, video, audio, PDF &mdash; max 50 MB</span>
+              <span class="media-upload-hint">Images, video, PDF &mdash; max 50 MB. Audio is uploaded from a post's settings.</span>
             </label>
             <input
               type="file"
               id="media-file-input"
               name="file"
-              accept="image/*,video/*,audio/*,.pdf"
+              accept="image/*,video/*,.pdf"
               class="media-file-input"
               multiple
             />
@@ -506,6 +512,12 @@ function isImage(mimeType: string): boolean {
           grid.hidden = !hasItems;
           if (empty) empty.hidden = hasItems;
           bindCardActions();
+          const usage = document.getElementById("media-usage");
+          if (usage) {
+            const total = items.reduce((sum, m) => sum + (m.size || 0), 0);
+            usage.textContent =
+              "Using " + formatSize(total) + " across " + items.length + (items.length === 1 ? " file." : " files.");
+          }
         } catch (err) {
           /* keep existing grid on failure */
         }

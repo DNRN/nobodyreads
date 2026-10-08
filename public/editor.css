@@ -5129,6 +5129,7 @@
 }
 
 .nr-admin .nbr-token-form input[type="text"],
+.nr-admin .nbr-token-form input[type="email"],
 .nr-admin .nbr-token-form input[type="password"],
 .nr-admin .nbr-token-form textarea,
 .nr-admin .nbr-token-form select {

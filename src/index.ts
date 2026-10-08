@@ -46,6 +46,8 @@ export {
 export { createBlogApiRoutes } from "./content/routes.js";
 export type { BlogApiOptions } from "./content/routes.js";
 export { createFeedRoutes } from "./content/feed.js";
+export { createPodcastFeedRoutes } from "./content/podcast.js";
+export type { PodcastFeedOptions } from "./content/podcast.js";
 export {
   createRobotsRoutes,
   createSitemapRoutes,
@@ -198,6 +200,7 @@ export {
   listPosts,
   listPostsForView,
   listFeedPosts,
+  listPodcastEpisodes,
   listSitemapEntries,
   getPostStats,
   getPageBySlug,
@@ -333,6 +336,10 @@ export {
   resolveSiteDiscovery,
   SITE_IDENTITY_FIELDS,
   SITE_DISCOVERY_FIELDS,
+  SITE_PODCAST_FIELDS,
+  PODCAST_CATEGORIES,
+  DEFAULT_PODCAST_CATEGORY,
+  resolvePodcastSettings,
   SETTING_SEARCH_INDEXING,
   SETTING_AI_TRAINING,
   SETTING_ROBOTS_TXT,
@@ -348,6 +355,8 @@ export type {
   ResolvedSiteIdentity,
   SiteDiscoveryField,
   ResolvedSiteDiscovery,
+  SitePodcastField,
+  ResolvedPodcastSettings,
 } from "./shared/site-settings.js";
 
 // Template system
@@ -402,6 +411,7 @@ export type {
 // Types
 export type {
   Page,
+  Episode,
   PageSummary,
   NavItem,
   LinkTarget,
@@ -434,6 +444,9 @@ export type {
   StoredFile,
   StorageConfig,
 } from "./media/storage.js";
+// Hosts deleting a tenant must also drop its in-flight chunked uploads; the
+// part-key layout is the engine's, so the host calls this instead.
+export { discardUploadSessions } from "./media/upload/session.js";
 
 // Editor auth
 export {

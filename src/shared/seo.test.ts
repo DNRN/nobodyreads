@@ -196,3 +196,30 @@ describe("per-request site origin", () => {
     );
   });
 });
+
+describe("episode audio", () => {
+  it("emits og:audio with its type, absolutised against the site origin", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com",
+      audio: { url: "/media/tenants/t/ep.mp3", type: "audio/mpeg" },
+    });
+
+    const tags = buildMetaTags(options);
+
+    expect(tags).toContain('property="og:audio" content="https://alice.example.com/media/tenants/t/ep.mp3"');
+    expect(tags).toContain('property="og:audio:type" content="audio/mpeg"');
+  });
+
+  it("keeps an already-absolute bucket URL as it is", () => {
+    const options = makeOptions({
+      siteUrl: "https://alice.example.com",
+      audio: { url: "https://files.example.com/ep.m4a", type: "audio/mp4" },
+    });
+
+    expect(buildMetaTags(options)).toContain('property="og:audio" content="https://files.example.com/ep.m4a"');
+  });
+
+  it("emits nothing audio-related for a page without an episode", () => {
+    expect(buildMetaTags(makeOptions())).not.toContain("og:audio");
+  });
+});

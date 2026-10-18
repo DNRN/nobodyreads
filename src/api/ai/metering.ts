@@ -24,3 +24,8 @@ export async function recordImageGeneration(_tenantId: string): Promise<void> {
   // TODO(phase-9): count per-tenant generations and enforce plan limits for
   // the platform-default key. BYO-key tenants skip the cap (their own spend).
 }
+
+/** Same seam for AI import-proposal generations (one per agent run). */
+export async function recordImportGeneration(_tenantId: string): Promise<void> {
+  // TODO(phase-9): count per-tenant import runs and enforce plan limits.
+}

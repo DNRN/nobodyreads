@@ -17,6 +17,7 @@ import { createAiRoutes } from "./modules/ai.js";
 import { createCoverImageRoutes } from "./modules/cover-image.js";
 import { createModerationRoutes } from "./modules/moderation.js";
 import { createMediaRoutes } from "./modules/media.js";
+import { createUploadSessionRoutes } from "./modules/upload-sessions.js";
 import { createViewRoutes } from "./modules/views.js";
 import { createPaymentsAdminRoutes } from "./modules/payments.js";
 
@@ -31,6 +32,13 @@ export interface AdminRouterOptions {
    * `tenants/<id>/`. Defaults to "" (no prefix).
    */
   keyPrefix?: string;
+  /**
+   * Largest file a chunked upload session accepts, in bytes. Defaults to
+   * 500 MB. Must stay within what the storage backend can assemble — GCS
+   * `compose` tops out at 32 × 16 MiB = 512 MiB, and sessions refuse files
+   * that would exceed `MediaStorage.maxParts`.
+   */
+  maxUploadBytes?: number;
   /**
    * Email provider/config used for new-post notifications. When omitted, the
    * file-based config is used. Multi-tenant hosts pass a per-tenant config.
@@ -82,6 +90,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     adminBase,
     editorBase,
     keyPrefix: options.keyPrefix,
+    maxUploadBytes: options.maxUploadBytes,
     email: options.email,
     siteUrl: options.siteUrl,
     siteName: options.siteName,
@@ -99,6 +108,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
 
   mountAuthRoutes(app, ctx);
   app.route("/", createMediaRoutes(ctx));
+  app.route("/", createUploadSessionRoutes(ctx));
   app.route("/", createThemeRoutes(ctx));
   app.route("/", createAiRoutes(ctx));
   app.route("/", createCoverImageRoutes(ctx));

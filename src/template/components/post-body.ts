@@ -31,6 +31,45 @@ const BASE_CSS = `.post-header {
   margin: 0;
 }
 
+/* An episode's player sits between the byline and the show notes. The native
+   <audio> control is kept rather than reskinned: it is accessible, keyboard-
+   and media-key-aware everywhere, and themes only need to frame it. */
+.episode-player {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  padding: 1rem;
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.episode-player__art {
+  flex: none;
+  width: 5.5rem;
+  height: 5.5rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.episode-player__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.episode-player__meta {
+  margin-bottom: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.episode-player__audio {
+  display: block;
+  width: 100%;
+}
+
 /* Fades the truncated body into the page above a paywall. The one gradient the
    design allows, and functional rather than decorative — it says "this stops
    mid-sentence" in a way a hard cut cannot. */

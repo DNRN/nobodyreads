@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
@@ -20,6 +21,8 @@ import {
   deleteSiteSetting,
   SITE_IDENTITY_FIELDS,
   SITE_DISCOVERY_FIELDS,
+  SITE_PODCAST_FIELDS,
+  PODCAST_CATEGORIES,
 } from "../../../shared/site-settings.js";
 import { validateTheme, themeHasScripts } from "../../../template/theme-io.js";
 import { serializeRegistry } from "../../../template/registry.js";
@@ -195,6 +198,50 @@ export function createThemeRoutes(ctx: AdminModuleContext): Hono {
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) return c.json({ ok: true });
     return c.redirect(`${adminBase}/settings?saved=1`);
+  });
+
+  /**
+   * Save the show-level podcast settings. The owner email is checked because
+   * directories verify ownership by writing to it — a typo locks the owner out
+   * of their own listing — and the category because directories reject one
+   * they do not know. Nothing is written when either is wrong.
+   */
+  app.post("/settings/podcast/save", async (c) => {
+    const body = await c.req.parseBody();
+    const json = c.req.header("accept")?.includes("application/json") ?? false;
+    const fail = (error: string) =>
+      json
+        ? c.json({ error }, 400)
+        : c.redirect(`${adminBase}/settings?podcast_error=${encodeURIComponent(error)}#podcast`);
+
+    const writes: [key: string, value: string | null][] = [];
+    for (const field of SITE_PODCAST_FIELDS) {
+      const raw = body[field.formName];
+      if (field.type === "toggle") {
+        // Hidden "off" companion input: present means the form rendered it.
+        if (raw === undefined) continue;
+        writes.push([field.key, raw === "on" ? "on" : null]);
+        continue;
+      }
+      if (typeof raw !== "string") continue;
+      const value = raw.trim();
+      if (value && field.type === "email" && !z.email().safeParse(value).success) {
+        return fail("That owner email does not look like an email address.");
+      }
+      if (value && field.type === "category" && !PODCAST_CATEGORIES.some((cat) => cat === value)) {
+        return fail("Choose one of the listed categories.");
+      }
+      writes.push([field.key, value || null]);
+    }
+
+    for (const [key, value] of writes) {
+      if (value === null) await deleteSiteSetting(db, tenantId, key);
+      else await setSiteSetting(db, tenantId, key, value);
+    }
+    fireSiteSettingsChanged(ctx);
+
+    if (json) return c.json({ ok: true });
+    return c.redirect(`${adminBase}/settings?podcast_saved=1#podcast`);
   });
 
   app.post("/editor/site/save", async (c) => {

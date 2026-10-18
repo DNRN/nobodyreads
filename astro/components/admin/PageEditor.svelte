@@ -10,6 +10,7 @@
   import { slugify } from "nobodyreads/slugify";
   import MediaPicker from "./MediaPicker.svelte";
   import CollectionPicker from "./CollectionPicker.svelte";
+  import EpisodeField from "./EpisodeField.svelte";
 
   interface Props {
     page?: Page;
@@ -56,6 +57,7 @@
     inFeed: true,
     accessTier: "public",
     priceAmount: null,
+    episode: null,
   } as Page);
 
   // --- Form state ---
@@ -81,6 +83,12 @@
   );
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
+  // Episode: an audio file as the post's main content. Stays a plain post on
+  // the server until audio is actually chosen (see buildBody).
+  let isEpisode = $state(Boolean(p.episode));
+  let audioMediaId = $state(p.episode?.audioMediaId ?? "");
+  let episodeNumber = $state(p.episode?.number != null ? String(p.episode.number) : "");
+  let seasonNumber = $state(p.episode?.season != null ? String(p.episode.season) : "");
 
   // --- AI cover image ------------------------------------------------------
   let coverPanelOpen = $state(false);
@@ -193,7 +201,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, isEpisode, audioMediaId, episodeNumber, seasonNumber });
   }
   // $state, so the status pill re-derives when a save moves the baseline.
   let baseline = $state(snapshot());
@@ -248,6 +256,14 @@
     body.set("price_amount", accessTier === "paid" ? priceAmount : "");
     body.set("seo_og_image", seoOgImage);
     body.set("seo_twitter_card", seoTwitterCard);
+    if (kind === "post") {
+      // "audio" only once a file is chosen: an episode without audio is not
+      // something the server will save, and autosave would fail on every tick.
+      body.set("content_type", isEpisode && audioMediaId ? "audio" : "post");
+      body.set("audio_media_id", audioMediaId);
+      body.set("episode_number", episodeNumber);
+      body.set("season_number", seasonNumber);
+    }
     body.set("content", content);
     return body;
   }
@@ -274,7 +290,16 @@
         window.location.assign(res.url);
         return;
       }
-      if (!res.ok) throw new Error(`Save failed (${res.status})`);
+      if (!res.ok) {
+        // The server explains rejections it understands (an episode with no
+        // audio, a duplicate home page); show that rather than a status code.
+        const failure: unknown = await res.json().catch(() => null);
+        const message =
+          failure && typeof failure === "object" && "error" in failure && typeof failure.error === "string"
+            ? failure.error
+            : `Save failed (${res.status})`;
+        throw new Error(message);
+      }
       const data = (await res.json().catch(() => ({}))) as { id?: string };
       // A freshly-created page: adopt its id so later saves update it, and
       // reflect the canonical URL without a reload.
@@ -286,8 +311,8 @@
       // The status pill already reads "saved", so only deliberate actions
       // announce themselves — a toast per autosave is noise.
       if (label) showToast(label, "success");
-    } catch {
-      showToast("Save failed", "error", 4000);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Save failed", "error", 4000);
     } finally {
       saving = false;
     }
@@ -304,7 +329,7 @@
   // Any edit to content or metadata (re)arms the autosave timer. The dirty
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, isEpisode, audioMediaId, episodeNumber, seasonNumber];
     if (editorReady) scheduleAutosave();
   });
 
@@ -816,13 +841,14 @@
           bind:this={settingsBtnEl}
           onclick={openDrawer}
           aria-expanded={drawerOpen}
+          aria-label={`${kindLabel} settings`}
           aria-describedby="tip-settings"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14M5 16h14"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>
         </button>
         <span class="nr-tip-panel" role="tooltip" id="tip-settings">
           <b class="nr-tip-label">{kindLabel} settings</b>
-          <span class="nr-tip-desc">Who can read it, tags, address, discussion.</span>
+          <span class="nr-tip-desc">Who can read it, audio, tags, address, discussion.</span>
         </span>
       </span>
 
@@ -973,6 +999,15 @@
               Write one below to control exactly what non-paying readers see.
             </p>
           {/if}
+
+          <EpisodeField
+            {adminBase}
+            bind:isEpisode
+            bind:audioMediaId
+            bind:episodeNumber
+            bind:seasonNumber
+            onError={(message) => showToast(message, "error", 5000)}
+          />
         {/if}
 
         <div class="nbr-field">

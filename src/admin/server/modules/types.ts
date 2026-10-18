@@ -56,8 +56,14 @@ export interface MediaUploadedEvent {
    * The bytes as uploaded. Handed over directly rather than made re-readable
    * from storage, so a host screening uploads never has to make unreviewed
    * media publicly fetchable in order to look at it.
+   *
+   * Absent for chunked uploads: those are assembled inside storage and never
+   * held in memory whole. A host that must inspect one reads it with
+   * `MediaStorage.openRead(storageKey)`.
    */
-  data: Buffer;
+  data?: Buffer;
+  /** Whole seconds, for audio/video whose duration was read from the file. */
+  durationSeconds?: number;
 }
 
 export interface AdminModuleContext {
@@ -70,6 +76,8 @@ export interface AdminModuleContext {
   editorBase: string;
   /** Prefix prepended to generated media storage keys (e.g. per-tenant folder). */
   keyPrefix?: string;
+  /** Largest file a chunked upload session accepts, in bytes. */
+  maxUploadBytes?: number;
   /** Email provider/config for publish notifications. Falls back to file config. */
   email?: EmailResolvable;
   /** Absolute base URL used in notification emails. */
@@ -108,4 +116,12 @@ export function fireSiteSettingsChanged(ctx: AdminModuleContext): void {
     .catch((err) =>
       console.error("onSiteSettingsChanged hook failed:", err),
     );
+}
+
+/** Fire-and-forget: tell the host a file just entered the media library. */
+export function fireMediaUploaded(ctx: AdminModuleContext, event: MediaUploadedEvent): void {
+  if (!ctx.onMediaUploaded) return;
+  Promise.resolve()
+    .then(() => ctx.onMediaUploaded!(event))
+    .catch((err) => console.error("onMediaUploaded hook failed:", err));
 }

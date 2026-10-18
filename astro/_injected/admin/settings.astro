@@ -10,6 +10,10 @@ import {
   resolveMediaValue,
   resolveSiteDiscovery,
   SITE_DISCOVERY_FIELDS,
+  SITE_PODCAST_FIELDS,
+  PODCAST_CATEGORIES,
+  resolvePodcastSettings,
+  listPodcastEpisodes,
   SETTING_ROBOTS_TXT,
   DEFAULT_TEMPLATE,
   SETTING_SITE_NAME,
@@ -58,6 +62,18 @@ const discoveryToggles = SITE_DISCOVERY_FIELDS.filter((f) => f.type === "toggle"
 const robotsField = SITE_DISCOVERY_FIELDS.find((f) => f.key === SETTING_ROBOTS_TXT)!;
 
 const saved = Astro.url.searchParams.has("saved");
+
+const podcast = resolvePodcastSettings(settings);
+const podcastEpisodeCount = (await listPodcastEpisodes(db, ctx.tenantId)).length;
+const podcastFeedUrl = new URL(`${ctx.siteBase.replace(/\/$/, "")}/podcast.xml`, Astro.url).href;
+const podcastArtworkUrl = resolveMediaValue(podcast.artwork, mediaUrl);
+const podcastSaved = Astro.url.searchParams.has("podcast_saved");
+const podcastError = Astro.url.searchParams.get("podcast_error");
+const podcastValue: Record<string, string> = {
+  podcast_artwork: podcast.artwork ?? "",
+  podcast_author: podcast.author ?? "",
+  podcast_owner_email: podcast.ownerEmail ?? "",
+};
 ---
 <AdminLayout title="Settings — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
@@ -127,6 +143,69 @@ const saved = Astro.url.searchParams.has("saved");
 
             <button type="submit" class="btn btn-primary btn-sm" style="margin-top:1rem">Save</button>
             {saved ? <span class="nr-status is-saved"><i class="nr-status-dot"></i>Saved</span> : null}
+          </form>
+        </div>
+      </section>
+
+      <section class="nbr-settings-section" id="podcast">
+        <span class="nr-eyebrow">Podcast</span>
+        <div class="nbr-settings-card">
+          <p class="hint" style="margin-top:0">
+            {podcastEpisodeCount > 0 ? (
+              <>
+                Your feed lists {podcastEpisodeCount} public {podcastEpisodeCount === 1 ? "episode" : "episodes"}.
+                Submit <a href={podcastFeedUrl} target="_blank" rel="noopener"><code>{podcastFeedUrl}</code></a> to
+                Apple Podcasts and Spotify.
+              </>
+            ) : (
+              <>
+                Your podcast feed appears at <code>{podcastFeedUrl}</code> once a public episode is
+                published — mark a post "This post is an episode" in its settings.
+              </>
+            )}
+          </p>
+
+          <form method="post" action={`${ctx.adminBase}/settings/podcast/save`} class="nbr-token-form">
+            {SITE_PODCAST_FIELDS.map((field) =>
+              field.type === "toggle" ? (
+                <label class="settings-toggle-row">
+                  <span>
+                    <span class="env-label">{field.label}</span>
+                    {field.hint ? <span class="hint" style="display:block">{field.hint}</span> : null}
+                  </span>
+                  <input type="hidden" name={field.formName} value="off" />
+                  <input type="checkbox" name={field.formName} value="on" checked={podcast.explicit} />
+                </label>
+              ) : field.type === "category" ? (
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for={field.formName}>{field.label}</label>
+                  <select id={field.formName} name={field.formName}>
+                    {PODCAST_CATEGORIES.map((category) => (
+                      <option value={category} selected={category === podcast.category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div class="nbr-control">
+                  <label class="nr-eyebrow" for={field.formName}>{field.label}</label>
+                  <input
+                    id={field.formName}
+                    name={field.formName}
+                    type={field.type === "email" ? "email" : "text"}
+                    value={podcastValue[field.key] ?? ""}
+                    placeholder={field.type === "url" ? "https://… or a URL copied from Media" : ""}
+                  />
+                  {field.hint ? <p class="hint">{field.hint}</p> : null}
+                  {field.type === "url" && podcastArtworkUrl ? (
+                    <img src={podcastArtworkUrl} alt="Podcast cover art" width="120" height="120" style="object-fit:cover;border-radius:6px" />
+                  ) : null}
+                </div>
+              ),
+            )}
+
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:1rem">Save</button>
+            {podcastSaved ? <span class="nr-status is-saved"><i class="nr-status-dot"></i>Saved</span> : null}
+            {podcastError ? <p class="hint" role="alert" style="color:var(--danger)">{podcastError}</p> : null}
           </form>
         </div>
       </section>

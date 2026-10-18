@@ -126,6 +126,10 @@ async function denied(
  * Replacing `content` rather than adding a flag is deliberate: a flag has to be
  * checked by every consumer forever, and one that forgets leaks the body. The
  * page object simply no longer *contains* the paid text.
+ *
+ * The same goes for an episode's audio: its media id is enough to guess the
+ * file's URL (storage keys are built from it), so a gated page loses the
+ * reference entirely and renders — and serializes — as a plain teaser.
  */
 export function redactPage(
   page: Page,
@@ -133,7 +137,11 @@ export function redactPage(
   options: PageAccessOptions = {}
 ): Page {
   if (decision.visibility === "full") return page;
-  return { ...page, content: buildTeaser(page, { words: options.teaserWords }) };
+  return {
+    ...page,
+    content: buildTeaser(page, { words: options.teaserWords }),
+    episode: null,
+  };
 }
 
 /**

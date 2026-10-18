@@ -29,6 +29,12 @@ export const pageFormSchema = z.object({
   access_tier: z.enum(["public", "members", "paid"]).default("public"),
   /** One-off price in major units as typed ("3.50"); converted to cents on save. */
   price_amount: z.string().trim().optional(),
+  // "audio" makes a post an episode of `audio_media_id`. Absent = keep whatever
+  // the post already is (forms without the control, like `in_feed`).
+  content_type: z.enum(["post", "audio"]).optional(),
+  audio_media_id: z.string().trim().max(100).optional(),
+  episode_number: z.string().trim().regex(/^\d{0,5}$/, "Episode number must be a whole number").optional(),
+  season_number: z.string().trim().regex(/^\d{0,5}$/, "Season number must be a whole number").optional(),
   seo_og_image: z.string().trim().max(500).optional(),
   seo_twitter_card: z.enum(["summary", "summary_large_image"]).optional(),
 });

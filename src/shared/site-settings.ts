@@ -147,6 +147,104 @@ export function resolveSiteDiscovery(
   };
 }
 
+// --- Podcast settings ---
+
+export const SETTING_PODCAST_ARTWORK = "podcast_artwork";
+export const SETTING_PODCAST_AUTHOR = "podcast_author";
+export const SETTING_PODCAST_OWNER_EMAIL = "podcast_owner_email";
+export const SETTING_PODCAST_CATEGORY = "podcast_category";
+export const SETTING_PODCAST_EXPLICIT = "podcast_explicit";
+
+/**
+ * Apple Podcasts' top-level categories — the values directories accept in
+ * `<itunes:category text="…">`, spelled exactly. Subcategories are optional
+ * and left out; a show is listed fine under its top-level category.
+ */
+export const PODCAST_CATEGORIES = [
+  "Arts", "Business", "Comedy", "Education", "Fiction", "Government", "Health & Fitness",
+  "History", "Kids & Family", "Leisure", "Music", "News", "Religion & Spirituality",
+  "Science", "Society & Culture", "Sports", "Technology", "True Crime", "TV & Film",
+] as const;
+
+export const DEFAULT_PODCAST_CATEGORY = "Society & Culture";
+
+export interface SitePodcastField {
+  key: string;
+  formName: string;
+  label: string;
+  type: "text" | "email" | "url" | "category" | "toggle";
+  hint?: string;
+}
+
+/**
+ * What a podcast directory needs to know about the show as a whole. Kept apart
+ * from the identity fields because these are published *into the feed* — the
+ * owner email especially — and the hints say so where they are edited.
+ */
+export const SITE_PODCAST_FIELDS: SitePodcastField[] = [
+  {
+    key: SETTING_PODCAST_ARTWORK,
+    formName: "podcast:artwork",
+    label: "Cover art",
+    type: "url",
+    hint: "Square JPG or PNG, 1400–3000 px. Apple and Spotify will not list a show without it.",
+  },
+  {
+    key: SETTING_PODCAST_AUTHOR,
+    formName: "podcast:author",
+    label: "Author",
+    type: "text",
+    hint: "Shown under the show's name in podcast apps. Defaults to the site name.",
+  },
+  {
+    key: SETTING_PODCAST_OWNER_EMAIL,
+    formName: "podcast:owner_email",
+    label: "Owner email",
+    type: "email",
+    hint: "Directories email this address to confirm the show is yours. It is published in the feed.",
+  },
+  {
+    key: SETTING_PODCAST_CATEGORY,
+    formName: "podcast:category",
+    label: "Category",
+    type: "category",
+  },
+  {
+    key: SETTING_PODCAST_EXPLICIT,
+    formName: "podcast:explicit",
+    label: "Contains explicit content",
+    type: "toggle",
+    hint: "Directories hide explicit shows from some listeners. Off unless you say so.",
+  },
+];
+
+export interface ResolvedPodcastSettings {
+  /** Stored value (media key or URL); resolve with {@link resolveMediaValue}. */
+  artwork: string | null;
+  author: string | null;
+  ownerEmail: string | null;
+  category: string;
+  explicit: boolean;
+}
+
+/**
+ * Resolve the show's settings. An unknown category falls back to the default
+ * rather than reaching the feed: directories reject a category they do not
+ * recognise, and a stored value outlives the list it was chosen from.
+ */
+export function resolvePodcastSettings(settings: Record<string, string>): ResolvedPodcastSettings {
+  const text = (key: string) => settings[key]?.trim() || null;
+  const category = text(SETTING_PODCAST_CATEGORY);
+  return {
+    artwork: text(SETTING_PODCAST_ARTWORK),
+    author: text(SETTING_PODCAST_AUTHOR),
+    ownerEmail: text(SETTING_PODCAST_OWNER_EMAIL),
+    category:
+      category && PODCAST_CATEGORIES.some((c) => c === category) ? category : DEFAULT_PODCAST_CATEGORY,
+    explicit: settings[SETTING_PODCAST_EXPLICIT] === "on",
+  };
+}
+
 /**
  * Resolve a stored media value to a usable URL. Values may be a media storage
  * key (resolved via `urlFn`), an absolute URL, or a root-relative path; empty

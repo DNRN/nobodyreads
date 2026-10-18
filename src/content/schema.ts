@@ -37,6 +37,16 @@ export const page = sqliteTable(
     accessTier: text("access_tier").notNull().default("public"),
     /** One-off purchase price in minor units. NULL = not sold separately. */
     priceAmount: integer("price_amount"),
+    /**
+     * NULL = a plain post; "audio" = an episode. No CHECK, like `accessTier`.
+     * `toPage()` builds an episode only when this is "audio" *and*
+     * `audioMediaId` is set, so a half-written row reads as a plain post.
+     */
+    contentType: text("content_type"),
+    /** The episode's audio, a `media.media_id` in the same tenant. */
+    audioMediaId: text("audio_media_id"),
+    episodeNumber: integer("episode_number"),
+    seasonNumber: integer("season_number"),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),

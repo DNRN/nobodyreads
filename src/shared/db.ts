@@ -74,6 +74,11 @@ async function migrateColumns(client: Client): Promise<void> {
     "ALTER TABLE comment ADD COLUMN held_at TEXT",
     "ALTER TABLE page ADD COLUMN access_tier TEXT NOT NULL DEFAULT 'public'",
     "ALTER TABLE page ADD COLUMN price_amount INTEGER",
+    "ALTER TABLE media ADD COLUMN duration_seconds INTEGER",
+    "ALTER TABLE page ADD COLUMN content_type TEXT",
+    "ALTER TABLE page ADD COLUMN audio_media_id TEXT",
+    "ALTER TABLE page ADD COLUMN episode_number INTEGER",
+    "ALTER TABLE page ADD COLUMN season_number INTEGER",
   ];
   for (const sql of migrations) {
     try {

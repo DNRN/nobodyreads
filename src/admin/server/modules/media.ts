@@ -10,7 +10,7 @@ import {
 import { resolveEffectiveComfyConfig, isComfyConfigured } from "../../../api/ai/comfy/config.js";
 import { generateImage } from "../../../api/ai/generate-image.js";
 import { recordImageGeneration } from "../../../api/ai/metering.js";
-import type { AdminModuleContext } from "./types.js";
+import { fireMediaUploaded, type AdminModuleContext } from "./types.js";
 
 export function createMediaRoutes(ctx: AdminModuleContext): Hono {
   const { db, storage, tenantId, adminBase, comfy } = ctx;
@@ -34,6 +34,21 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
 
     const mediaId = randomUUID();
     const ext = extname(file.name).toLowerCase() || "";
+
+    // Audio only enters through the chunked upload session, which checks the
+    // bytes and records the duration an episode needs. Checked by extension
+    // too: a browser's declared type is a guess, and drag-and-drop skips the
+    // file picker's filter.
+    if (file.type.startsWith("audio/") || /^\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)$/.test(ext)) {
+      return c.json(
+        {
+          error:
+            "Audio is uploaded from a post's settings (This post is an episode), where it is checked and timed.",
+        },
+        415
+      );
+    }
+
     const storageKey = `${keyPrefix}${mediaId}${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -51,22 +66,17 @@ export function createMediaRoutes(ctx: AdminModuleContext): Hono {
       tenantId
     );
 
-    if (ctx.onMediaUploaded) {
-      const event = {
-        tenantId,
-        mediaId,
-        storageKey: stored.key,
-        filename: file.name,
-        mimeType: file.type,
-        size: buffer.length,
-        data: buffer,
-      };
-      // Fire-and-forget, like the publish hook: an upload must not fail because
-      // the host's screening provider is having a bad day.
-      Promise.resolve()
-        .then(() => ctx.onMediaUploaded!(event))
-        .catch((err) => console.error("onMediaUploaded hook failed:", err));
-    }
+    // Fire-and-forget, like the publish hook: an upload must not fail because
+    // the host's screening provider is having a bad day.
+    fireMediaUploaded(ctx, {
+      tenantId,
+      mediaId,
+      storageKey: stored.key,
+      filename: file.name,
+      mimeType: file.type,
+      size: buffer.length,
+      data: buffer,
+    });
 
     const accept = c.req.header("accept") || "";
     if (accept.includes("application/json")) {

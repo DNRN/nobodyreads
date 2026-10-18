@@ -38,7 +38,8 @@ export const READABLE_COLUMNS: Record<string, string[]> = {
   page_public: [
     "page_id", "tenant_id", "slug", "title", "excerpt", "tags", "date", "updated",
     "published", "seo", "kind", "nav_label", "nav_order", "comments_enabled",
-    "in_feed", "access_tier", "price_amount",
+    "in_feed", "access_tier", "price_amount", "content_type", "episode_number",
+    "season_number",
   ],
   post_like: ["tenant_id", "page_id", "member_issuer", "member_subject", "created_at"],
   comment: [
@@ -46,7 +47,10 @@ export const READABLE_COLUMNS: Record<string, string[]> = {
     "created_at", "deleted_at", "pinned_at",
   ],
   content_view: ["content_view_id", "tenant_id", "slug", "title", "kind", "published", "updated"],
-  media: ["media_id", "tenant_id", "storage_key", "original_name", "mime_type", "size", "created_at"],
+  media: [
+    "media_id", "tenant_id", "storage_key", "original_name", "mime_type", "size",
+    "duration_seconds", "created_at",
+  ],
 };
 
 function tableReference(): string {

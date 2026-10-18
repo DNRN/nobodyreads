@@ -1,14 +1,23 @@
 import type { ServerResponse } from "node:http";
+import type { Readable } from "node:stream";
+import { pipeline, finished } from "node:stream/promises";
 import { join, dirname, extname, isAbsolute } from "node:path";
-import { readFileSync, existsSync } from "node:fs";
 import {
-  readFile as readFileAsync,
+  readFileSync,
+  existsSync,
+  createReadStream,
+  createWriteStream,
+} from "node:fs";
+import {
   writeFile,
   unlink,
   mkdir,
+  rename,
+  rmdir,
   stat as statAsync,
 } from "node:fs/promises";
 import { z } from "zod";
+import { parseRange } from "./range.js";
 
 // --- MIME types (subset for media serving) ---
 
@@ -23,6 +32,7 @@ const MIME: Record<string, string> = {
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
   ".wav": "audio/wav",
   ".ogg": "audio/ogg",
   ".pdf": "application/pdf",
@@ -37,18 +47,44 @@ export interface StoredFile {
   url: string;
 }
 
+/** Request details {@link MediaStorage.serve} needs beyond the key. */
+export interface ServeOptions {
+  /** The request's `Range` header, if any. Honoured for a single byte range. */
+  range?: string;
+  /** `HEAD` writes headers only. Anything else is treated as GET. */
+  method?: string;
+}
+
 export interface MediaStorage {
+  /**
+   * The most parts {@link assemble} can join into one object. Undefined means
+   * no practical limit. Upload sessions refuse files that would need more.
+   */
+  readonly maxParts?: number;
   /** Save a file buffer. Returns the storage key and public URL. */
   put(key: string, data: Buffer, mimeType: string): Promise<StoredFile>;
+  /**
+   * Join `partKeys`, in order, into one object at `destKey`, then delete the
+   * parts. The parts must already exist; nothing is written at `destKey` on
+   * failure.
+   */
+  assemble(
+    partKeys: readonly string[],
+    destKey: string,
+    mimeType: string,
+  ): Promise<StoredFile>;
+  /** Open a stored object for streaming reads, or null when it does not exist. */
+  openRead(key: string): Promise<Readable | null>;
   /** Delete a file by key. */
   delete(key: string): Promise<void>;
   /** Return the public URL for a stored key. */
   url(key: string): string;
   /**
-   * Serve a file to an HTTP response (local: pipe from disk; cloud: redirect).
+   * Serve a file to an HTTP response (local: stream from disk with byte-range
+   * support; cloud: redirect to the bucket, which handles ranges itself).
    * Returns true if handled, false if not found.
    */
-  serve(key: string, res: ServerResponse): Promise<boolean>;
+  serve(key: string, res: ServerResponse, options?: ServeOptions): Promise<boolean>;
 }
 
 // --- Local filesystem implementation ---
@@ -86,31 +122,109 @@ export class LocalMediaStorage implements MediaStorage {
     return `/media/${key}`;
   }
 
-  async serve(key: string, res: ServerResponse): Promise<boolean> {
+  async assemble(
+    partKeys: readonly string[],
+    destKey: string,
+    _mimeType: string,
+  ): Promise<StoredFile> {
+    const destPath = join(this.dir, destKey);
+    const partialPath = `${destPath}.partial`;
+    await mkdir(dirname(destPath), { recursive: true });
+
+    // Assemble beside the destination and rename into place, so a failure
+    // midway never leaves a truncated file at the public key.
+    const out = createWriteStream(partialPath);
+    try {
+      for (const partKey of partKeys) {
+        await pipeline(createReadStream(join(this.dir, partKey)), out, { end: false });
+      }
+      out.end();
+      await finished(out);
+    } catch (err) {
+      out.destroy();
+      await unlink(partialPath).catch(() => {});
+      throw err;
+    }
+
+    await rename(partialPath, destPath);
+    await Promise.all(partKeys.map((k) => this.delete(k)));
+    // Parts usually share a per-upload folder that is now empty. Object stores
+    // have no folders to leave behind; a filesystem would keep one per upload.
+    // `rmdir` only removes empty directories, so a shared one survives.
+    const partDirs = new Set(partKeys.map((k) => dirname(join(this.dir, k))));
+    partDirs.delete(this.dir);
+    await Promise.all([...partDirs].map((d) => rmdir(d).catch(() => {})));
+    return { key: destKey, url: this.url(destKey) };
+  }
+
+  async openRead(key: string): Promise<Readable | null> {
+    const filePath = await this.existingFile(key);
+    return filePath ? createReadStream(filePath) : null;
+  }
+
+  async serve(
+    key: string,
+    res: ServerResponse,
+    options: ServeOptions = {},
+  ): Promise<boolean> {
+    const filePath = await this.existingFile(key);
+    if (!filePath) return false;
+    const { size } = await statAsync(filePath);
+
+    const ext = extname(filePath).toLowerCase();
+    const headers: Record<string, string> = {
+      "Content-Type": MIME[ext] || "application/octet-stream",
+      "Accept-Ranges": "bytes",
+    };
+
+    const range = parseRange(options.range, size);
+    if (range === "unsatisfiable") {
+      res.writeHead(416, { ...headers, "Content-Range": `bytes */${size}` });
+      res.end();
+      return true;
+    }
+
+    if (range) {
+      headers["Content-Range"] = `bytes ${range.start}-${range.end}/${size}`;
+    }
+    const start = range?.start ?? 0;
+    const end = range?.end ?? size - 1;
+    headers["Content-Length"] = String(size === 0 ? 0 : end - start + 1);
+    res.writeHead(range ? 206 : 200, headers);
+
+    if (options.method === "HEAD" || size === 0) {
+      res.end();
+      return true;
+    }
+
+    // Streamed, never buffered: an episode can be hundreds of megabytes. A
+    // listener closing the tab mid-stream rejects the pipeline; that is not a
+    // server error, and the response is already torn down by then.
+    await pipeline(createReadStream(filePath, { start, end }), res).catch(() => {});
+    return true;
+  }
+
+  /** Resolve `key` to a regular file inside the media directory, or null. */
+  private async existingFile(key: string): Promise<string | null> {
     const filePath = join(this.dir, key);
 
     // Prevent directory traversal
-    if (!filePath.startsWith(this.dir)) return false;
+    if (!filePath.startsWith(this.dir)) return null;
 
     try {
       const fileStat = await statAsync(filePath);
-      if (!fileStat.isFile()) return false;
+      return fileStat.isFile() ? filePath : null;
     } catch {
-      return false;
+      return null;
     }
-
-    const ext = extname(filePath).toLowerCase();
-    const contentType = MIME[ext] || "application/octet-stream";
-    const content = await readFileAsync(filePath);
-    res.writeHead(200, { "Content-Type": contentType });
-    res.end(content);
-    return true;
   }
 }
 
 // --- Google Cloud Storage implementation ---
 
 export class GcsMediaStorage implements MediaStorage {
+  /** GCS `compose` accepts at most 32 source objects. */
+  readonly maxParts = 32;
   private bucket: string;
   private publicUrl: string;
   private keyFile?: string;
@@ -165,8 +279,30 @@ export class GcsMediaStorage implements MediaStorage {
     return `${this.publicUrl}/${key}`;
   }
 
+  async assemble(
+    partKeys: readonly string[],
+    destKey: string,
+    mimeType: string,
+  ): Promise<StoredFile> {
+    const client = await this.getClient();
+    const bucket = client.bucket(this.bucket);
+    const dest = bucket.file(destKey);
+    // `combine` sends the destination's metadata.contentType; without it GCS
+    // guesses from the extension, which is not what the bytes were checked as.
+    dest.metadata = { ...dest.metadata, contentType: mimeType };
+    await bucket.combine([...partKeys], dest, { deleteSourceObjects: true });
+    return { key: destKey, url: this.url(destKey) };
+  }
+
+  async openRead(key: string): Promise<Readable | null> {
+    const client = await this.getClient();
+    const file = client.bucket(this.bucket).file(key);
+    const [exists] = await file.exists();
+    return exists ? (file.createReadStream() as Readable) : null;
+  }
+
   async serve(key: string, res: ServerResponse): Promise<boolean> {
-    // For GCS, redirect to the public URL
+    // For GCS, redirect to the public URL. GCS answers Range requests itself.
     res.writeHead(302, { Location: this.url(key) });
     res.end();
     return true;
@@ -176,6 +312,8 @@ export class GcsMediaStorage implements MediaStorage {
 // --- Amazon S3 (and S3-compatible) implementation ---
 
 export class S3MediaStorage implements MediaStorage {
+  /** S3 multipart uploads accept up to 10,000 parts. */
+  readonly maxParts = 10_000;
   private bucket: string;
   private region?: string;
   private endpoint?: string;
@@ -270,8 +408,79 @@ export class S3MediaStorage implements MediaStorage {
     return `https://${this.bucket}.s3.${region}.amazonaws.com/${key}`;
   }
 
+  async assemble(
+    partKeys: readonly string[],
+    destKey: string,
+    mimeType: string,
+  ): Promise<StoredFile> {
+    const client = await this.getClient();
+    const { UploadId } = await client.send(
+      new this.sdk.CreateMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: destKey,
+        ContentType: mimeType,
+      }),
+    );
+
+    // Server-side copy of each stored part into the multipart upload: the
+    // bytes never pass back through this process. S3's 5 MiB minimum part
+    // size (all but the last) is met by the upload chunk size.
+    try {
+      const parts: { PartNumber: number; ETag?: string }[] = [];
+      for (const [i, partKey] of partKeys.entries()) {
+        const out = await client.send(
+          new this.sdk.UploadPartCopyCommand({
+            Bucket: this.bucket,
+            Key: destKey,
+            UploadId,
+            PartNumber: i + 1,
+            CopySource: `${this.bucket}/${encodeURIComponent(partKey)}`,
+          }),
+        );
+        parts.push({ PartNumber: i + 1, ETag: out.CopyPartResult?.ETag });
+      }
+      await client.send(
+        new this.sdk.CompleteMultipartUploadCommand({
+          Bucket: this.bucket,
+          Key: destKey,
+          UploadId,
+          MultipartUpload: { Parts: parts },
+        }),
+      );
+    } catch (err) {
+      await client
+        .send(
+          new this.sdk.AbortMultipartUploadCommand({
+            Bucket: this.bucket,
+            Key: destKey,
+            UploadId,
+          }),
+        )
+        .catch(() => {});
+      throw err;
+    }
+
+    await Promise.all(partKeys.map((k) => this.delete(k)));
+    return { key: destKey, url: this.url(destKey) };
+  }
+
+  async openRead(key: string): Promise<Readable | null> {
+    const client = await this.getClient();
+    try {
+      const out = await client.send(
+        new this.sdk.GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return out.Body as Readable;
+    } catch (err) {
+      // SDK v3 throws a `NoSuchKey` error class for a missing object.
+      if (err instanceof Error && err.name === "NoSuchKey") return null;
+      throw err;
+    }
+  }
+
   async serve(key: string, res: ServerResponse): Promise<boolean> {
-    // For S3-backed storage, redirect to the public URL.
+    // For S3-backed storage, redirect to the public URL. S3 answers Range
+    // requests itself.
     res.writeHead(302, { Location: this.url(key) });
     res.end();
     return true;

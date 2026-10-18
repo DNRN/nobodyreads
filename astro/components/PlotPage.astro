@@ -14,6 +14,7 @@
  */
 import type { PageView } from "../../src/render/page.js";
 import { type SiteContext, hasFeature } from "../../src/render/context.js";
+import { formatDuration } from "../../src/shared/duration.js";
 import Paywall from "./Paywall.astro";
 import ShareBar from "./ShareBar.astro";
 
@@ -34,6 +35,17 @@ function formatDate(iso: string): string {
     year: "numeric",
   });
 }
+
+const episode = view.episode;
+const episodeLabel = episode
+  ? [
+      episode.season !== null && `Season ${episode.season}`,
+      episode.number !== null && `Episode ${episode.number}`,
+      formatDuration(episode.durationSeconds),
+    ]
+      .filter(Boolean)
+      .join(" · ")
+  : "";
 
 // A teaser is a partial body, so it carries the fade whichever kind of page it
 // is on. `page-body` and `post-body` differ only in their own spacing rules.
@@ -69,6 +81,20 @@ const showComments = kind === "post" && hasFeature(ctx, "comments");
               </div>
             )}
           </div>
+          {episode && (
+            <figure class="episode-player">
+              {episode.artUrl && (
+                <img class="episode-player__art" src={episode.artUrl} alt="" loading="lazy" />
+              )}
+              <div class="episode-player__body">
+                <p class="episode-player__meta">{episodeLabel}</p>
+                <audio class="episode-player__audio" controls preload="metadata">
+                  <source src={episode.audioUrl} type={episode.mimeType} />
+                  <a href={episode.audioUrl}>Download the episode</a>
+                </audio>
+              </div>
+            </figure>
+          )}
           <div
             class:list={[bodyClass, view.teaser && "post-body--teaser"]}
             set:html={view.bodyHtml}

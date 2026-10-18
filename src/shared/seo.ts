@@ -84,6 +84,15 @@ export function buildMetaTags(options: LayoutOptions): string {
       : `${siteUrl}${ogImage}`;
     lines.push(`  <meta property="og:image" content="${escapeHtml(imgUrl)}">`);
   }
+  // An episode's audio, so link previews that can play it (Facebook,
+  // Discord, iMessage among them) do. Present only where the player is.
+  if (options.audio) {
+    const audioUrl = options.audio.url.startsWith("http")
+      ? options.audio.url
+      : `${siteUrl}${options.audio.url}`;
+    lines.push(`  <meta property="og:audio" content="${escapeHtml(audioUrl)}">`);
+    lines.push(`  <meta property="og:audio:type" content="${escapeHtml(options.audio.type)}">`);
+  }
 
   // Twitter Card tags
   const twitterCard = seo?.twitterCard || "summary";

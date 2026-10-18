@@ -51,7 +51,9 @@ export function createBlogApiRoutes(options: BlogApiOptions): Hono {
     // *interface* API group, which already carries `resolveMember`. Explicitly
     // out of scope for Phase 5a.
     if (post.accessTier !== "public") {
-      return c.json({ ...post, content: buildTeaser(post), gated: true });
+      // `episode: null` for the same reason as `redactPage`: the audio's media
+      // id is enough to guess the file's URL.
+      return c.json({ ...post, content: buildTeaser(post), episode: null, gated: true });
     }
 
     return c.json(post);

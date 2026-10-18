@@ -16,6 +16,7 @@ import type {
   PostListViewConfig,
   CustomViewConfig,
   Media,
+  PodcastEpisode,
 } from "./types.js";
 
 // --- Row mappers ---
@@ -47,6 +48,16 @@ function toPage(row: PageRow): Page {
     // itself separately fails closed to a teaser.
     accessTier: normalizeAccessTier(row.accessTier),
     priceAmount: row.priceAmount ?? null,
+    // Both halves or nothing: a row marked audio without its file (or a file
+    // id left on a plain post) reads as a plain post, never as a broken player.
+    episode:
+      row.contentType === "audio" && row.audioMediaId
+        ? {
+            audioMediaId: row.audioMediaId,
+            number: row.episodeNumber ?? null,
+            season: row.seasonNumber ?? null,
+          }
+        : null,
   };
 }
 
@@ -231,6 +242,70 @@ export async function listFeedPosts(db: Database, tenantId: string): Promise<Pag
     .orderBy(desc(page.date))
     .limit(50);
   return rows.map(toPageSummary);
+}
+
+/**
+ * Episodes for the podcast feed, newest first.
+ *
+ * This query is the whole of "what may reach a podcast directory": published
+ * posts marked audio, **public** (a directory feed cannot authenticate, so a
+ * gated episode must not appear at all — not even its title), in the feed, and
+ * joined to their own tenant's audio with a known duration. A row failing any
+ * of those is simply not an episode as far as directories are concerned.
+ *
+ * Capped at 500: well past any v1 show, and a bound on the response size.
+ */
+export async function listPodcastEpisodes(
+  db: Database,
+  tenantId: string,
+): Promise<PodcastEpisode[]> {
+  const rows = await db
+    .select({
+      pageId: page.pageId,
+      slug: page.slug,
+      title: page.title,
+      excerpt: page.excerpt,
+      date: page.date,
+      episodeNumber: page.episodeNumber,
+      seasonNumber: page.seasonNumber,
+      storageKey: media.storageKey,
+      mimeType: media.mimeType,
+      size: media.size,
+      durationSeconds: media.durationSeconds,
+    })
+    .from(page)
+    .innerJoin(
+      media,
+      and(eq(media.mediaId, page.audioMediaId), eq(media.tenantId, page.tenantId)),
+    )
+    .where(and(
+      eq(page.tenantId, tenantId),
+      eq(page.published, true),
+      eq(page.kind, "post"),
+      eq(page.contentType, "audio"),
+      eq(page.accessTier, "public"),
+      eq(page.inFeed, true),
+      isNotNull(media.durationSeconds),
+    ))
+    .orderBy(desc(page.date))
+    .limit(500);
+
+  return rows.map((r) => ({
+    id: r.pageId,
+    slug: r.slug,
+    title: r.title,
+    excerpt: r.excerpt,
+    date: r.date,
+    number: r.episodeNumber ?? null,
+    season: r.seasonNumber ?? null,
+    audio: {
+      storageKey: r.storageKey,
+      mimeType: r.mimeType,
+      size: r.size,
+      // Guaranteed by the isNotNull filter; the column type cannot say so.
+      durationSeconds: r.durationSeconds ?? 0,
+    },
+  }));
 }
 
 /** List posts for a post-list content view (newest first, optional limit). */
@@ -556,6 +631,14 @@ export async function upsertPage(
   p: Page,
   tenantId: string
 ): Promise<void> {
+  // Written from `p.episode` in one place so the insert and update lists below
+  // cannot disagree about what an episode is.
+  const episodeColumns = {
+    contentType: p.episode ? "audio" : null,
+    audioMediaId: p.episode?.audioMediaId ?? null,
+    episodeNumber: p.episode?.number ?? null,
+    seasonNumber: p.episode?.season ?? null,
+  };
   await db
     .insert(page)
     .values({
@@ -578,6 +661,7 @@ export async function upsertPage(
       inFeed: p.inFeed,
       accessTier: normalizeAccessTier(p.accessTier),
       priceAmount: p.priceAmount ?? null,
+      ...episodeColumns,
     })
     .onConflictDoUpdate({
       target: [page.pageId, page.tenantId],
@@ -599,6 +683,7 @@ export async function upsertPage(
         inFeed: p.inFeed,
         accessTier: normalizeAccessTier(p.accessTier),
         priceAmount: p.priceAmount ?? null,
+        ...episodeColumns,
       },
     });
 }
@@ -614,6 +699,7 @@ function toMedia(row: MediaRow, urlFn: (key: string) => string): Media {
     originalName: row.originalName,
     mimeType: row.mimeType,
     size: row.size,
+    durationSeconds: row.durationSeconds ?? null,
     createdAt: row.createdAt,
     url: urlFn(row.storageKey),
   };
@@ -622,7 +708,14 @@ function toMedia(row: MediaRow, urlFn: (key: string) => string): Media {
 /** Insert a new media record. */
 export async function insertMedia(
   db: Database,
-  m: { id: string; storageKey: string; originalName: string; mimeType: string; size: number },
+  m: {
+    id: string;
+    storageKey: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    durationSeconds?: number | null;
+  },
   tenantId: string
 ): Promise<void> {
   await db.insert(media).values({
@@ -632,6 +725,7 @@ export async function insertMedia(
     originalName: m.originalName,
     mimeType: m.mimeType,
     size: m.size,
+    durationSeconds: m.durationSeconds ?? null,
   });
 }
 

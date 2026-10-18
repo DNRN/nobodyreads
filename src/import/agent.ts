@@ -24,8 +24,12 @@ const BLOCK_TEXT_LIMIT = 6000;
 const LIST_ITEM_LIMIT = 500;
 const DOCUMENT_CHAR_LIMIT = 120_000;
 const INSTRUCTIONS_LIMIT = 8000;
-/** A proposal has to fit the completion budget alongside its reasoning. */
-const PROPOSAL_MAX_TOKENS = 16384;
+/**
+ * A proposal has to fit the completion budget alongside its reasoning — and
+ * reasoning models spend a large share of the budget thinking before they
+ * emit content (GLM-5.3-Flash truncated at 16k).
+ */
+const PROPOSAL_MAX_TOKENS = 32768;
 
 const SYSTEM_PROMPT = [
   "You convert an imported document outline into pages and posts for a personal site.",
@@ -47,6 +51,8 @@ const SYSTEM_PROMPT = [
   "  No HTML tags, no scripts, no CSS.",
   "- Images: use exactly the /media/{key} urls from the images manifest, in",
   "  place, with their alt text. Never invent a url, never hotlink elsewhere.",
+  "- coverImageKey, when set, must be exactly the key field of a manifest",
+  "  entry — never the original filename.",
   "- slugs: lowercase ASCII kebab-case (æ→ae, ø→o, å→a), short but readable.",
   "- excerpt: one or two sentences a reader sees before clicking.",
   "- The body travels as bodyLines: one Markdown line per array entry, and an",
@@ -113,6 +119,7 @@ export interface ImportAgentOptions {
 function buildUserPrompt(options: ImportAgentOptions): string {
   const document = compactOutline(options.outline);
   const images = options.manifest.map((entry) => ({
+    key: entry.key,
     url: entry.url,
     alt: entry.alt,
     original: entry.source,

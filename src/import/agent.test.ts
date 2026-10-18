@@ -105,7 +105,9 @@ describe("generateImportProposal", () => {
     const user = JSON.parse(lastSpec().user);
     expect(user.instructions).toBe("Make it one page only.");
     expect(user.previousNotes).toBe("Split into three posts.");
-    expect(user.images).toEqual([{ url: "/media/id1.png", alt: "A specimen", original: "photos/hero.png" }]);
+    expect(user.images).toEqual([
+      { key: "id1.png", url: "/media/id1.png", alt: "A specimen", original: "photos/hero.png" },
+    ]);
     expect(user.document.sections[0].blocks[0].text).toBe("We found specimens.");
   });
 

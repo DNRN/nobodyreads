@@ -46,6 +46,18 @@ export const importProposalSchema = z.object({
   notes: z.string(),
 });
 
+/**
+ * The public proposal — what generate returns and the client round-trips
+ * back at apply time. Same fields, but the assembled `bodyMarkdown` instead
+ * of the `bodyLines` transport.
+ */
+export const importProposalPublicSchema = z.object({
+  items: z.array(importItemSchema.omit({ bodyLines: true }).extend({
+    bodyMarkdown: z.string().trim().min(1),
+  })).max(50),
+  notes: z.string(),
+});
+
 export type RawImportItem = z.infer<typeof importProposalSchema>["items"][number];
 export type RawImportProposal = z.infer<typeof importProposalSchema>;
 
@@ -82,4 +94,10 @@ export function parseImportProposal(value: unknown): ImportProposal | null {
     })),
     notes: result.data.notes,
   };
+}
+
+/** Parse a client-round-tripped (public-shape) proposal at apply time. */
+export function parsePublicProposal(value: unknown): ImportProposal | null {
+  const result = importProposalPublicSchema.safeParse(value);
+  return result.success ? result.data : null;
 }

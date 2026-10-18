@@ -14,7 +14,7 @@ import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
 import { createBlogApiRoutes } from "./content/routes.js";
 import { createAiApiRoutes } from "./api/ai/ai.routes.js";
-import { resolveAiProviderConfig, resolveModerationAiConfig } from "./api/ai/config.js";
+import { resolveAiProviderConfig, resolveImportAiConfig, resolveModerationAiConfig } from "./api/ai/config.js";
 import { resolvePlatformComfyConfig } from "./api/ai/comfy/config.js";
 import { createFeedRoutes } from "./content/feed.js";
 import { createPodcastFeedRoutes } from "./content/podcast.js";
@@ -354,6 +354,7 @@ async function start() {
 			db,
 			storage,
 			ai: resolveAiProviderConfig(),
+			importAi: resolveImportAiConfig(),
 			comfy: resolvePlatformComfyConfig(),
 		}),
 	);

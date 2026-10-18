@@ -10,10 +10,25 @@
 
 import { randomUUID } from "node:crypto";
 import { posix as posixPath } from "node:path";
+import { z } from "zod";
 import type { Database } from "../db/index.js";
 import { insertMedia } from "../content/db.js";
 import type { MediaStorage } from "../media/storage.js";
 import type { DocumentOutline } from "./types.js";
+
+/** A manifest as it survives the client round-trip, re-checked at apply time. */
+export const manifestEntrySchema = z.object({
+  source: z.string(),
+  key: z.string(),
+  url: z.string(),
+  alt: z.string().nullable(),
+  mediaId: z.string(),
+});
+
+export function parseManifest(value: unknown): ManifestEntry[] | null {
+  const result = z.array(manifestEntrySchema).safeParse(value);
+  return result.success ? result.data : null;
+}
 
 const MIME_BY_EXTENSION: Record<string, string> = {
   ".jpg": "image/jpeg",

@@ -105,6 +105,10 @@ export function nobodyreadsAdmin(
           entrypoint: entry("layout.astro"),
         });
         injectRoute({
+          pattern: `${pattern}/import`,
+          entrypoint: entry("import.astro"),
+        });
+        injectRoute({
           pattern: `${pattern}/ai`,
           entrypoint: entry("ai.astro"),
         });

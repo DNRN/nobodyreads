@@ -48,6 +48,7 @@ export type { BlogApiOptions } from "./content/routes.js";
 export { createFeedRoutes } from "./content/feed.js";
 export { createPodcastFeedRoutes } from "./content/podcast.js";
 export type { PodcastFeedOptions } from "./content/podcast.js";
+export type { ImportItem, ImportProposal } from "./import/proposal.js";
 export {
   createRobotsRoutes,
   createSitemapRoutes,

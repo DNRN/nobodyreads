@@ -86,6 +86,8 @@ export interface AdminModuleContext {
   siteName?: string;
   /** OpenAI-compatible provider config for AI theming. When absent, AI is off. */
   ai?: AiProviderConfig;
+  /** AI config for the import agent; falls back to {@link ai} when unset. */
+  importAi?: AiProviderConfig;
   /** Comfy Cloud config for AI cover-image generation. When absent, it's off. */
   comfy?: ComfyProviderConfig;
   /**

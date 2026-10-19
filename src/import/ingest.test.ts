@@ -4,10 +4,15 @@ import {
   IMPORT_LIMITS,
   IngestError,
   ingestHtml,
+  ingestUrl,
   ingestZip,
+  isBlockedAddress,
   normalizeEntryName,
   type ImportLimits,
 } from "./ingest.js";
+import { extractOutline } from "./extract.js";
+import { resolveAssetKey } from "./manifest.js";
+import { createServer, type AddressInfo, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
 /**
  * Ingest is the only stage that touches untrusted archive bytes. These tests
@@ -162,5 +167,260 @@ describe("IngestError", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe("no-html");
     expect(error.message).toBe("nothing here");
+  });
+});
+
+// --- URL ingest ---
+//
+// The URL path adds an untrusted *host* to the untrusted bytes, so these
+// tests pin the SSRF boundary (who may be fetched, ever) and the contract
+// with the rest of the pipeline (a URL document must stage exactly like a
+// zipped web root: rewritten srcs resolve back to the fetched assets).
+
+type LocalServer = { server: Server; origin: string; hits: string[] };
+
+async function localServer(
+  handler: (req: IncomingMessage, res: ServerResponse) => void,
+): Promise<LocalServer> {
+  const hits: string[] = [];
+  const server = createServer((req, res) => {
+    hits.push(req.url ?? "");
+    handler(req, res);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return {
+    server,
+    origin: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    hits,
+  };
+}
+
+async function closeServer(server: Server): Promise<void> {
+  server.closeAllConnections();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+}
+
+const urlLimits: ImportLimits = { maxEntries: 5, maxTotalBytes: 64 * 1024, maxFileBytes: 32 * 1024 };
+
+describe("isBlockedAddress", () => {
+  it("blocks loopback only without the opt-in, private ranges never", () => {
+    expect(isBlockedAddress("8.8.8.8", false)).toBe(false);
+    expect(isBlockedAddress("2606:4700::1111", false)).toBe(false);
+    expect(isBlockedAddress("127.0.0.1", false)).toBe(true);
+    expect(isBlockedAddress("::1", false)).toBe(true);
+    expect(isBlockedAddress("127.0.0.1", true)).toBe(false);
+    expect(isBlockedAddress("::1", true)).toBe(false);
+    // Private, link-local, and unique-local stay refused with the opt-in.
+    expect(isBlockedAddress("10.0.0.1", true)).toBe(true);
+    expect(isBlockedAddress("172.16.0.9", true)).toBe(true);
+    expect(isBlockedAddress("192.168.4.4", true)).toBe(true);
+    expect(isBlockedAddress("169.254.169.254", true)).toBe(true);
+    expect(isBlockedAddress("0.0.0.0", true)).toBe(true);
+    expect(isBlockedAddress("fe80::1", true)).toBe(true);
+    expect(isBlockedAddress("fc00::5", true)).toBe(true);
+    // An IPv4-in-IPv6 address is judged by the embedded address too.
+    expect(isBlockedAddress("::ffff:10.0.0.1", true)).toBe(true);
+    expect(isBlockedAddress("::ffff:8.8.8.8", false)).toBe(false);
+    expect(isBlockedAddress("64:ff9b::10.0.0.1", true)).toBe(true);
+    expect(isBlockedAddress("64:ff9b::8.8.8.8", false)).toBe(false);
+  });
+});
+
+describe("ingestUrl", () => {
+  it("refuses loopback targets without the opt-in", async () => {
+    await expect(ingestUrl("http://127.0.0.1:1/x.html", urlLimits)).rejects.toMatchObject({
+      code: "blocked-host",
+    });
+    await expect(ingestUrl("http://localhost:1/x.html", urlLimits)).rejects.toMatchObject({
+      code: "blocked-host",
+    });
+  });
+
+  it("refuses private, link-local, and unique-local targets despite the opt-in", async () => {
+    for (const host of [
+      "10.1.2.3",
+      "172.16.0.9",
+      "192.168.4.4",
+      "169.254.169.254",
+      "0.0.0.0",
+      "[fe80::1]",
+      "[fc00::5]",
+    ]) {
+      await expect(
+        ingestUrl(`http://${host}/x.html`, { limits: urlLimits, allowLoopback: true }),
+      ).rejects.toMatchObject({ code: "blocked-host" });
+    }
+  });
+
+  it("refuses non-http URLs and unparsable input", async () => {
+    await expect(ingestUrl("ftp://example.com/x.html", urlLimits)).rejects.toMatchObject({
+      code: "bad-url",
+    });
+    await expect(ingestUrl("not a url", urlLimits)).rejects.toMatchObject({ code: "bad-url" });
+  });
+
+  it("refuses a redirect to a private target", async () => {
+    const local = await localServer((_req, res) => {
+      res.writeHead(302, { location: "http://169.254.169.254/latest/meta-data/" });
+      res.end();
+    });
+    try {
+      await expect(
+        ingestUrl(`${local.origin}/hop`, { limits: urlLimits, allowLoopback: true }),
+      ).rejects.toMatchObject({ code: "blocked-host" });
+    } finally {
+      await closeServer(local.server);
+    }
+  });
+
+  it("follows at most three redirects", async () => {
+    const local = await localServer((req, res) => {
+      const hop = Number(/\/hop\/(\d+)/.exec(req.url ?? "")?.[1] ?? -1);
+      if (hop >= 0 && hop <= 2) {
+        res.writeHead(302, { location: `/hop/${hop + 1}` });
+        res.end();
+        return;
+      }
+      if (req.url === "/hop/3") {
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end("<p>fired</p>");
+        return;
+      }
+      if (req.url === "/spin" || req.url === "/spin/0") {
+        res.writeHead(302, { location: "/spin/0" });
+        res.end();
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    try {
+      const doc = await ingestUrl(`${local.origin}/hop/0`, { limits: urlLimits, allowLoopback: true });
+      expect(doc.html).toContain("fired");
+      await expect(
+        ingestUrl(`${local.origin}/spin`, { limits: urlLimits, allowLoopback: true }),
+      ).rejects.toMatchObject({ code: "too-many-redirects" });
+    } finally {
+      await closeServer(local.server);
+    }
+  });
+
+  it("refuses a non-HTML content type", async () => {
+    const local = await localServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("just words");
+    });
+    try {
+      await expect(
+        ingestUrl(`${local.origin}/notes.txt`, { limits: urlLimits, allowLoopback: true }),
+      ).rejects.toMatchObject({ code: "not-html" });
+    } finally {
+      await closeServer(local.server);
+    }
+  });
+
+  it("fetches same-origin images, leaves cross-origin and data srcs alone, survives missing ones", async () => {
+    const page = `<!doctype html><html lang="da"><body><section><h2>Hej</h2>
+      <img src="giftige/a.jpg" alt="Galder">
+      <img src="/spiselige/b.png">
+      <img src="https://elsewhere.example/x.jpg">
+      <img src="data:image/png;base64,AAAA">
+      <img src="gone.jpg">
+      </section></body></html>`;
+    const local = await localServer((req, res) => {
+      if (req.url === "/svampe.html") {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(page);
+      } else if (req.url === "/giftige/a.jpg" || req.url === "/spiselige/b.png") {
+        res.writeHead(200, { "content-type": "application/octet-stream" });
+        res.end(PNG_BYTES);
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+    try {
+      const doc = await ingestUrl(`${local.origin}/svampe.html`, {
+        limits: urlLimits,
+        allowLoopback: true,
+      });
+
+      expect(doc.htmlName).toBe("svampe.html");
+      expect([...doc.assets.keys()].sort()).toEqual(["giftige/a.jpg", "spiselige/b.png"]);
+      expect(doc.assets.get("giftige/a.jpg")).toEqual(Buffer.from(PNG_BYTES));
+      expect(doc.skipped).toEqual(["gone.jpg"]);
+      // Only the document and its same-origin images were requested.
+      expect(local.hits).toEqual([
+        "/svampe.html",
+        "/giftige/a.jpg",
+        "/spiselige/b.png",
+        "/gone.jpg",
+      ]);
+      // Same-origin srcs are rewritten to zip-style relative paths; the
+      // others survive verbatim.
+      expect(doc.html).toContain('src="giftige/a.jpg"');
+      expect(doc.html).toContain('src="spiselige/b.png"');
+      expect(doc.html).toContain('src="https://elsewhere.example/x.jpg"');
+      expect(doc.html).toContain('src="data:image/png;base64,AAAA"');
+    } finally {
+      await closeServer(local.server);
+    }
+  });
+
+  it("stages a document in a subfolder exactly like a zipped web root", async () => {
+    const page = `<!doctype html><html lang="da"><body><section>
+      <img src="img/a.png">
+      <img src="/top.png">
+      </section></body></html>`;
+    const local = await localServer((req, res) => {
+      if (req.url === "/docs/page.html") {
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end(page);
+      } else if (req.url === "/docs/img/a.png" || req.url === "/top.png") {
+        res.writeHead(200, { "content-type": "image/png" });
+        res.end(PNG_BYTES);
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+    try {
+      const doc = await ingestUrl(`${local.origin}/docs/page.html`, {
+        limits: urlLimits,
+        allowLoopback: true,
+      });
+
+      // The staging contract: every outline image resolves through
+      // resolveAssetKey to a key that exists in the assets map.
+      const outline = extractOutline(doc.html);
+      expect(outline.images.length).toBe(2);
+      for (const src of outline.images) {
+        const key = resolveAssetKey(doc.htmlName, src);
+        expect(key, src).toBeTruthy();
+        expect(doc.assets.has(key!), src).toBe(true);
+      }
+      expect(doc.htmlName).toBe("docs/page.html");
+    } finally {
+      await closeServer(local.server);
+    }
+  });
+
+  it("enforces the size caps", async () => {
+    const local = await localServer((req, res) => {
+      if (req.url === "/big.html") {
+        res.writeHead(200, { "content-type": "text/html", "content-length": String(40 * 1024) });
+        res.end("x".repeat(40 * 1024));
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+    try {
+      await expect(
+        ingestUrl(`${local.origin}/big.html`, { limits: urlLimits, allowLoopback: true }),
+      ).rejects.toMatchObject({ code: "entry-too-large" });
+    } finally {
+      await closeServer(local.server);
+    }
   });
 });

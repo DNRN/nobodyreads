@@ -34,6 +34,7 @@
   let { adminBase }: { adminBase: string } = $props();
 
   let file = $state<File | null>(null);
+  let pageUrl = $state("");
   let pastedHtml = $state("");
   let instructions = $state("");
   let phase = $state<"configuring" | "running" | "reviewing">("configuring");
@@ -54,12 +55,13 @@
   const busy = $derived(phase === "running" || applying);
 
   async function start(previousNotes?: string) {
-    if (!file && !pastedHtml.trim()) {
-      error = "Upload a zip/html file or paste HTML first.";
+    if (!file && !pageUrl.trim() && !pastedHtml.trim()) {
+      error = "Upload a zip/html file, give a page URL, or paste HTML first.";
       return;
     }
     const form = new FormData();
     if (file) form.set("file", file);
+    else if (pageUrl.trim()) form.set("url", pageUrl.trim());
     else form.set("html", pastedHtml);
     form.set("instructions", instructions);
     if (previousNotes) form.set("previousNotes", previousNotes);
@@ -132,6 +134,7 @@
     created = ((await res.json()) as { created: typeof created }).created ?? null;
     phase = "configuring";
     file = null;
+    pageUrl = "";
     pastedHtml = "";
     result = null;
   }
@@ -149,6 +152,7 @@
     created = null;
     phase = "configuring";
     file = null;
+    pageUrl = "";
     pastedHtml = "";
   }
 </script>
@@ -168,13 +172,23 @@
       />
       <span class="hint">A zip with the page and its images works best.</span>
     </label>
+    <label class="nbr-import-url">
+      <span class="hint">…or import from a URL</span>
+      <input
+        type="url"
+        bind:value={pageUrl}
+        placeholder="https://example.org/deck.html"
+        disabled={busy || file !== null}
+      />
+      <span class="hint">The page and its same-origin images are fetched by the server; cross-origin images are left linked.</span>
+    </label>
     <details>
       <summary class="hint">…or paste HTML</summary>
       <textarea
         rows="5"
         bind:value={pastedHtml}
         placeholder="<!doctype html> …"
-        disabled={busy || (file !== null)}
+        disabled={busy || file !== null || pageUrl.trim() !== ""}
       ></textarea>
     </details>
     <label class="nbr-import-instructions">

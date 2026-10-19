@@ -21,7 +21,7 @@ import type { AiProviderConfig, AdminModuleContext } from "./types.js";
 import { generateImportProposal } from "../../../import/agent.js";
 import { applyImportItems } from "../../../import/apply.js";
 import { extractOutline } from "../../../import/extract.js";
-import { IngestError, ingestHtml, ingestZip } from "../../../import/ingest.js";
+import { IngestError, ingestHtml, ingestUrl, ingestZip } from "../../../import/ingest.js";
 import { parseManifest, stageMedia, type ManifestEntry } from "../../../import/manifest.js";
 import { parsePublicProposal, type ImportProposal } from "../../../import/proposal.js";
 import { validateProposal, type ProposalValidation } from "../../../import/validate.js";
@@ -64,6 +64,7 @@ export function createImportRoutes(ctx: AdminModuleContext): Hono {
 
   const startJob = async (input: {
     bytes?: Uint8Array;
+    url?: string;
     html?: string;
     instructions: string;
     previousNotes?: string;
@@ -77,11 +78,18 @@ export function createImportRoutes(ctx: AdminModuleContext): Hono {
       try {
         const document = input.bytes
           ? await ingestZip(input.bytes)
-          : input.html
-            ? ingestHtml(input.html)
-            : (() => {
-                throw new IngestError("no-html", "Nothing to import: no file and no pasted HTML.");
-              })();
+          : input.url
+            ? await ingestUrl(input.url, {
+                allowLoopback: process.env.IMPORT_ALLOW_LOOPBACK === "1",
+              })
+            : input.html
+              ? ingestHtml(input.html)
+              : (() => {
+                  throw new IngestError(
+                    "no-html",
+                    "Nothing to import: no file, no URL, and no pasted HTML.",
+                  );
+                })();
         const outline = extractOutline(document.html);
         const { manifest, unstaged } = await stageMedia({
           db,
@@ -142,6 +150,7 @@ export function createImportRoutes(ctx: AdminModuleContext): Hono {
     const form = await c.req.parseBody();
     const file = form.file;
     const pasted = form.html;
+    const url = typeof form.url === "string" ? form.url.trim() : "";
     const instructions = typeof form.instructions === "string" ? form.instructions : "";
     const previousNotes = typeof form.previousNotes === "string" ? form.previousNotes : undefined;
 
@@ -151,13 +160,14 @@ export function createImportRoutes(ctx: AdminModuleContext): Hono {
         return c.json({ error: "That archive is larger than the 100 MB import cap." }, 413);
       }
       bytes = new Uint8Array(await file.arrayBuffer());
-    } else if (typeof pasted !== "string" || !pasted.trim()) {
-      return c.json({ error: "Upload a zip/html file or paste HTML." }, 400);
+    } else if (!url && (typeof pasted !== "string" || !pasted.trim())) {
+      return c.json({ error: "Upload a zip/html file, paste HTML, or give a page URL." }, 400);
     }
 
     const job = await startJob({
       bytes,
-      html: typeof pasted === "string" && pasted.trim() ? pasted : undefined,
+      url: url || undefined,
+      html: !bytes && !url && typeof pasted === "string" && pasted.trim() ? pasted : undefined,
       instructions,
       previousNotes,
     });

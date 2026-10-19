@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ServerResponse } from "node:http";
+import { createServer, type AddressInfo, type Server, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import JSZip from "jszip";
 import type { MediaStorage, StoredFile } from "../../../media/storage.js";
@@ -171,6 +171,64 @@ describe("createImportRoutes", () => {
 
     // Media was staged for real.
     expect(await listMedia(t.db, TENANT, (key) => key)).toHaveLength(1);
+  });
+
+  it("starts from a URL when the loopback opt-in is set", async () => {
+    vi.stubEnv("IMPORT_ALLOW_LOOPBACK", "1");
+    const server: Server = createServer((req, res) => {
+      if (req.url === "/deck.html") {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(
+          "<html lang='da'><body><section><h2>Hej</h2><p>Tekst.</p><img src='billed.png' alt='Billede'></section></body></html>",
+        );
+        return;
+      }
+      if (req.url === "/billed.png") {
+        res.writeHead(200, { "content-type": "image/png" });
+        res.end(Buffer.from([1, 2, 3]));
+        return;
+      }
+      res.writeHead(404);
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    try {
+      const { t, app } = await setup();
+      generateImportProposal.mockImplementation(async () => proposalFromCall());
+      const form = new FormData();
+      form.set("url", `${origin}/deck.html`);
+      form.set("instructions", "");
+      const start = await app.request("/import/start", { method: "POST", body: form });
+      expect(start.status).toBe(202);
+      const { jobId } = (await start.json()) as { jobId: string };
+      const job = await waitForJob(app, jobId);
+
+      // Same outcome as the zip path: one staged image, clean validation.
+      expect(job.status).toBe("done");
+      expect(job.manifest).toHaveLength(1);
+      expect(job.manifest[0]).toMatchObject({ source: "billed.png" });
+      expect(await listMedia(t.db, TENANT, (key) => key)).toHaveLength(1);
+    } finally {
+      server.closeAllConnections();
+      server.close();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("reports a refused URL host on the job", async () => {
+    const { app } = await setup();
+
+    const form = new FormData();
+    form.set("url", "http://127.0.0.1:9/deck.html"); // no opt-in: loopback refused
+    form.set("instructions", "");
+    const start = await app.request("/import/start", { method: "POST", body: form });
+    const { jobId } = (await start.json()) as { jobId: string };
+    const job = await waitForJob(app, jobId);
+
+    expect(job.status).toBe("error");
+    expect(job.error).toContain("refuses to fetch");
   });
 
   it("reports ingest failures on the job, not the process", async () => {

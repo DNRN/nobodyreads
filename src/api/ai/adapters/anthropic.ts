@@ -47,7 +47,7 @@ function buildUserContent(
  * `tool_choice` is accepted across the Claude model family.
  */
 export function createAnthropicCaller(config: AiProviderConfig): StructuredCaller {
-  const client = new Anthropic({ apiKey: config.apiKey });
+  const client = new Anthropic({ apiKey: config.apiKey, baseURL: config.baseURL });
 
   return {
     async callStructured(spec: StructuredCallSpec): Promise<unknown> {

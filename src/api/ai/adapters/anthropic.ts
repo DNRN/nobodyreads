@@ -45,13 +45,18 @@ function buildUserContent(
  * The model id comes from config (the host/tenant picks it) — this adapter
  * never hard-codes a vendor model. Thinking is left off so the forced
  * `tool_choice` is accepted across the Claude model family.
+ *
+ * Always streamed: the SDK refuses non-streaming calls whose `max_tokens`
+ * implies more than ten minutes (the import agent asks for 32k), and a long
+ * non-streamed call sends no headers until it finishes, which trips Node's
+ * fetch header timeout. `finalMessage()` returns the same assembled message.
  */
 export function createAnthropicCaller(config: AiProviderConfig): StructuredCaller {
   const client = new Anthropic({ apiKey: config.apiKey, baseURL: config.baseURL });
 
   return {
     async callStructured(spec: StructuredCallSpec): Promise<unknown> {
-      const res = await client.messages.create({
+      const res = await client.messages.stream({
         model: config.model,
         max_tokens: spec.maxTokens ?? MAX_TOKENS,
         system: spec.system,
@@ -68,7 +73,7 @@ export function createAnthropicCaller(config: AiProviderConfig): StructuredCalle
         ],
         tool_choice: { type: "tool", name: spec.schemaName },
         messages: [{ role: "user", content: buildUserContent(spec) }],
-      });
+      }).finalMessage();
 
       const toolUse = res.content.find((block) => block.type === "tool_use");
       if (!toolUse || toolUse.type !== "tool_use") {

@@ -10,6 +10,7 @@ import type {
   NavItem,
   LinkTarget,
   PageKind,
+  LinkTargetEntry,
   ContentView,
   ContentViewKind,
   ContentViewConfig,
@@ -590,6 +591,37 @@ export async function resolvePageLinks(
     .from(page)
     .where(and(inArray(page.pageId, ids), eq(page.published, true), eq(page.tenantId, tenantId)));
   return rows.map(toLinkTarget);
+}
+
+/**
+ * Posts and pages for the editor's internal-link picker. Content bodies are
+ * excluded — the list crosses to the browser — and drafts are included so an
+ * author can link work they are about to publish (the picker marks them).
+ */
+export async function listLinkTargets(
+  db: Database,
+  tenantId: string
+): Promise<LinkTargetEntry[]> {
+  const rows = await db
+    .select({
+      pageId: page.pageId,
+      title: page.title,
+      slug: page.slug,
+      kind: page.kind,
+      published: page.published,
+      date: page.date,
+    })
+    .from(page)
+    .where(and(inArray(page.kind, ["post", "page"]), eq(page.tenantId, tenantId)))
+    .orderBy(asc(page.kind), desc(page.date));
+  return rows.map((row) => ({
+    id: row.pageId,
+    title: row.title,
+    slug: row.slug,
+    kind: row.kind as LinkTargetEntry["kind"],
+    published: row.published,
+    date: row.date,
+  }));
 }
 
 /** List ALL pages for a tenant (including drafts), ordered by kind then date. */

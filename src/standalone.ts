@@ -299,8 +299,7 @@ async function start() {
 		"/api",
 		createAiApiRoutes({
 			db,
-			openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-			openaiBaseRoute: process.env.OPENAI_BASE_URL ?? "",
+			ai: resolveAiProviderConfig(),
 		}),
 	);
 

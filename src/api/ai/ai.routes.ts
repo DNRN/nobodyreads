@@ -1,47 +1,50 @@
 import { Hono } from "hono";
 import OpenAI from "openai";
 import type { Database } from "../../db/index.js";
+import type { AiProviderConfig } from "../../admin/server/modules/types.js";
 import { DEFAULT_TENANT_ID } from "../../shared/types.js";
-import { createThemeProvider } from "./provider.js";
+import { isAiConfigured } from "./config.js";
+import { createThemeProvider, type AIThemeProvider } from "./provider.js";
 
 export interface AiApiOptions {
 	db: Database;
 	tenantId?: string;
-	/** OpenAI API key — required for all AI routes. */
-	openaiApiKey: string;
-	openaiBaseRoute: string;
+	/**
+	 * Resolved AI provider config — from the environment via
+	 * {@link resolveAiProviderConfig}, or per-tenant via `getTenantAiConfig`.
+	 * When absent or unusable, every AI route answers 503: AI is optional.
+	 */
+	ai?: AiProviderConfig;
 }
 
 /**
- * AI API group — per-tenant OpenAI-backed endpoints.
- * Mount at /api. Requires a valid openaiApiKey.
+ * AI API group — per-tenant AI endpoints. Mount at /api.
  *
  * Routes:
- *   (none yet — add per-feature routes here)
+ *   GET  /ai       — availability probe
+ *   POST /ai/theme — generate a ThemeDiff from a natural-language prompt
  */
 export function createAiApiRoutes(options: AiApiOptions): Hono {
-	const { openaiApiKey, openaiBaseRoute } = options;
+	const { ai } = options;
 	const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
 
 	const app = new Hono();
 
-	// Guard: reject all AI routes if no key is configured
+	// The provider object is built on the first guarded request, not at mount:
+	// `new OpenAI` throws at construction when credentials are missing, and
+	// this factory runs at standalone boot. The guard below is the only path
+	// that constructs it.
+	let themeProvider: AIThemeProvider | undefined;
+
+	// Guard: reject all AI routes when no usable provider is configured.
 	app.use("/ai/*", async (c, next) => {
-		if (!openaiApiKey) {
-			return c.json({ error: "AI features not configured" }, 503);
-		}
-		if (!openaiBaseRoute) {
-			return c.json({ error: "AI features not configured" }, 503);
+		if (!themeProvider) {
+			if (!isAiConfigured(ai)) {
+				return c.json({ error: "AI features not configured" }, 503);
+			}
+			themeProvider = createThemeProvider(ai);
 		}
 		return next();
-	});
-
-	// OpenAI-compatible provider for the standalone /api/ai/theme endpoint.
-	const provider = createThemeProvider({
-		provider: "openai-compatible",
-		apiKey: openaiApiKey,
-		baseURL: openaiBaseRoute,
-		model: process.env.AI_THEME_MODEL ?? "",
 	});
 
 	app.get("/ai", async (c) => {
@@ -53,7 +56,8 @@ export function createAiApiRoutes(options: AiApiOptions): Hono {
 		const { input } = body;
 
 		try {
-			const response = await provider.generateThemeDiff(input);
+			// The /ai/* guard has constructed the provider by the time handlers run.
+			const response = await themeProvider!.generateThemeDiff(input);
 			return c.json(response);
 		} catch (err) {
 			if (err instanceof OpenAI.APIError) {

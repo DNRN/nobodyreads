@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 import { EventEmitter } from "node:events";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
 import { streamSSE } from "hono/streaming";
 import { initDb } from "./shared/db.js";
 import { createMediaStorage, type LocalMediaStorage } from "./media/storage.js";
@@ -63,14 +64,18 @@ const ASTRO_CLIENT_DIR = join(
 );
 
 /**
- * Sentinel response that tells @hono/node-server the raw Node response
- * was already written to directly (e.g. by Astro SSR or media storage).
+ * Handlers that write the raw Node response themselves (media storage, Astro
+ * SSR) return this sentinel so @hono/node-server does not write a second
+ * response over it.
+ *
+ * It must be the upstream constant, not a locally constructed
+ * `new Response(null, { headers: { "x-hono-already-sent": "1" } })`: v2 of the
+ * adapter overrides global.Response when serve() starts, giving any Response
+ * built after that an internal cache that takes a fast path which skips the
+ * already-sent check entirely — writing headers twice (ERR_HTTP_HEADERS_SENT)
+ * on every media file and SSR render. The upstream constant is built at module
+ * load, before the override, so it is a plain Response and is honoured.
  */
-function alreadySent(): Response {
-	return new Response(null, {
-		headers: { "x-hono-already-sent": "1" },
-	});
-}
 
 // --- MIME types for static file serving ---
 
@@ -265,7 +270,7 @@ async function start() {
 			range: c.req.header("range"),
 			method: c.req.method,
 		});
-		if (served) return alreadySent();
+		if (served) return RESPONSE_ALREADY_SENT;
 		return c.text("Not found", 404);
 	});
 
@@ -442,7 +447,7 @@ async function start() {
 					nodeRes.on("finish", resolve),
 				);
 			}
-			return alreadySent();
+			return RESPONSE_ALREADY_SENT;
 		}
 
 		return c.text("Not found", 404);

@@ -7,20 +7,22 @@ const ctx = requireAdminContext(Astro.locals);
 ---
 
 <AdminLayout title="Import — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
-  <div class="nbr-settings">
-    <header>
-      <h2 class="nr-title nbr-settings-title">Import</h2>
-      <p class="nbr-settings-sub">
-        Turn an HTML page — a slide deck, an old site, a saved article — into drafts.
-        The agent proposes; you accept, steer, or discard.
-      </p>
-    </header>
+  <main class="container">
+    <div class="nbr-settings">
+      <header class="nbr-settings-head">
+        <h2 class="nr-title nbr-settings-title">Import</h2>
+        <p class="nbr-settings-sub">
+          Turn an HTML page — a slide deck, an old site, a saved article — into drafts.
+          The agent proposes; you accept, steer, or discard.
+        </p>
+      </header>
 
-    <section class="nbr-settings-section">
-      <span class="nr-eyebrow">Source</span>
-      <div class="nbr-settings-card">
-        <ImportPanel client:load adminBase={ctx.adminBase} />
-      </div>
-    </section>
-  </div>
+      <section class="nbr-settings-section">
+        <span class="nr-eyebrow">Source</span>
+        <div class="nbr-settings-card">
+          <ImportPanel client:load adminBase={ctx.adminBase} />
+        </div>
+      </section>
+    </div>
+  </main>
 </AdminLayout>

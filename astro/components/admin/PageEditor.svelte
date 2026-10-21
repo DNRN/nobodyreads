@@ -11,6 +11,7 @@
   import MediaPicker from "./MediaPicker.svelte";
   import CollectionPicker from "./CollectionPicker.svelte";
   import EpisodeField from "./EpisodeField.svelte";
+  import LinkPicker from "./LinkPicker.svelte";
 
   interface Props {
     page?: Page;
@@ -153,6 +154,9 @@
   let pickerTarget: "body" | "seo" | "pick" = "body";
   let resolvePick: ((url: string | null) => void) | null = null;
   let collectionPickerOpen = $state(false);
+  let linkPickerOpen = $state(false);
+  // Which tab the link picker opens on — set by the slash item that opened it.
+  let linkPickerKind = $state<"post" | "page">("post");
 
   // --- Chrome state --------------------------------------------------------
   let drawerOpen = $state(false);
@@ -457,6 +461,43 @@
     return sourceMode ? insertCollectionSource(slug) : insertCollectionWysiwyg(slug);
   }
 
+  // --- Internal links -------------------------------------------------------
+  // A picker-inserted link carries the target's title as display text; the
+  // [[id]] underneath points at the page itself, so the URL survives renames.
+
+  async function insertLinkWysiwyg(id: string, label: string) {
+    if (!crepe) return;
+    const { editorViewCtx } = await import("@milkdown/kit/core");
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const linkType = view.state.schema.nodes.wiki_link;
+      if (!linkType) return;
+      // Node built directly, not the typed token: ProseMirror input rules only
+      // fire on real keystrokes (same reason as collection embeds above).
+      const node = linkType.create({ target: id, label });
+      view.dispatch(view.state.tr.replaceSelectionWith(node, false).scrollIntoView());
+      view.focus();
+    });
+    content = crepe.getMarkdown();
+  }
+
+  async function insertLinkSource(id: string, label: string) {
+    const token = `[[${id}|${label}]]`;
+    const start = sourceEl?.selectionStart ?? content.length;
+    const end = sourceEl?.selectionEnd ?? start;
+    content = content.slice(0, start) + token + content.slice(end);
+    await tick(); // let bind:value flush before moving the caret
+    sourceEl?.focus();
+    sourceEl?.setSelectionRange(start + token.length, start + token.length);
+  }
+
+  function insertLink({ id, title }: { id: string; title: string }) {
+    linkPickerOpen = false;
+    // "]" would end the token early; a label has no use for brackets anyway.
+    const label = title.replace(/[[\]]/g, "").trim() || id;
+    return sourceMode ? insertLinkSource(id, label) : insertLinkWysiwyg(id, label);
+  }
+
   /** Draft an image prompt from the saved post's content (cheap text call, no image spend yet). */
   async function draftCoverPrompt() {
     if (!currentId || coverDrafting) return;
@@ -591,6 +632,28 @@
               },
             };
 
+            const postLinkMenuItem = {
+              key: "post-link",
+              label: "Post link",
+              icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>`,
+              onRun: (menuCtx: any) => {
+                menuCtx.get(commandsCtx).call(clearTextInCurrentBlockCommand.key);
+                linkPickerKind = "post";
+                linkPickerOpen = true;
+              },
+            };
+
+            const pageLinkMenuItem = {
+              key: "page-link",
+              label: "Page link",
+              icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`,
+              onRun: (menuCtx: any) => {
+                menuCtx.get(commandsCtx).call(clearTextInCurrentBlockCommand.key);
+                linkPickerKind = "page";
+                linkPickerOpen = true;
+              },
+            };
+
             const take = (groupKey: string, itemKey: string) => {
               try {
                 return builder
@@ -621,6 +684,11 @@
                 // survives (see `features` above). Without this entry the Media
                 // group would offer everything except the obvious thing.
                 items: [imageMenuItem, collectionMenuItem, take("advanced", "code")],
+              },
+              {
+                key: "links",
+                label: "Links",
+                items: [postLinkMenuItem, pageLinkMenuItem],
               },
               {
                 key: "structure",
@@ -1229,7 +1297,7 @@
       </div>
       <dl class="nbr-help-list">
         <dt><kbd>/</kbd></dt>
-        <dd>Insert an image, quote, code block, list or embed.</dd>
+        <dd>Insert an image, link, quote, code block, list or embed.</dd>
         <dt>Select text</dt>
         <dd>A formatting bar appears above the selection.</dd>
         <dt><kbd>⌘S</kbd></dt>
@@ -1237,7 +1305,7 @@
         <dt><kbd>⌘⇧F</kbd></dt>
         <dd>Focus mode — hide everything but the words.</dd>
         <dt><code>[[page-id]]</code></dt>
-        <dd>Link to another of your pages.</dd>
+        <dd>Link to another post or page — or press / and pick one.</dd>
         <dt><code>{"{{collection:slug}}"}</code></dt>
         <dd>Embed a collection of posts.</dd>
         <dt><code>![alt|400px|right]</code></dt>
@@ -1263,6 +1331,15 @@
       onSelect={insertCollection}
       onClose={() => (collectionPickerOpen = false)}
       onError={(m) => showToast(m, "error", 4000)}
+    />
+  {/if}
+
+  {#if linkPickerOpen}
+    <LinkPicker
+      listUrl={`${editorBase}/link-targets`}
+      initialKind={linkPickerKind}
+      onSelect={insertLink}
+      onClose={() => (linkPickerOpen = false)}
     />
   {/if}
 

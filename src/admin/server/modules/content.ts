@@ -8,6 +8,7 @@ import {
   deletePage,
   upsertPage,
   getMediaById,
+  listLinkTargets,
 } from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
 import type { Page, PageKind } from "../../../content/types.js";
@@ -58,6 +59,15 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       console.error("Editor preview render error:", err);
       return c.json({ error: "Failed to render preview" }, 500);
     }
+  });
+
+  /**
+   * Posts and pages as JSON, for the editor's internal-link picker. Drafts
+   * included and flagged — an author can link work in progress; the link
+   * renders as broken for readers until the target is published.
+   */
+  app.get("/editor/link-targets", async (c) => {
+    return c.json(await listLinkTargets(db, tenantId));
   });
 
   app.post(

@@ -20,6 +20,7 @@ import { createMediaRoutes } from "./modules/media.js";
 import { createUploadSessionRoutes } from "./modules/upload-sessions.js";
 import { createViewRoutes } from "./modules/views.js";
 import { createPaymentsAdminRoutes } from "./modules/payments.js";
+import { createImportRoutes } from "./modules/import.js";
 
 export interface AdminRouterOptions {
   db: Database;
@@ -53,6 +54,12 @@ export interface AdminRouterOptions {
    * endpoint; when omitted, AI routes return 503 and the AI panel is hidden.
    */
   ai?: AiProviderConfig;
+  /**
+   * AI config for the import agent. Quality over latency by default: this
+   * wants the best writer available (see `AI_IMPORT_MODEL`). Falls back to
+   * `ai` when unset.
+   */
+  importAi?: AiProviderConfig;
   /**
    * Comfy Cloud config for AI cover-image generation. The host owns the key;
    * when omitted, cover-image routes return 503 and the generate UI is hidden.
@@ -95,6 +102,7 @@ function buildModuleContext(options: AdminRouterOptions): AdminModuleContext {
     siteUrl: options.siteUrl,
     siteName: options.siteName,
     ai: options.ai,
+    importAi: options.importAi,
     comfy: options.comfy,
     onContentPublished: options.onContentPublished,
     onMediaUploaded: options.onMediaUploaded,
@@ -114,6 +122,7 @@ export function createAdminRoutes(options: AdminRouterOptions): Hono {
   app.route("/", createCoverImageRoutes(ctx));
   app.route("/", createModerationRoutes(ctx));
   app.route("/", createContentRoutes(ctx));
+  app.route("/", createImportRoutes(ctx));
   app.route("/", createViewRoutes(ctx));
   app.route("/", createPaymentsAdminRoutes(ctx));
 

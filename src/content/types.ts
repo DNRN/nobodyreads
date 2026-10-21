@@ -182,6 +182,19 @@ export interface LinkTarget {
   title: string;
 }
 
+/**
+ * A post or page as offered by the editor's internal-link picker: enough to
+ * choose a target and insert `[[id|title]]`, without the content bodies.
+ */
+export interface LinkTargetEntry {
+  id: string;
+  title: string;
+  slug: string;
+  kind: "post" | "page";
+  published: boolean;
+  date: string;
+}
+
 // --- Layout types ---
 
 /** An entry in the topbar account dropdown. */

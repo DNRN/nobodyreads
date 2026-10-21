@@ -82,6 +82,25 @@ describe("generateImportProposal", () => {
     expect(spec.maxTokens).toBeGreaterThan(8192);
   });
 
+  it("raises the completion budget from AI_IMPORT_MAX_TOKENS for reasoning models", async () => {
+    callStructured.mockResolvedValue(goodProposal);
+    const previous = process.env.AI_IMPORT_MAX_TOKENS;
+    try {
+      process.env.AI_IMPORT_MAX_TOKENS = "98304";
+      await run({ ai: AI, tenantId: "t1", siteName: "Field", outline, manifest });
+      expect(lastSpec().maxTokens).toBe(98304);
+
+      // Out-of-range values fall back to the default rather than trusting
+      // a typo with the model's real budget.
+      process.env.AI_IMPORT_MAX_TOKENS = "12";
+      await run({ ai: AI, tenantId: "t1", siteName: "Field", outline, manifest });
+      expect(lastSpec().maxTokens).toBe(32768);
+    } finally {
+      if (previous === undefined) delete process.env.AI_IMPORT_MAX_TOKENS;
+      else process.env.AI_IMPORT_MAX_TOKENS = previous;
+    }
+  });
+
   it("frames the document as data and pins the image rules in the system prompt", () => {
     callStructured.mockResolvedValue(goodProposal);
 

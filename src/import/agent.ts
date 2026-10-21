@@ -27,9 +27,19 @@ const INSTRUCTIONS_LIMIT = 8000;
 /**
  * A proposal has to fit the completion budget alongside its reasoning — and
  * reasoning models spend a large share of the budget thinking before they
- * emit content (GLM-5.3-Flash truncated at 16k).
+ * emit content (GLM-5.3-Flash truncated at 16k, and again at 32k on longer
+ * thinking runs). Hosts on such models raise the budget with
+ * AI_IMPORT_MAX_TOKENS; models with lower output caps keep the default.
  */
-const PROPOSAL_MAX_TOKENS = 32768;
+const DEFAULT_PROPOSAL_MAX_TOKENS = 32768;
+const MAX_PROPOSAL_TOKEN_CEILING = 131072;
+
+function proposalMaxTokens(): number {
+	const n = Number(process.env.AI_IMPORT_MAX_TOKENS);
+	return Number.isFinite(n) && n >= 1024 && n <= MAX_PROPOSAL_TOKEN_CEILING
+		? Math.floor(n)
+		: DEFAULT_PROPOSAL_MAX_TOKENS;
+}
 
 const SYSTEM_PROMPT = [
   "You convert an imported document outline into pages and posts for a personal site.",
@@ -155,7 +165,7 @@ export async function generateImportProposal(
     schema: importProposalJsonSchema as unknown as Record<string, unknown>,
     toolDescription: "Propose how an imported HTML document becomes pages and posts.",
     temperature: 0.3,
-    maxTokens: PROPOSAL_MAX_TOKENS,
+    maxTokens: proposalMaxTokens(),
   });
 
   const proposal = parseImportProposal(value);

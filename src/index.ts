@@ -15,6 +15,7 @@ export type { AIModerationProvider } from "./api/ai/moderation-provider.js";
 export {
   resolveAiProviderConfig,
   resolveModerationAiConfig,
+  resolveImportAiConfig,
   getTenantAiConfig,
   isAiConfigured,
   SETTING_AI_PROVIDER,

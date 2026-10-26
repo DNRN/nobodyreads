@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Notes</title>
+<link rel="stylesheet" href="https://cdn.example.net/reset.css">
+<link rel="stylesheet" href="deck.css">
+<style>
+  body { color: rebeccapurple; }
+</style>
+<script>
+  window.deck = { init: function () { return true; } };
+</script>
+</head>
+<body>
+<canvas id="spores"></canvas>
+<div class="reveal">
+<div class="slides">
+
+  <section class="title-slide">
+    <div class="kicker">Autumn walks</div>
+    <h1>Field Notes</h1>
+    <p class="author">A. Collector</p>
+  </section>
+
+  <section>
+    <h2>What we found</h2>
+    <div class="split">
+      <div>
+        <p class="fragment fade-up">We found the first <strong>specimens</strong> after rain.</p>
+        <p class="fragment fade-up">Note the <em>ring</em> on the stalk.</p>
+      </div>
+      <img class="photo" src="photos/hero.png" data-preview-image alt="A specimen in situ">
+    </div>
+  </section>
+
+  <section>
+    <h2>Three habitats</h2>
+    <div class="ways3">
+      <div class="card"><img src="photos/moss.jpg" alt=""><div class="way-text"><div class="num">1</div><div><h3>Moss</h3><p>Damp and shaded &middot; example one</p></div></div></div>
+      <div class="card"><img src="photos/pine.jpg" alt=""><div class="way-text"><div class="num">2</div><div><h3>Pine</h3><p>Resin and needles</p></div></div></div>
+    </div>
+    <p class="muted small center">Tap a photo to enlarge</p>
+  </section>
+
+  <section>
+    <h2>Keep or leave?</h2>
+    <div class="quiz-bar">
+      <button class="btn" id="quiz-reset">Reset all</button>
+    </div>
+    <div class="flip"><div class="flip-inner"><div class="flip-face front"><img src="photos/quiz-1.jpg" alt=""></div><div class="flip-face back"><div class="verdict">Keep</div><div class="name">Waxy cap</div></div></div></div>
+    <aside class="notes">Let the audience shout before flipping.</aside>
+  </section>
+
+  <section>
+    <h2>Comparison</h2>
+    <ul class="fragment">
+      <li>Grows in tight <strong>clusters</strong></li>
+      <li>Small outward scales</li>
+    </ul>
+    <figure>
+      <img src="photos/compare.png" alt="Side by side">
+      <figcaption>The two species side by side</figcaption>
+    </figure>
+    <div class="rule">When in doubt, leave it.</div>
+  </section>
+
+  <section>
+    <h2>Sources</h2>
+    <div class="credit">
+      <div class="eyebrow">Photos</div>
+      <p><em>Regional Atlas</em></p>
+      <p class="muted">By J. Photographer</p>
+    </div>
+  </section>
+
+</div>
+</div>
+<svg id="deco"><text>decoration only</text></svg>
+</body>
+</html>

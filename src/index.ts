@@ -15,6 +15,7 @@ export type { AIModerationProvider } from "./api/ai/moderation-provider.js";
 export {
   resolveAiProviderConfig,
   resolveModerationAiConfig,
+  resolveImportAiConfig,
   getTenantAiConfig,
   isAiConfigured,
   SETTING_AI_PROVIDER,
@@ -48,6 +49,7 @@ export type { BlogApiOptions } from "./content/routes.js";
 export { createFeedRoutes } from "./content/feed.js";
 export { createPodcastFeedRoutes } from "./content/podcast.js";
 export type { PodcastFeedOptions } from "./content/podcast.js";
+export type { ImportItem, ImportProposal } from "./import/proposal.js";
 export {
   createRobotsRoutes,
   createSitemapRoutes,

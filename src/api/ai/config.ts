@@ -52,8 +52,8 @@ export function resolveAiProviderConfig(): AiProviderConfig | undefined {
   return isAiConfigured(config) ? config : undefined;
 }
 
-/** Sensible small-model default per provider (moderation is high-volume). */
-function defaultModerationModel(provider: AiProvider): string {
+/** Last-resort model per provider when no feature variable is set at all. */
+function defaultFeatureModel(provider: AiProvider): string {
   switch (provider) {
     case "openai-compatible":
       return "gpt-4o-mini";
@@ -65,35 +65,55 @@ function defaultModerationModel(provider: AiProvider): string {
 }
 
 /**
- * Resolve the moderation AI config from the environment, or `undefined` when
- * unusable. Moderation runs per comment (cost- and latency-sensitive, usually
- * a small fast model, possibly a different vendor than theming), so every
- * field has its own `AI_MODERATION_*` override. Key/baseURL/model fall back to
- * the theming variables only when moderation uses the *same provider* as
+ * Layered env resolution shared by the feature-specific AI configs. Every
+ * field has its own `<PREFIX>_*` override; key/baseURL/model fall back to
+ * the theming variables only when the feature uses the *same provider* as
  * theming — an OpenAI key is useless against Anthropic. A host that sets no
- * `AI_MODERATION_*` variables gets the same config as theming.
+ * feature variables gets the same config as theming.
  */
-export function resolveModerationAiConfig(): AiProviderConfig | undefined {
+function resolveFeatureAiConfig(
+  prefix: "AI_MODERATION" | "AI_IMPORT",
+  defaultModel: (provider: AiProvider) => string,
+): AiProviderConfig | undefined {
   const themeProvider = coerceProvider(process.env.AI_PROVIDER);
   const provider = coerceProvider(
-    process.env.AI_MODERATION_PROVIDER || process.env.AI_PROVIDER,
+    process.env[`${prefix}_PROVIDER`] || process.env.AI_PROVIDER,
   );
   const sameProvider = provider === themeProvider;
   const config: AiProviderConfig = {
     provider,
     apiKey:
-      process.env.AI_MODERATION_API_KEY ||
+      process.env[`${prefix}_API_KEY`] ||
       (sameProvider ? process.env.OPENAI_API_KEY : undefined),
     baseURL:
-      process.env.AI_MODERATION_BASE_URL ||
+      process.env[`${prefix}_BASE_URL`] ||
       (sameProvider ? process.env.OPENAI_BASE_URL : undefined) ||
       (provider === "openai-compatible" ? "https://api.openai.com/v1" : undefined),
     model:
-      process.env.AI_MODERATION_MODEL ||
+      process.env[`${prefix}_MODEL`] ||
       (sameProvider ? process.env.AI_THEME_MODEL : undefined) ||
-      defaultModerationModel(provider),
+      defaultModel(provider),
   };
   return isAiConfigured(config) ? config : undefined;
+}
+
+/**
+ * Resolve the moderation AI config from the environment, or `undefined` when
+ * unusable. Moderation runs per comment (cost- and latency-sensitive), so it
+ * usually wants a small fast model.
+ */
+export function resolveModerationAiConfig(): AiProviderConfig | undefined {
+  return resolveFeatureAiConfig("AI_MODERATION", defaultFeatureModel);
+}
+
+/**
+ * Resolve the import-agent AI config from the environment, or `undefined`
+ * when unusable. Import runs once per agent run, never per request, so the
+ * usual choice is the best writer available and latency is secondary — see
+ * `AI_IMPORT_MODEL` in `.env.example`.
+ */
+export function resolveImportAiConfig(): AiProviderConfig | undefined {
+  return resolveFeatureAiConfig("AI_IMPORT", defaultFeatureModel);
 }
 
 /**

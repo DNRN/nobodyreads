@@ -8,7 +8,8 @@ import type { AdminModuleContext } from "./types.js";
 vi.mock("../../../shared/db.js", () => ({ getRawClient: () => testClient }));
 
 import { createContentRoutes } from "./content.js";
-import { getPageById, insertMedia } from "../../../content/db.js";
+import { getPageById, insertMedia, upsertPage } from "../../../content/db.js";
+import type { Page, PageKind } from "../../../content/types.js";
 
 /**
  * `/editor/save` for episodes. The save route is the one gate between an
@@ -159,5 +160,44 @@ describe("saving an episode", () => {
     );
 
     expect((await getPageById(t.db, id, TENANT))!.episode).toBeNull();
+  });
+});
+
+describe("the internal-link picker's target list", () => {
+  /** A valid page with the given fields over sensible defaults. */
+  function seed(partial: Partial<Page> & { id: string; slug: string; kind: PageKind }): Page {
+    return {
+      title: partial.slug,
+      content: "",
+      excerpt: "",
+      tags: [],
+      date: "2026-01-01",
+      published: false,
+      nav: undefined,
+      commentsEnabled: true,
+      inFeed: true,
+      accessTier: "public",
+      priceAmount: null,
+      episode: null,
+      ...partial,
+    };
+  }
+
+  it("offers this plot's posts and pages, drafts flagged — home and other plots excluded", async () => {
+    await upsertPage(t.db, seed({ id: "post-live", slug: "chanterelles", kind: "post", title: "Chanterelles", published: true, date: "2026-03-03" }), TENANT);
+    await upsertPage(t.db, seed({ id: "post-draft", slug: "amanita", kind: "post", title: "Amanita", date: "2026-04-04" }), TENANT);
+    await upsertPage(t.db, seed({ id: "page-about", slug: "about", kind: "page", title: "About", published: true, date: "2026-02-02" }), TENANT);
+    await upsertPage(t.db, seed({ id: "home", slug: "home", kind: "home", title: "Home", published: true }), TENANT);
+    await upsertPage(t.db, seed({ id: "theirs", slug: "theirs", kind: "post", title: "Theirs", published: true }), OTHER_TENANT);
+
+    const res = await mount().request("/editor/link-targets");
+
+    expect(res.status).toBe(200);
+    // Pages before posts (kind asc), newest first within a kind.
+    expect(await res.json()).toEqual([
+      { id: "page-about", title: "About", slug: "about", kind: "page", published: true, date: "2026-02-02" },
+      { id: "post-draft", title: "Amanita", slug: "amanita", kind: "post", published: false, date: "2026-04-04" },
+      { id: "post-live", title: "Chanterelles", slug: "chanterelles", kind: "post", published: true, date: "2026-03-03" },
+    ]);
   });
 });

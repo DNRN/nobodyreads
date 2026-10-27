@@ -2,7 +2,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, getPageById, resolveSiteName } from "nobodyreads";
+import { initDb, getPageById, resolveSiteName, POST_FORMATS } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
@@ -36,5 +36,6 @@ const editorTitle = page.kind === "home" ? siteName : page.title;
     adminBase={ctx.adminBase}
     previewBase={previewBase}
     siteName={siteName}
+    formats={POST_FORMATS.map(({ id, label }) => ({ id, label }))}
   />
 </AdminLayout>

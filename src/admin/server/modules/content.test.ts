@@ -117,7 +117,6 @@ describe("saving an episode", () => {
   });
 
   it.each([
-    ["no audio chosen", ""],
     ["audio that does not exist", "m-missing"],
     ["an image", "m-image"],
     ["audio without a known duration", "m-untimed"],
@@ -127,6 +126,39 @@ describe("saving an episode", () => {
 
     expect(res.status).toBe(400);
     expect(Failed.parse(await res.json()).error).toMatch(/audio/i);
+  });
+
+  it("keeps an audio draft's format while its file is still to come", async () => {
+    const id = await savedId(await save(mount(), { content_type: "audio", audio_media_id: "" }));
+
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page.format).toBe("audio");
+    expect(page.episode).toBeNull();
+  });
+
+  it("refuses to publish an audio post until its audio is attached", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "audio", audio_media_id: "" }));
+
+    const refused = await save(app, { id, content_type: "audio", audio_media_id: "", published: "on" });
+    expect(refused.status).toBe(400);
+    expect(Failed.parse(await refused.json()).error).toMatch(/audio/i);
+    expect((await getPageById(t.db, id, TENANT))!.published).toBe(false);
+
+    await savedId(await save(app, { id, content_type: "audio", audio_media_id: "m-audio", published: "on" }));
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page.published).toBe(true);
+    expect(page.episode?.audioMediaId).toBe("m-audio");
+  });
+
+  it("lets a live post switched to audio keep saving before its file exists", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "post", published: "on" }));
+
+    await savedId(await save(app, { id, content_type: "audio", audio_media_id: "", published: "on" }));
+
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page).toMatchObject({ published: true, format: "audio", episode: null });
   });
 
   it("keeps an existing episode when the form has no audio control", async () => {

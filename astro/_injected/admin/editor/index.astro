@@ -1,7 +1,8 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listAllPages, resolveSiteName, type Page } from "nobodyreads";
+import { initDb, listAllPages, listMedia, resolveSiteName, type Page } from "nobodyreads";
+import { formatDuration } from "nobodyreads/duration";
 
 const ctx = requireAdminContext(Astro.locals);
 
@@ -59,6 +60,19 @@ const intro =
       : "Everything you've made, in one calm place.";
 const newHref = `${ctx.editorBase}/new${filter === "page" ? "?kind=page" : ""}`;
 const isEmpty = kinds.every((kind) => groups[kind].length === 0);
+
+// Episodes show their length in the list; an audio draft without its file says
+// so, since publishing waits for it. Media is only read when there are any.
+const durations = new Map<string, number | null>();
+if (groups.post.some((p) => p.format === "audio")) {
+  for (const m of await listMedia(db, ctx.tenantId, (key) => key)) durations.set(m.id, m.durationSeconds ?? null);
+}
+function formatBadge(p: Page): string | null {
+  if (p.format !== "audio") return null;
+  if (!p.episode) return "episode · needs audio";
+  const seconds = durations.get(p.episode.audioMediaId);
+  return seconds ? `episode · ${formatDuration(seconds)}` : "episode";
+}
 ---
 <AdminLayout
   title={`${heading} — Admin`}
@@ -118,9 +132,14 @@ const isEmpty = kinds.every((kind) => groups[kind].length === 0);
                 <tr><th>Title</th><th>URL</th><th>Status</th><th>Date</th></tr>
               </thead>
               <tbody>
-                {items.map((p) => (
+                {items.map((p) => {
+                  const badge = formatBadge(p);
+                  return (
                   <tr>
-                    <td><a href={`${ctx.editorBase}/${p.id}`}>{p.title}</a></td>
+                    <td>
+                      <a href={`${ctx.editorBase}/${p.id}`}>{p.title}</a>
+                      {badge && <span class="badge badge-format">{badge}</span>}
+                    </td>
                     <td class="cell-slug">{viewUrl(p)}</td>
                     <td class="cell-status">
                       {p.published
@@ -129,7 +148,8 @@ const isEmpty = kinds.every((kind) => groups[kind].length === 0);
                     </td>
                     <td class="cell-date">{formatDate(p.date)}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

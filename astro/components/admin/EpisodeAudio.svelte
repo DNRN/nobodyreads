@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
-   * The "this post is an episode" section of the post settings drawer.
+   * An audio post's main content: the episode's audio file, picked from the
+   * library or uploaded, shown above the show notes.
    *
    * Audio is uploaded through the chunked upload-session routes, not the
    * single-request media upload: an episode is routinely larger than a hosting
@@ -14,19 +15,13 @@
 
   interface Props {
     adminBase: string;
-    isEpisode: boolean;
     audioMediaId: string;
-    episodeNumber: string;
-    seasonNumber: string;
     onError?: (message: string) => void;
   }
 
   let {
     adminBase,
-    isEpisode = $bindable(false),
     audioMediaId = $bindable(""),
-    episodeNumber = $bindable(""),
-    seasonNumber = $bindable(""),
     onError,
   }: Props = $props();
 
@@ -143,82 +138,79 @@
   }
 </script>
 
-<fieldset class="nbr-field">
-  <legend class="nr-eyebrow">Audio</legend>
-  <label class="nbr-check">
-    <input type="checkbox" bind:checked={isEpisode} />
-    <span>This post is an episode</span>
-  </label>
-  <p class="hint">
-    {isEpisode
-      ? "Readers get a player above the post, and it joins your podcast feed."
-      : "Make the post's main content an audio file — a podcast episode, a track, a recording."}
-  </p>
-
-  {#if isEpisode}
-    <div class="nbr-field">
-      <label for="episode_audio">Audio file</label>
-      <div class="nbr-image-row">
-        <select id="episode_audio" bind:value={audioMediaId} disabled={progress !== null}>
-          <option value="">Choose audio…</option>
-          {#each items as item (item.id)}
-            <option value={item.id}>
-              {item.originalName} · {formatDuration(item.durationSeconds ?? 0)}
-            </option>
-          {/each}
-        </select>
-        <button
-          type="button"
-          class="btn btn-sm btn-ghost"
-          disabled={progress !== null}
-          onclick={() => fileInput?.click()}
-        >
-          Upload…
-        </button>
-        <input
-          bind:this={fileInput}
-          type="file"
-          accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,.mp3,.m4a,.ogg,.wav"
-          hidden
-          onchange={onFileChosen}
-        />
-      </div>
-      {#if progress !== null}
-        <progress class="nbr-episode-progress" max="1" value={progress}></progress>
-        <p class="hint">Uploading… {Math.round(progress * 100)}%. Keep this tab open.</p>
-      {:else if loadFailed}
-        <p class="hint">Could not load your media library. Reload the page to try again.</p>
-      {:else if selected}
-        <p class="hint">{selected.originalName} · {formatDuration(selected.durationSeconds ?? 0)}</p>
-      {:else}
-        <p class="hint">mp3, m4a, ogg or wav, up to 500 MB. The post stays a plain post until audio is chosen.</p>
-      {/if}
-    </div>
-
-    <div class="nbr-episode-numbers">
-      <div class="nbr-field">
-        <label for="episode_number">Episode <span class="hint">(optional)</span></label>
-        <input id="episode_number" type="text" inputmode="numeric" pattern="[0-9]*" bind:value={episodeNumber} />
-      </div>
-      <div class="nbr-field">
-        <label for="season_number">Season <span class="hint">(optional)</span></label>
-        <input id="season_number" type="text" inputmode="numeric" pattern="[0-9]*" bind:value={seasonNumber} />
-      </div>
-    </div>
-    <p class="hint">The share image below doubles as the episode's cover art.</p>
+<section class="nbr-field nbr-episode-audio" class:is-empty={!audioMediaId} aria-labelledby="episode_audio_label">
+  <div class="nbr-episode-audio-head">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    <label id="episode_audio_label" for="episode_audio">Episode audio</label>
+  </div>
+  <div class="nbr-image-row">
+    <select id="episode_audio" bind:value={audioMediaId} disabled={progress !== null}>
+      <option value="">Choose from your library…</option>
+      {#each items as item (item.id)}
+        <option value={item.id}>
+          {item.originalName} · {formatDuration(item.durationSeconds ?? 0)}
+        </option>
+      {/each}
+    </select>
+    <button
+      type="button"
+      class="btn btn-sm btn-primary"
+      disabled={progress !== null}
+      onclick={() => fileInput?.click()}
+    >
+      Upload audio…
+    </button>
+    <input
+      bind:this={fileInput}
+      type="file"
+      accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg,audio/wav,.mp3,.m4a,.ogg,.wav"
+      hidden
+      onchange={onFileChosen}
+    />
+  </div>
+  {#if progress !== null}
+    <progress class="nbr-episode-progress" max="1" value={progress}></progress>
+    <p class="hint">Uploading… {Math.round(progress * 100)}%. Keep this tab open.</p>
+  {:else if loadFailed}
+    <p class="hint">Could not load your media library. Reload the page to try again.</p>
+  {:else if selected}
+    <p class="hint">{selected.originalName} · {formatDuration(selected.durationSeconds ?? 0)} — readers get a player above your show notes.</p>
+  {:else}
+    <p class="hint">mp3, m4a, ogg or wav, up to 500 MB. You can write the show notes while it uploads; publishing waits for the audio.</p>
   {/if}
-</fieldset>
+</section>
 
 <style>
+  .nbr-episode-audio {
+    margin: 0 0 1.5rem;
+    padding: 16px 18px;
+    border: 1px solid var(--nr-border);
+    border-radius: 14px;
+    background: var(--nr-card);
+  }
+
+  .nbr-episode-audio.is-empty {
+    border-style: dashed;
+  }
+
+  .nbr-episode-audio-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--nr-text);
+  }
+
+  .nbr-episode-audio-head svg {
+    width: 18px;
+    height: 18px;
+    color: var(--nr-accent);
+  }
+
   .nbr-episode-progress {
     display: block;
     width: 100%;
     margin-top: 0.5rem;
-  }
-
-  .nbr-episode-numbers {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
   }
 </style>

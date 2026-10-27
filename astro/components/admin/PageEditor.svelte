@@ -4,13 +4,13 @@
   import type { Crepe as CrepeType } from "@milkdown/crepe";
   import "@milkdown/crepe/theme/common/style.css";
   import "@milkdown/crepe/theme/frame.css";
-  import type { Page, PageKind } from "nobodyreads";
+  import type { Page, PageKind, PostFormat } from "nobodyreads";
   import { altFromName, altWithDefaultWidth, imageMarkdown } from "nobodyreads/image-markdown";
   import { embedToken } from "nobodyreads/embed-token";
   import { slugify } from "nobodyreads/slugify";
   import MediaPicker from "./MediaPicker.svelte";
   import CollectionPicker from "./CollectionPicker.svelte";
-  import EpisodeField from "./EpisodeField.svelte";
+  import EpisodeAudio from "./EpisodeAudio.svelte";
   import LinkPicker from "./LinkPicker.svelte";
 
   interface Props {
@@ -20,6 +20,10 @@
     /** Owner-only draft preview base, e.g. "/alice/preview". Empty hides Preview. */
     previewBase?: string;
     kind?: PageKind;
+    /** Format of a new post (the create menu's `?format=`); an existing page brings its own. */
+    format?: PostFormat;
+    /** Every post format, for the top bar's format switch. */
+    formats?: { id: PostFormat; label: string }[];
     /**
      * The resolved site name. The home page's title mirrors it rather than
      * being separately editable — see the title field below.
@@ -33,6 +37,8 @@
     adminBase = "/admin",
     previewBase = "",
     kind: kindProp,
+    format: formatProp = "text",
+    formats = [],
     siteName = "",
   }: Props = $props();
 
@@ -58,6 +64,7 @@
     inFeed: true,
     accessTier: "public",
     priceAmount: null,
+    format: formatProp,
     episode: null,
   } as Page);
 
@@ -84,9 +91,11 @@
   );
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
-  // Episode: an audio file as the post's main content. Stays a plain post on
-  // the server until audio is actually chosen (see buildBody).
-  let isEpisode = $state(Boolean(p.episode));
+  // Format: what the post is made of. An audio draft stays audio on the server
+  // before its file exists; only publishing needs the file (see togglePublish).
+  // Switching back to text keeps the chosen file here, so switching again
+  // re-attaches it.
+  let format = $state<PostFormat>(p.format ?? (p.episode ? "audio" : "text"));
   let audioMediaId = $state(p.episode?.audioMediaId ?? "");
   let episodeNumber = $state(p.episode?.number != null ? String(p.episode.number) : "");
   let seasonNumber = $state(p.episode?.season != null ? String(p.episode.season) : "");
@@ -205,7 +214,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, isEpisode, audioMediaId, episodeNumber, seasonNumber });
+    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber });
   }
   // $state, so the status pill re-derives when a save moves the baseline.
   let baseline = $state(snapshot());
@@ -261,10 +270,8 @@
     body.set("seo_og_image", seoOgImage);
     body.set("seo_twitter_card", seoTwitterCard);
     if (kind === "post") {
-      // "audio" only once a file is chosen: an episode without audio is not
-      // something the server will save, and autosave would fail on every tick.
-      body.set("content_type", isEpisode && audioMediaId ? "audio" : "post");
-      body.set("audio_media_id", audioMediaId);
+      body.set("content_type", format === "audio" ? "audio" : "post");
+      body.set("audio_media_id", format === "audio" ? audioMediaId : "");
       body.set("episode_number", episodeNumber);
       body.set("season_number", seasonNumber);
     }
@@ -333,11 +340,17 @@
   // Any edit to content or metadata (re)arms the autosave timer. The dirty
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, isEpisode, audioMediaId, episodeNumber, seasonNumber];
+    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber];
     if (editorReady) scheduleAutosave();
   });
 
   function togglePublish() {
+    // The server refuses this too; saying so here keeps the post a draft
+    // instead of flipping the button and failing the save.
+    if (!published && kind === "post" && format === "audio" && !audioMediaId) {
+      showToast("Add the episode's audio before publishing — or switch the post to text.", "error", 5000);
+      return;
+    }
     published = !published;
     save({ label: published ? "Published" : "Unpublished" });
   }
@@ -839,6 +852,23 @@
         <i class="nr-status-dot"></i>{status.text}
       </span>
 
+      <!-- What the post is made of. Same button group as the mode switch, and
+           for the same reason: named radios would ride along on a no-JS submit. -->
+      {#if kind === "post" && formats.length > 1}
+        <span class="nbr-modeswitch nbr-formatswitch" role="group" aria-label="Post format">
+          {#each formats as f (f.id)}
+            <button
+              type="button"
+              class="nbr-modeswitch-option"
+              aria-pressed={format === f.id}
+              onclick={() => (format = f.id)}
+            >
+              <span>{f.label}</span>
+            </button>
+          {/each}
+        </span>
+      {/if}
+
       <span class="nbr-topbar-spacer"></span>
 
       <span class="nbr-wordcount">{wordCount} {wordCount === 1 ? "word" : "words"}</span>
@@ -916,7 +946,7 @@
         </button>
         <span class="nr-tip-panel" role="tooltip" id="tip-settings">
           <b class="nr-tip-label">{kindLabel} settings</b>
-          <span class="nr-tip-desc">Who can read it, audio, tags, address, discussion.</span>
+          <span class="nr-tip-desc">Who can read it, tags, address, discussion.</span>
         </span>
       </span>
 
@@ -956,6 +986,14 @@
             bind:value={title}
             oninput={onTitleInput}
             required
+          />
+        {/if}
+
+        {#if kind === "post" && format === "audio"}
+          <EpisodeAudio
+            {adminBase}
+            bind:audioMediaId
+            onError={(message) => showToast(message, "error", 5000)}
           />
         {/if}
 
@@ -1068,14 +1106,22 @@
             </p>
           {/if}
 
-          <EpisodeField
-            {adminBase}
-            bind:isEpisode
-            bind:audioMediaId
-            bind:episodeNumber
-            bind:seasonNumber
-            onError={(message) => showToast(message, "error", 5000)}
-          />
+          {#if format === "audio"}
+            <fieldset class="nbr-field">
+              <legend class="nr-eyebrow">Episode</legend>
+              <div class="nbr-episode-numbers">
+                <div class="nbr-field">
+                  <label for="episode_number">Number <span class="hint">(optional)</span></label>
+                  <input id="episode_number" type="text" inputmode="numeric" pattern="[0-9]*" bind:value={episodeNumber} />
+                </div>
+                <div class="nbr-field">
+                  <label for="season_number">Season <span class="hint">(optional)</span></label>
+                  <input id="season_number" type="text" inputmode="numeric" pattern="[0-9]*" bind:value={seasonNumber} />
+                </div>
+              </div>
+              <p class="hint">Podcast apps order and label episodes by these. The share image below doubles as the episode's cover art.</p>
+            </fieldset>
+          {/if}
         {/if}
 
         <div class="nbr-field">

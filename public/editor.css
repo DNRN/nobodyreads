@@ -633,6 +633,13 @@
 	color: var(--nr-muted);
 }
 
+/* Post format next to a title in the content list ("episode · 45 min"). */
+.nr-admin .badge-format {
+	margin-left: 8px;
+	background: var(--nr-accent-soft);
+	color: var(--nr-chip-text);
+}
+
 /* Publish status control (editor sidebar) */
 .nr-admin .publish-control {
 	display: flex;
@@ -3387,11 +3394,18 @@
 }
 
 /* The label is the first thing to go when the bar gets tight; the icons still
-   distinguish the two. */
+   distinguish the two. The format switch has no icons, so it keeps its words. */
 @media (max-width: 720px) {
-	.nr-admin .nbr-modeswitch-option span {
+	.nr-admin .nbr-modeswitch:not(.nbr-formatswitch) .nbr-modeswitch-option span {
 		display: none;
 	}
+}
+
+/* Episode / season number pair in the post settings drawer. */
+.nr-admin .nbr-episode-numbers {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
 }
 
 /* ----- Canvas ----- */

@@ -1,4 +1,5 @@
 import type { SiteContext } from "../render/context.js";
+import { POST_FORMATS } from "../content/formats.js";
 
 /**
  * Runtime context for the injected admin pages.
@@ -269,21 +270,21 @@ export interface AdminCreateItem {
 
 /**
  * The sidebar's "New post" split button: `primary` is the main click (a text
- * post); `items` fill its ▾ menu.
+ * post); `items` fill its ▾ menu — every post format, then the rest.
  */
 export function buildCreateMenu(
   ctx: Pick<NobodyreadsAdminContext, "adminBase" | "editorBase">
 ): { primary: AdminCreateItem; items: AdminCreateItem[] } {
-  const primary: AdminCreateItem = {
-    id: "post",
-    label: "Text post",
-    hint: "Dated, in your feed, emailed to subscribers",
-    href: `${ctx.editorBase}/new`,
-  };
+  const formats: AdminCreateItem[] = POST_FORMATS.map((f) => ({
+    id: f.id,
+    label: f.createLabel,
+    hint: f.createHint,
+    href: f.id === "text" ? `${ctx.editorBase}/new` : `${ctx.editorBase}/new?format=${f.id}`,
+  }));
   return {
-    primary,
+    primary: formats[0],
     items: [
-      primary,
+      ...formats,
       {
         id: "page",
         label: "Page",

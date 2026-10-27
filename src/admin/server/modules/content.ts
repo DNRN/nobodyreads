@@ -11,7 +11,7 @@ import {
   listLinkTargets,
 } from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
-import type { Page, PageKind } from "../../../content/types.js";
+import type { Page, PageKind, PostFormat } from "../../../content/types.js";
 import { notifySubscribers } from "../../../subscription/index.js";
 import type { AdminModuleContext } from "./types.js";
 
@@ -99,6 +99,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       let existingCommentsEnabled: boolean | undefined;
       let existingInFeed: boolean | undefined;
       let existingSeo: Page["seo"] | undefined;
+      let existingFormat: PostFormat = "text";
       let existingEpisode: Page["episode"] = null;
       let content = data.content;
       if (!isNew) {
@@ -107,6 +108,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         existingCommentsEnabled = existing?.commentsEnabled;
         existingInFeed = existing?.inFeed;
         existingSeo = existing?.seo;
+        existingFormat = existing?.format ?? "text";
         existingEpisode = existing?.episode ?? null;
         if (!content && existing?.content) content = existing.content;
       }
@@ -126,31 +128,45 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       }
       const seo = Object.keys(seoUpdate).length > 0 ? seoUpdate : undefined;
 
-      // Only posts are episodes. A form without the control keeps what the post
-      // already is; an explicit "audio" must name audio this tenant owns, with a
-      // known duration — the podcast feed cannot list an episode without one.
+      // Only posts have a format. A form without the control keeps what the
+      // post already is. "audio" without a file is an audio draft — the format
+      // is the author's intent and survives while the upload is pending; a
+      // file, when named, must be audio this tenant owns with a known
+      // duration, since the podcast feed cannot list an episode without one.
+      let format: PostFormat = "text";
       let episode: Page["episode"] = null;
       if (data.kind === "post") {
         if (data.content_type === undefined) {
+          format = existingFormat;
           episode = existingEpisode;
         } else if (data.content_type === "audio") {
+          format = "audio";
           const audioMediaId = data.audio_media_id ?? "";
-          const audio = audioMediaId
-            ? await getMediaById(db, audioMediaId, tenantId, (key) => key)
-            : null;
-          if (!audio?.mimeType.startsWith("audio/") || audio.durationSeconds === null) {
-            return c.json(
-              { error: "An episode needs an uploaded audio file — choose or upload one." },
-              400
-            );
+          if (audioMediaId) {
+            const audio = await getMediaById(db, audioMediaId, tenantId, (key) => key);
+            if (!audio?.mimeType.startsWith("audio/") || audio.durationSeconds === null) {
+              return c.json(
+                { error: "That file can't be an episode's audio — choose or upload another." },
+                400
+              );
+            }
+            episode = {
+              audioMediaId,
+              // Blank or 0 means "unnumbered"; feeds omit the tag rather than say 0.
+              number: Number(data.episode_number) || null,
+              season: Number(data.season_number) || null,
+            };
           }
-          episode = {
-            audioMediaId,
-            // Blank or 0 means "unnumbered"; feeds omit the tag rather than say 0.
-            number: Number(data.episode_number) || null,
-            season: Number(data.season_number) || null,
-          };
         }
+      }
+      // The publish transition is the gate, not every save: a live post
+      // switched to audio keeps saving while its file uploads, and reads as text
+      // to the public until the file exists (see `toPage`).
+      if (data.published === "on" && !wasPreviouslyPublished && format === "audio" && !episode) {
+        return c.json(
+          { error: "Add the episode's audio before publishing — or switch the post to text." },
+          400
+        );
       }
 
       const p: Page = {
@@ -190,6 +206,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         priceAmount:
           data.access_tier === "paid" ? parseMinorUnits(data.price_amount) : null,
         seo,
+        format,
         episode,
       };
 
@@ -216,16 +233,25 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       }
 
       if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
-        notifySubscribers(
-          db,
-          tenantId,
-          {
-            title: p.title,
-            slug: p.slug,
-            excerpt: p.excerpt,
-          },
-          { email: ctx.email, siteUrl: ctx.siteUrl, siteName: ctx.siteName }
-        ).catch((err) => console.error("Subscriber notification error:", err));
+        // An episode's email says how long it is; the lookup rides on the same
+        // fire-and-forget chain so it never delays the author's save.
+        const audioMediaId = p.episode?.audioMediaId;
+        (audioMediaId ? getMediaById(db, audioMediaId, tenantId, (key) => key) : Promise.resolve(null))
+          .then((audio) =>
+            notifySubscribers(
+              db,
+              tenantId,
+              {
+                title: p.title,
+                slug: p.slug,
+                excerpt: p.excerpt,
+                format: p.format,
+                durationSeconds: audio?.durationSeconds ?? null,
+              },
+              { email: ctx.email, siteUrl: ctx.siteUrl, siteName: ctx.siteName }
+            )
+          )
+          .catch((err) => console.error("Subscriber notification error:", err));
       }
 
       // AJAX saves (editor autosave / save button) ask for JSON and stay on the

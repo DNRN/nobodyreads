@@ -3,6 +3,9 @@ import { readFileSync, existsSync } from "node:fs";
 import { z } from "zod";
 
 import type { Subscriber } from "./types.js";
+import type { PostFormat } from "../content/types.js";
+import { postFormat } from "../content/formats.js";
+import { formatDuration } from "../shared/duration.js";
 
 // --- Email provider abstraction ---
 
@@ -290,22 +293,32 @@ export async function sendVerificationEmail(
 }
 
 /**
- * Send a new-post notification to a list of subscribers.
- *
- * The `post` parameter is a narrow `{ title, slug, excerpt }` **on purpose**,
- * not a `Page`. Free subscribers receive this email, so a widening to
- * `post: Page` would mail the body of a paid post to everyone the day it is
- * published. As typed, that is not expressible. `email.test.ts` pins the shape
- * so the widening fails a test rather than a customer.
+ * What a new-post email may say about the post. Narrow **on purpose**, not a
+ * `Page`: free subscribers receive this email, so a widening to `Page` would
+ * mail the body of a paid post to everyone the day it is published. As typed,
+ * that is not expressible. `email.test.ts` pins the shape so the widening fails
+ * a test rather than a customer. Format and duration only change the wording.
  */
+export interface NewPostNotice {
+  title: string;
+  slug: string;
+  excerpt: string;
+  format?: PostFormat;
+  /** The episode's length, when it has one: "Listen · 45 min". */
+  durationSeconds?: number | null;
+}
+
+/** Send a new-post notification to a list of subscribers. */
 export async function sendNewPostNotification(
   provider: EmailProvider,
   siteUrl: string,
   siteName: string,
-  post: { title: string; slug: string; excerpt: string },
+  post: NewPostNotice,
   subscribers: Subscriber[]
 ): Promise<void> {
   const postUrl = `${siteUrl}/posts/${post.slug}`;
+  const spec = postFormat(post.format);
+  const cta = post.durationSeconds ? `${spec.verb} · ${formatDuration(post.durationSeconds)}` : spec.verb;
 
   for (const subscriber of subscribers) {
     const unsubscribeUrl = `${siteUrl}/api/unsubscribe?id=${encodeURIComponent(subscriber.id)}`;
@@ -319,7 +332,7 @@ export async function sendNewPostNotification(
   ${post.excerpt ? `<p>${escapeHtml(post.excerpt)}</p>` : ""}
   <p style="margin: 24px 0;">
     <a href="${escapeHtml(postUrl)}" style="background: #333; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-      Read post
+      ${escapeHtml(cta)}
     </a>
   </p>
   <p style="font-size: 13px; color: #666;">
@@ -329,12 +342,12 @@ export async function sendNewPostNotification(
 </body>
 </html>`.trim();
 
-    const text = `New post: ${post.title}\n\n${post.excerpt ? post.excerpt + "\n\n" : ""}Read it here: ${postUrl}\n\nUnsubscribe: ${unsubscribeUrl}`;
+    const text = `New ${spec.noun}: ${post.title}\n\n${post.excerpt ? post.excerpt + "\n\n" : ""}${cta}: ${postUrl}\n\nUnsubscribe: ${unsubscribeUrl}`;
 
     try {
       await provider.sendEmail({
         to: subscriber.email,
-        subject: `New post: ${post.title}`,
+        subject: `New ${spec.noun}: ${post.title}`,
         html,
         text,
       });

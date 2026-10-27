@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildAdminNav, contentListHref, type AdminNavGroup } from "./context.js";
+import { buildAdminNav, buildCreateMenu, contentListHref, type AdminNavGroup } from "./context.js";
+import { POST_FORMATS } from "../content/formats.js";
 
 const base = { adminBase: "/admin" };
 
@@ -68,5 +69,17 @@ describe("buildAdminNav", () => {
       activeHref: contentListHref("/admin", "page"),
     });
     expect(activeIds(nav)).toEqual(["pages"]);
+  });
+});
+
+describe("buildCreateMenu", () => {
+  it("starts a text post on the main click and offers every format, each to its own editor", () => {
+    const menu = buildCreateMenu({ adminBase: "/admin", editorBase: "/admin/editor" });
+    expect(menu.primary.href).toBe("/admin/editor/new");
+
+    const formatItems = menu.items.slice(0, POST_FORMATS.length);
+    expect(formatItems.map((i) => i.id)).toEqual(POST_FORMATS.map((f) => f.id));
+    expect(new Set(formatItems.map((i) => i.href)).size).toBe(POST_FORMATS.length);
+    expect(formatItems.find((i) => i.id === "audio")?.href).toBe("/admin/editor/new?format=audio");
   });
 });

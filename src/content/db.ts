@@ -3,6 +3,7 @@ import { page, contentView } from "./schema.js";
 import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
 import { validateCustomQuery } from "./custom-view-sql.js";
+import { formatFromContentType, postFormat } from "./formats.js";
 import type { Database } from "../db/index.js";
 import type {
   Page,
@@ -49,8 +50,10 @@ function toPage(row: PageRow): Page {
     // itself separately fails closed to a teaser.
     accessTier: normalizeAccessTier(row.accessTier),
     priceAmount: row.priceAmount ?? null,
-    // Both halves or nothing: a row marked audio without its file (or a file
-    // id left on a plain post) reads as a plain post, never as a broken player.
+    format: formatFromContentType(row.contentType),
+    // Both halves or nothing: a row marked audio without its file (an audio
+    // draft still uploading, or a file id left on a text post) carries no
+    // episode, never a broken player.
     episode:
       row.contentType === "audio" && row.audioMediaId
         ? {
@@ -663,10 +666,11 @@ export async function upsertPage(
   p: Page,
   tenantId: string
 ): Promise<void> {
-  // Written from `p.episode` in one place so the insert and update lists below
-  // cannot disagree about what an episode is.
+  // Written in one place so the insert and update lists below cannot disagree
+  // about what an episode is. An episode implies audio even when the caller
+  // built the Page without a `format`.
   const episodeColumns = {
-    contentType: p.episode ? "audio" : null,
+    contentType: postFormat(p.episode ? "audio" : p.format).contentType,
     audioMediaId: p.episode?.audioMediaId ?? null,
     episodeNumber: p.episode?.number ?? null,
     seasonNumber: p.episode?.season ?? null,

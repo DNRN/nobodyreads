@@ -181,6 +181,7 @@ export type { Database } from "./db/index.js";
 export {
   tenant,
   page,
+  pageRedirect,
   contentView,
   siteTemplate,
   siteTemplateRevision,

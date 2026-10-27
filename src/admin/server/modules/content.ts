@@ -9,8 +9,12 @@ import {
   upsertPage,
   getMediaById,
   listLinkTargets,
+  findSlugConflict,
+  recordRedirect,
+  releaseRedirect,
 } from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
+import { pagePath } from "../../../render/context.js";
 import type { Page, PageKind, PostFormat } from "../../../content/types.js";
 import { notifySubscribersOnce } from "../../../subscription/once.js";
 import { countSubscribers } from "../../../subscription/db.js";
@@ -97,6 +101,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         }
       }
 
+      let before: Page | null = null;
       let wasPreviouslyPublished = false;
       let existingCommentsEnabled: boolean | undefined;
       let existingInFeed: boolean | undefined;
@@ -106,15 +111,44 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       let existingNotifiedAt: string | null = null;
       let content = data.content;
       if (!isNew) {
-        const existing = await getPageById(db, pageId, tenantId);
-        wasPreviouslyPublished = existing?.published ?? false;
-        existingCommentsEnabled = existing?.commentsEnabled;
-        existingInFeed = existing?.inFeed;
-        existingSeo = existing?.seo;
-        existingFormat = existing?.format ?? "text";
-        existingEpisode = existing?.episode ?? null;
-        existingNotifiedAt = existing?.notifiedAt ?? null;
-        if (!content && existing?.content) content = existing.content;
+        before = await getPageById(db, pageId, tenantId);
+        wasPreviouslyPublished = before?.published ?? false;
+        existingCommentsEnabled = before?.commentsEnabled;
+        existingInFeed = before?.inFeed;
+        existingSeo = before?.seo;
+        existingFormat = before?.format ?? "text";
+        existingEpisode = before?.episode ?? null;
+        existingNotifiedAt = before?.notifiedAt ?? null;
+        if (!content && before?.content) content = before.content;
+      }
+
+      // Posts and pages can trade places (ADR 0003); the home page is neither
+      // and nothing becomes it. Pages are text-only (ADR 0004), so an episode
+      // has to become a text post before it can become a page — dropping its
+      // audio here would lose it without the author asking.
+      if (before && before.kind !== data.kind) {
+        if (before.kind === "home" || data.kind === "home") {
+          return c.json({ error: "The home page can't become a post or a page." }, 400);
+        }
+        if (before.format === "audio") {
+          return c.json({ error: "Switch the episode to text before making it a page." }, 400);
+        }
+      }
+
+      // The database would refuse this with a constraint error; say which page
+      // holds the address instead.
+      if (data.kind !== "home") {
+        const conflict = await findSlugConflict(db, tenantId, data.slug, data.kind as PageKind, pageId);
+        if (conflict) {
+          return c.json(
+            {
+              error: `“${conflict.title}” already uses this address. Choose another one.`,
+              field: "slug",
+              id: conflict.id,
+            },
+            409
+          );
+        }
       }
 
       // Merge per-post social fields into the existing seo JSON, preserving
@@ -215,6 +249,16 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       };
 
       await upsertPage(db, p, tenantId);
+
+      // Readers, inboxes and feed readers hold the old URL of anything that
+      // was live, so a move leaves a redirect behind; and an address that live
+      // content answers at again stops redirecting (ADR 0003).
+      if (before?.published && pagePath(before, "") !== pagePath(p, "")) {
+        await recordRedirect(db, tenantId, pagePath(before, ""), pageId);
+      }
+      if (p.published && p.kind !== "home") {
+        await releaseRedirect(db, tenantId, pagePath(p, ""));
+      }
 
       // The publish transition, not every save. Screening and notification hang
       // off the same moment for the same reason: this is when the content stops

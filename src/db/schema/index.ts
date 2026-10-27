@@ -17,7 +17,7 @@ export {
   siteTemplateTrial,
   siteSettings,
 } from "../../shared/schema.js";
-export { page, contentView } from "../../content/schema.js";
+export { page, pageRedirect, contentView } from "../../content/schema.js";
 export { media, uploadSession, uploadSessionPart } from "../../media/schema.js";
 export { member, plotMembership, postLike } from "../../community/schema.js";
 export { comment } from "../../comments/schema.js";

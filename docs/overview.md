@@ -155,6 +155,23 @@ All content tables carry a `tenant_id` column (default `_default`) so the same s
 
 Navigation is optional per page via `nav_label` and `nav_order` columns (set from frontmatter `nav:` block or the admin editor).
 
+#### Moving content
+
+A post and a page can trade places at any time (the editor's **Type** switch, or
+the publish dialog for a draft); the home page cannot, and an episode must be
+switched to text first (pages are text-only). When a **published** item's public
+path changes — kind switch or slug rename — `/editor/save` records the old path in
+`page_redirect(tenant_id, from_path, page_id)` (paths without any URL prefix, e.g.
+`/posts/hello`). `resolvePageView` consults it only on a miss and returns
+`redirectTo` — the item's *current* URL under the context's prefix — which the
+public `[slug]` routes answer with a 301. Because the target is a page id, a chain
+of moves is one hop; an unpublished target is a plain 404; publishing live content
+at a redirected path removes that redirect; `deletePage` removes a page's
+redirects. A save that would collide on `UNIQUE(slug, kind, tenant_id)` gets a 409
+naming the page that holds the address. See ADR 0003. Hosts that render their own
+public routes must handle `view.redirectTo` the same way, and a host that deletes a
+tenant's rows must clear `page_redirect` too.
+
 #### Titles
 
 `post` and `page` render their `title` as the document's `<h1>`, and `renderMarkdown`

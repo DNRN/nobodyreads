@@ -198,6 +198,88 @@ describe("saving an episode", () => {
   });
 });
 
+describe("moving published content", () => {
+  const redirects = async () =>
+    (await t.client.execute("SELECT from_path, page_id FROM page_redirect ORDER BY from_path")).rows.map(
+      (r) => [r.from_path, r.page_id],
+    );
+
+  it("leaves the old address of a post that became a page", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("page");
+    expect(await redirects()).toEqual([["/posts/hello", id]]);
+  });
+
+  it("records nothing for a draft — nobody holds its address yet", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello" }));
+
+    await savedId(await save(app, { id, slug: "renamed", kind: "page" }));
+
+    expect(await redirects()).toEqual([]);
+  });
+
+  it("stops redirecting an address that live content answers at again", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    // Back to a post: /posts/hello is live again, and /hello now redirects.
+    await savedId(await save(app, { id, slug: "hello", kind: "post", published: "on" }));
+
+    expect(await redirects()).toEqual([["/hello", id]]);
+  });
+
+  it("refuses an address another page holds, naming it, and changes nothing", async () => {
+    const app = mount();
+    await savedId(await save(app, { title: "About me", slug: "about", kind: "page", published: "on" }));
+    const id = await savedId(await save(app, { title: "About", slug: "about", published: "on" }));
+
+    const res = await save(app, { id, title: "About", slug: "about", kind: "page", published: "on" });
+
+    expect(res.status).toBe(409);
+    expect(Failed.parse(await res.json()).error).toContain("About me");
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("post");
+    expect(await redirects()).toEqual([]);
+  });
+
+  it("keeps an episode a post until it is switched to text", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "audio", audio_media_id: "m-audio", published: "on" }));
+
+    const refused = await save(app, { id, kind: "page", published: "on" });
+    expect(refused.status).toBe(400);
+
+    await savedId(await save(app, { id, content_type: "post", published: "on" }));
+    await savedId(await save(app, { id, kind: "page", published: "on" }));
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("page");
+  });
+
+  it("never turns the home page into a post", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "home", kind: "home", published: "on" }));
+
+    const res = await save(app, { id, slug: "home", kind: "post", published: "on" });
+
+    expect(res.status).toBe(400);
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("home");
+  });
+
+  it("takes a page's redirects with it when it is deleted", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    await app.request(`/editor/delete/${id}`, { method: "POST" });
+
+    expect(await redirects()).toEqual([]);
+  });
+});
+
 describe("emailing subscribers about a post", () => {
   /** A provider that records instead of sending, and one verified reader. */
   async function withSubscriber(): Promise<{ app: Hono; sent: EmailMessage[] }> {

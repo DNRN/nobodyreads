@@ -59,6 +59,21 @@ CREATE TABLE IF NOT EXISTS page (
   UNIQUE (slug, kind, tenant_id)
 );
 
+-- Old public paths of published content that moved (post <-> page, slug
+-- rename). The public 404 path looks a miss up here and answers 301 to the
+-- item's *current* URL, resolved from page_id at request time, so a chain of
+-- moves is always one hop. Written by the editor's save (ADR 0003); removed
+-- with the page and when live content claims the path again.
+CREATE TABLE IF NOT EXISTS page_redirect (
+  tenant_id  TEXT NOT NULL DEFAULT '_default',
+  -- In-site path without any URL prefix: '/posts/hello' or '/hello'.
+  from_path  TEXT NOT NULL,
+  page_id    TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (tenant_id, from_path)
+);
+CREATE INDEX IF NOT EXISTS idx_page_redirect_page ON page_redirect (tenant_id, page_id);
+
 -- Reusable content views (embeddable via {{collection:slug}} tokens)
 CREATE TABLE IF NOT EXISTS content_view (
   content_view_id TEXT NOT NULL,

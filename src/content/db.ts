@@ -1,5 +1,5 @@
-import { eq, and, desc, asc, inArray, isNotNull, isNull } from "drizzle-orm";
-import { page, contentView } from "./schema.js";
+import { eq, and, desc, asc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { page, pageRedirect, contentView } from "./schema.js";
 import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
 import { validateCustomQuery } from "./custom-view-sql.js";
@@ -652,13 +652,81 @@ export async function getPageById(
   return rows.length > 0 ? toPage(rows[0]) : null;
 }
 
-/** Delete a page by its stable page_id. */
+/** Delete a page by its stable page_id, with the redirects that lead to it. */
 export async function deletePage(
   db: Database,
   pageId: string,
   tenantId: string
 ): Promise<void> {
-  await db.delete(page).where(and(eq(page.pageId, pageId), eq(page.tenantId, tenantId)));
+  await db.batch([
+    db.delete(pageRedirect).where(and(eq(pageRedirect.pageId, pageId), eq(pageRedirect.tenantId, tenantId))),
+    db.delete(page).where(and(eq(page.pageId, pageId), eq(page.tenantId, tenantId))),
+  ]);
+}
+
+// --- Redirects (ADR 0003) ---
+
+/**
+ * Keep `fromPath` (an in-site path, no URL prefix) leading to `pageId`. A path
+ * that already redirected elsewhere now points here: the newest move wins.
+ */
+export async function recordRedirect(
+  db: Database,
+  tenantId: string,
+  fromPath: string,
+  pageId: string
+): Promise<void> {
+  await db
+    .insert(pageRedirect)
+    .values({ tenantId, fromPath, pageId })
+    .onConflictDoUpdate({ target: [pageRedirect.tenantId, pageRedirect.fromPath], set: { pageId } });
+}
+
+/** Live content now answers at `path`, so it no longer redirects anywhere. */
+export async function releaseRedirect(db: Database, tenantId: string, path: string): Promise<void> {
+  await db
+    .delete(pageRedirect)
+    .where(and(eq(pageRedirect.tenantId, tenantId), eq(pageRedirect.fromPath, path)));
+}
+
+/**
+ * The published page an old path now leads to, or null — no redirect, or its
+ * page was unpublished. Callers build the URL from the page's current kind and
+ * slug, so the answer is always one hop.
+ */
+export async function findRedirectTarget(
+  db: Database,
+  tenantId: string,
+  fromPath: string
+): Promise<Pick<Page, "kind" | "slug"> | null> {
+  const rows = await db
+    .select({ kind: page.kind, slug: page.slug })
+    .from(pageRedirect)
+    .innerJoin(page, and(eq(page.pageId, pageRedirect.pageId), eq(page.tenantId, pageRedirect.tenantId)))
+    .where(
+      and(eq(pageRedirect.tenantId, tenantId), eq(pageRedirect.fromPath, fromPath), eq(page.published, true))
+    )
+    .limit(1);
+  return rows.length > 0 ? { kind: rows[0].kind as PageKind, slug: rows[0].slug } : null;
+}
+
+/**
+ * Another page already holding `slug` for `kind` in this tenant — the
+ * `UNIQUE(slug, kind, tenant_id)` collision a save would hit — or null.
+ */
+export async function findSlugConflict(
+  db: Database,
+  tenantId: string,
+  slug: string,
+  kind: PageKind,
+  exceptPageId: string
+): Promise<Pick<Page, "id" | "title"> | null> {
+  const rows = await db
+    .select({ id: page.pageId, title: page.title })
+    .from(page)
+    .where(and(eq(page.tenantId, tenantId), eq(page.slug, slug), eq(page.kind, kind), ne(page.pageId, exceptPageId)))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 /**

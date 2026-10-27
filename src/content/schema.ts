@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { sqliteTable, text, integer, primaryKey, unique } from "drizzle-orm/sqlite-core";
 import type { PageMeta } from "./types.js";
 
@@ -58,6 +59,24 @@ export const page = sqliteTable(
     primaryKey({ columns: [table.pageId, table.tenantId] }),
     unique().on(table.slug, table.kind, table.tenantId),
   ]
+);
+
+/**
+ * Old public paths of published content that moved (ADR 0003). The target is
+ * a page id, never a path, so the current URL is resolved at request time and
+ * a chain of moves stays one hop. No FK, like every table here: `deletePage`
+ * removes a page's redirects itself.
+ */
+export const pageRedirect = sqliteTable(
+  "page_redirect",
+  {
+    tenantId: text("tenant_id").notNull().default("_default"),
+    /** In-site path without any URL prefix: "/posts/hello" or "/hello". */
+    fromPath: text("from_path").notNull(),
+    pageId: text("page_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.fromPath] })]
 );
 
 // --- Content views (embeddable via {{collection:slug}}) ---

@@ -53,22 +53,25 @@
   }: Props = $props();
 
   const isNew = !page;
-  const kind: PageKind = page?.kind ?? kindProp ?? "post";
-  const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
+  // A post and a page can trade places (ADR 0003); home is fixed. Read through
+  // `p` for the initial row, which only needs the kind the editor opened with.
+  const initialKind: PageKind = page?.kind ?? kindProp ?? "post";
+  let kind = $state<PageKind>(initialKind);
+  const kindLabel = $derived(kind === "home" ? "Home" : kind === "page" ? "Page" : "Post");
 
   const uploadUrl = `${adminBase}/media/upload`;
   const saveUrl = `${editorBase}/save`;
 
   const p: Page = page ?? ({
     id: "",
-    slug: kind === "home" ? "home" : "",
+    slug: initialKind === "home" ? "home" : "",
     title: "",
     content: "",
     excerpt: "",
     tags: [],
     date: new Date().toISOString().slice(0, 10),
     published: false,
-    kind,
+    kind: initialKind,
     nav: undefined,
     commentsEnabled: true,
     inFeed: true,
@@ -82,7 +85,7 @@
   let currentId = $state(p.id);
   // The home page's title is a mirror of the site name, so prefer the live
   // setting over the stored copy: saving then refreshes a mirror that drifted.
-  let title = $state(kind === "home" ? siteName || p.title : p.title);
+  let title = $state(initialKind === "home" ? siteName || p.title : p.title);
   let slug = $state(p.slug);
   let excerpt = $state(p.excerpt ?? "");
   let tags = $state((p.tags ?? []).join(", "));
@@ -238,7 +241,7 @@
   // Snapshot used to tell whether anything changed since the last save, so
   // autosave only fires on real edits (not on load-time Markdown normalization).
   function snapshot() {
-    return JSON.stringify({ content, title, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber });
+    return JSON.stringify({ content, title, kind, slug, excerpt, tags, date, navLabel, navOrder, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber });
   }
   // $state, so the status pill re-derives when a save moves the baseline.
   let baseline = $state(snapshot());
@@ -390,7 +393,7 @@
   // Any edit to content or metadata (re)arms the autosave timer. The dirty
   // check inside keeps load-time and no-op changes from saving.
   $effect(() => {
-    void [title, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber];
+    void [title, kind, slug, excerpt, tags, date, navLabel, navOrder, content, published, commentsEnabled, inFeed, accessTier, priceAmount, seoOgImage, seoTwitterCard, format, audioMediaId, episodeNumber, seasonNumber];
     if (editorReady) scheduleAutosave();
   });
 
@@ -438,6 +441,33 @@
   async function unpublish() {
     published = false;
     if (!(await save({ label: "Unpublished" }))) published = true;
+  }
+
+  /**
+   * Turn a post into a page or back (ADR 0003). Pending edits land first, so
+   * the server judges the switch against what the author last chose — a
+   * format just set to text, say. A live item moves at once and leaves a 301
+   * at its old address; a draft just changes and autosaves.
+   */
+  async function changeKind(to: "post" | "page") {
+    if (to === kind || kind === "home") return;
+    if (to === "page" && format === "audio") {
+      showToast("Switch the episode to text before making it a page.", "error", 4000);
+      return;
+    }
+    if (published) {
+      const newPath = to === "post" ? `posts/${slug}` : slug;
+      const newUrl = `${origin}${siteBase.replace(/\/$/, "")}/${newPath}`;
+      const what = kind === "post" ? "post" : "page";
+      if (!confirm(`Make this ${what} a ${to}? It moves to ${newUrl}. The old address redirects there, so links people already have keep working.`)) {
+        return;
+      }
+    }
+    if (inflightSave) await inflightSave;
+    if (dirty && !(await save())) return;
+    const previous = kind;
+    kind = to;
+    if (published && !(await save({ label: `Now a ${to}` }))) kind = previous;
   }
 
   /** "Email subscribers now" for a live post that was never emailed. */
@@ -1268,6 +1298,33 @@
 
         {#if kind !== "home"}
           <div class="nbr-field">
+            <div class="nr-eyebrow" id="kind-label">Type</div>
+            <span class="nbr-modeswitch" role="group" aria-labelledby="kind-label">
+              <button
+                type="button"
+                class="nbr-modeswitch-option"
+                aria-pressed={kind === "post"}
+                onclick={() => changeKind("post")}
+              ><span>Post</span></button>
+              <button
+                type="button"
+                class="nbr-modeswitch-option"
+                aria-pressed={kind === "page"}
+                disabled={kind === "post" && format === "audio"}
+                onclick={() => changeKind("page")}
+              ><span>Page</span></button>
+            </span>
+            <p class="hint">
+              {kind === "post" && format === "audio"
+                ? "An episode stays a post. Switch the format to text to make it a page."
+                : kind === "post"
+                  ? "Dated, in your feed. A page stands on its own, like About."
+                  : "Standalone, like About. A post is dated and goes in your feed."}
+              {published ? " Switching moves it; the old address redirects." : ""}
+            </p>
+          </div>
+
+          <div class="nbr-field">
             <label for="slug">Page address</label>
             <div class="nbr-slug-row">
               <span class="nbr-slug-prefix">{kind === "post" ? "posts/" : "/"}</span>
@@ -1282,7 +1339,9 @@
                 title="Lowercase letters, numbers, and hyphens only"
               />
             </div>
-            <p class="hint">Filled in from the title. Best changed before publishing, not after.</p>
+            <p class="hint">
+              Filled in from the title.{published ? " Changing it moves the page; the old address redirects." : ""}
+            </p>
           </div>
         {:else}
           <input type="hidden" name="slug" value={slug || "home"} />
@@ -1457,6 +1516,7 @@
     busy={publishBusy}
     error={saveError}
     {kind}
+    onKindChange={changeKind}
     {format}
     {title}
     url={publicUrl}

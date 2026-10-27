@@ -14,7 +14,8 @@ path is recorded** in a new `page_redirect(tenant_id, from_path, page_id)`
 table, and the public 404 path consults it and answers **301 to the item's
 current URL, resolved live from `page_id`**. Because the target is resolved at
 request time, a chain of renames collapses to one hop, and deleting the item
-removes its redirects (FK cascade) so they 404 again.
+removes its redirects (`deletePage` clears them in the same batch — the schema
+has no foreign keys) so they 404 again.
 
 ## Considered Options
 
@@ -30,7 +31,7 @@ removes its redirects (FK cascade) so they 404 again.
 ## Consequences
 
 - Slug renames of published content get the same protection for free; the
-  editor's "best changed before publishing" hint can soften.
+  editor's slug hint says so.
 - `from_path` is unique per tenant; claiming a path that a redirect holds
   (publishing a new item at it) deletes the redirect — live content wins.
 - Saves that would collide on `UNIQUE(slug, kind, tenant_id)` are pre-checked

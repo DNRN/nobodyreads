@@ -22,6 +22,8 @@
     /** Why the last publish attempt failed, if it did. */
     error: string;
     kind: PageKind;
+    /** Turn the draft into a post or a page before it goes out. */
+    onKindChange: (to: "post" | "page") => void;
     format: PostFormat;
     title: string;
     /** Absolute public URL the item will have. */
@@ -46,6 +48,7 @@
     busy,
     error,
     kind,
+    onKindChange,
     format,
     title,
     url,
@@ -75,15 +78,6 @@
   });
 
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const typeLine = $derived(
-    kind === "home"
-      ? "Your home page — the front door of your site."
-      : kind === "page"
-        ? "A page — standalone, like About. Never emailed."
-        : format === "audio"
-          ? "An episode — dated, with a player, in your feeds."
-          : "A post — dated, in your feed.",
-  );
   const canEmail = $derived(kind === "post" && emailEnabled && subscriberCount > 0 && !notifiedAt);
   const intents = $derived(shareIntentUrls(url, title));
   const inMenu = $derived(navLabel.trim().length > 0);
@@ -118,7 +112,39 @@
 >
   {#if phase === "confirm"}
     <h2 id="nbr-publish-title" class="nbr-publish-title">Publish “{title || "Untitled"}”</h2>
-    <p class="nbr-publish-type">{typeLine}</p>
+    {#if kind === "home"}
+      <p class="nbr-publish-type">Your home page — the front door of your site.</p>
+    {:else}
+      <fieldset class="nbr-publish-section">
+        <legend class="nr-eyebrow">Publish as</legend>
+        <div class="nbr-publish-types">
+          <button
+            type="button"
+            class="nbr-publish-typecard"
+            aria-pressed={kind === "post"}
+            disabled={busy}
+            onclick={() => onKindChange("post")}
+          >
+            <span class="nbr-publish-typecard-title">{format === "audio" ? "Episode" : "Post"}</span>
+            <span class="nbr-publish-typecard-desc">
+              {format === "audio" ? "Dated, with a player, in your feeds" : "Dated, in your feed, can be emailed"}
+            </span>
+          </button>
+          <button
+            type="button"
+            class="nbr-publish-typecard"
+            aria-pressed={kind === "page"}
+            disabled={busy || format === "audio"}
+            onclick={() => onKindChange("page")}
+          >
+            <span class="nbr-publish-typecard-title">Page</span>
+            <span class="nbr-publish-typecard-desc">
+              {format === "audio" ? "Switch the format to text first" : "Standalone, like About. Never emailed"}
+            </span>
+          </button>
+        </div>
+      </fieldset>
+    {/if}
 
     {#if kind === "post"}
       <fieldset class="nbr-publish-section">

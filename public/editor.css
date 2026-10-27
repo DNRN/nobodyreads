@@ -3564,6 +3564,52 @@
 	gap: 8px;
 }
 
+.nr-admin .nbr-publish-types {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.nr-admin .nbr-publish-typecard {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 12px 14px;
+	border: 1px solid var(--nr-border);
+	border-radius: 12px;
+	background: var(--nr-card);
+	color: var(--nr-text);
+	text-align: left;
+	cursor: pointer;
+}
+
+.nr-admin .nbr-publish-typecard[aria-pressed="true"] {
+	border-color: var(--nr-accent);
+	box-shadow: inset 0 0 0 1px var(--nr-accent);
+	background: var(--nr-accent-soft);
+}
+
+.nr-admin .nbr-publish-typecard:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.nr-admin .nbr-publish-typecard:focus-visible {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+.nr-admin .nbr-publish-typecard-title {
+	font-size: 14.5px;
+	font-weight: 700;
+}
+
+.nr-admin .nbr-publish-typecard-desc {
+	font-size: 12.5px;
+	line-height: 1.35;
+	color: var(--nr-muted);
+}
+
 .nr-admin .nbr-publish-error {
 	margin-top: 18px;
 	padding: 10px 12px;

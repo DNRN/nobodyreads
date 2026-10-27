@@ -115,6 +115,12 @@ export interface Page {
    * still waiting for its file). Only posts carry one.
    */
   episode?: Episode | null;
+  /**
+   * When subscribers were emailed about this post (ISO timestamp); null =
+   * never. Read-only here: `upsertPage` ignores it, and only
+   * `claimNotification` sets it.
+   */
+  notifiedAt?: string | null;
 }
 
 /**

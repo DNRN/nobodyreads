@@ -37,6 +37,11 @@ export const pageFormSchema = z.object({
   season_number: z.string().trim().regex(/^\d{0,5}$/, "Season number must be a whole number").optional(),
   seo_og_image: z.string().trim().max(500).optional(),
   seo_twitter_card: z.enum(["summary", "summary_large_image"]).optional(),
+  /**
+   * "on" = email subscribers when this save publishes the post. Absent = no
+   * email: the author chooses in the publish dialog (ADR 0002).
+   */
+  notify: z.literal("on").optional(),
 });
 export type PageFormData = z.infer<typeof pageFormSchema>;
 

@@ -54,7 +54,7 @@ const kinds: ("post" | "page")[] = filter ? [filter] : ["post", "page"];
 const heading = filter === "post" ? "Posts" : filter === "page" ? "Pages" : "Content";
 const intro =
   filter === "post"
-    ? "Dated writing. Shows up in your feed and goes to subscribers."
+    ? "Dated writing. Shows up in your feed, and can be emailed to subscribers."
     : filter === "page"
       ? "Standalone pages like About or Contact. Add them to your site's menu."
       : "Everything you've made, in one calm place.";

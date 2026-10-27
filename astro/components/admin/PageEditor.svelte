@@ -12,6 +12,7 @@
   import CollectionPicker from "./CollectionPicker.svelte";
   import EpisodeAudio from "./EpisodeAudio.svelte";
   import LinkPicker from "./LinkPicker.svelte";
+  import PublishDialog from "./PublishDialog.svelte";
 
   interface Props {
     page?: Page;
@@ -29,6 +30,12 @@
      * being separately editable — see the title field below.
      */
     siteName?: string;
+    /** Public site root ("/" or "/alice"), for the published URL. */
+    siteBase?: string;
+    /** Verified subscribers — how many people a publish email reaches. */
+    subscriberCount?: number;
+    /** Whether subscriber email can be sent for this site. */
+    emailEnabled?: boolean;
   }
 
   let {
@@ -40,6 +47,9 @@
     format: formatProp = "text",
     formats = [],
     siteName = "",
+    siteBase = "/",
+    subscriberCount = 0,
+    emailEnabled = false,
   }: Props = $props();
 
   const isNew = !page;
@@ -92,13 +102,27 @@
   let seoOgImage = $state(p.seo?.ogImage ?? "");
   let seoTwitterCard = $state<"summary" | "summary_large_image">(p.seo?.twitterCard ?? "summary");
   // Format: what the post is made of. An audio draft stays audio on the server
-  // before its file exists; only publishing needs the file (see togglePublish).
+  // before its file exists; only publishing needs the file (see openPublish).
   // Switching back to text keeps the chosen file here, so switching again
   // re-attaches it.
   let format = $state<PostFormat>(p.format ?? (p.episode ? "audio" : "text"));
   let audioMediaId = $state(p.episode?.audioMediaId ?? "");
   let episodeNumber = $state(p.episode?.number != null ? String(p.episode.number) : "");
   let seasonNumber = $state(p.episode?.season != null ? String(p.episode.season) : "");
+
+  // --- Publishing ----------------------------------------------------------
+  /** When subscribers were emailed about this post; null = never (ADR 0002). */
+  let notifiedAt = $state<string | null>(p.notifiedAt ?? null);
+  let publishOpen = $state(false);
+  let publishPhase = $state<"confirm" | "live">("confirm");
+  let publishBusy = $state(false);
+  /** The dialog's "Email to N subscribers" box. */
+  let notifyChoice = $state(false);
+  /** Whether the publish that just happened sent the email (for "It's live"). */
+  let justEmailed = $state(false);
+  let sendingNow = $state(false);
+  /** The last save's failure, shown inside the publish dialog (it covers toasts). */
+  let saveError = $state("");
 
   // --- AI cover image ------------------------------------------------------
   let coverPanelOpen = $state(false);
@@ -241,6 +265,13 @@
     kind === "home" ? "/" : kind === "post" ? `posts/${slug}` : slug,
   );
 
+  // Where readers will find it. The origin is only known in the browser, so the
+  // server render shows the site-relative path until the island mounts.
+  let origin = $state("");
+  const publicUrl = $derived(
+    `${origin}${siteBase.replace(/\/$/, "")}/${kind === "home" ? "" : pagePath}`,
+  );
+
   const previewHref = $derived(
     previewBase && (kind === "home" || slug)
       ? `${previewBase}/${kind === "home" ? "" : pagePath}`
@@ -251,7 +282,7 @@
     return title.trim().length > 0 && (kind === "home" || slug.trim().length > 0);
   }
 
-  function buildBody(): URLSearchParams {
+  function buildBody(opts: { notify?: boolean } = {}): URLSearchParams {
     const body = new URLSearchParams();
     body.set("id", currentId ?? "");
     body.set("kind", kind);
@@ -261,6 +292,7 @@
     body.set("tags", tags);
     body.set("date", date);
     if (published) body.set("published", "on");
+    if (opts.notify) body.set("notify", "on");
     body.set("nav_label", navLabel);
     body.set("nav_order", navOrder);
     body.set("comments_enabled", commentsEnabled ? "on" : "off");
@@ -279,14 +311,28 @@
     return body;
   }
 
-  async function save(opts: { label?: string } = {}) {
+  /** The save on the wire, if any — so a deliberate save can wait for it. */
+  let inflightSave: Promise<boolean> | null = null;
+
+  /**
+   * Save now. Resolves true when the server accepted it. A call while another
+   * save is on the wire is dropped (resolves false), as autosave expects; a
+   * caller that must not be dropped awaits `inflightSave` first.
+   */
+  function save(opts: { label?: string; notify?: boolean } = {}): Promise<boolean> {
+    if (inflightSave) return Promise.resolve(false);
+    inflightSave = saveNow(opts).finally(() => (inflightSave = null));
+    return inflightSave;
+  }
+
+  async function saveNow(opts: { label?: string; notify?: boolean }): Promise<boolean> {
     const { label } = opts;
-    if (saving) return;
     if (!isValid()) {
       if (label) showToast("Add a title and address before saving", "error");
-      return;
+      return false;
     }
     saving = true;
+    saveError = "";
     try {
       const res = await fetch(saveUrl, {
         method: "POST",
@@ -295,11 +341,11 @@
           Accept: "application/json",
         },
         credentials: "same-origin",
-        body: buildBody(),
+        body: buildBody({ notify: opts.notify }),
       });
       if (res.redirected && res.url.includes("/admin/login")) {
         window.location.assign(res.url);
-        return;
+        return false;
       }
       if (!res.ok) {
         // The server explains rejections it understands (an episode with no
@@ -311,19 +357,23 @@
             : `Save failed (${res.status})`;
         throw new Error(message);
       }
-      const data = (await res.json().catch(() => ({}))) as { id?: string };
+      const data = (await res.json().catch(() => ({}))) as { id?: string; notifiedAt?: string | null };
       // A freshly-created page: adopt its id so later saves update it, and
       // reflect the canonical URL without a reload.
       if (data.id && !currentId) {
         currentId = data.id;
         history.replaceState(null, "", `${editorBase}/${data.id}`);
       }
+      if (data.notifiedAt !== undefined) notifiedAt = data.notifiedAt;
       baseline = snapshot();
       // The status pill already reads "saved", so only deliberate actions
       // announce themselves — a toast per autosave is noise.
       if (label) showToast(label, "success");
+      return true;
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Save failed", "error", 4000);
+      saveError = err instanceof Error ? err.message : "Save failed";
+      showToast(saveError, "error", 4000);
+      return false;
     } finally {
       saving = false;
     }
@@ -344,15 +394,71 @@
     if (editorReady) scheduleAutosave();
   });
 
-  function togglePublish() {
-    // The server refuses this too; saying so here keeps the post a draft
-    // instead of flipping the button and failing the save.
-    if (!published && kind === "post" && format === "audio" && !audioMediaId) {
+  /** Open the publish dialog — the only way a draft goes live. */
+  function openPublish() {
+    if (!isValid()) {
+      showToast("Add a title and address before publishing", "error");
+      return;
+    }
+    // The server refuses this too; saying so here keeps the dialog from
+    // offering a publish that cannot succeed.
+    if (kind === "post" && format === "audio" && !audioMediaId) {
       showToast("Add the episode's audio before publishing — or switch the post to text.", "error", 5000);
       return;
     }
-    published = !published;
-    save({ label: published ? "Published" : "Unpublished" });
+    notifyChoice = kind === "post" && emailEnabled && subscriberCount > 0 && !notifiedAt;
+    saveError = "";
+    publishPhase = "confirm";
+    publishOpen = true;
+  }
+
+  async function confirmPublish() {
+    publishBusy = true;
+    try {
+      // An autosave on the wire would make this save a no-op; let it land first.
+      if (inflightSave) await inflightSave;
+      const emailing = notifyChoice && kind === "post" && emailEnabled && subscriberCount > 0 && !notifiedAt;
+      published = true;
+      const ok = await save({ notify: emailing });
+      if (!ok) {
+        published = false;
+        return;
+      }
+      justEmailed = emailing && notifiedAt !== null;
+      publishPhase = "live";
+    } finally {
+      publishBusy = false;
+    }
+  }
+
+  function closePublish() {
+    publishOpen = false;
+  }
+
+  async function unpublish() {
+    published = false;
+    if (!(await save({ label: "Unpublished" }))) published = true;
+  }
+
+  /** "Email subscribers now" for a live post that was never emailed. */
+  async function sendNow() {
+    if (!currentId || sendingNow) return;
+    sendingNow = true;
+    try {
+      const res = await fetch(`${editorBase}/notify/${currentId}`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      const data = (await res.json().catch(() => ({}))) as { notifiedAt?: string; error?: string };
+      if (!res.ok || !data.notifiedAt) throw new Error(data.error || `Sending failed (${res.status})`);
+      notifiedAt = data.notifiedAt;
+      showToast(`Emailing ${subscriberCount} subscriber${subscriberCount === 1 ? "" : "s"}`, "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Sending failed", "error", 4000);
+    } finally {
+      sendingNow = false;
+    }
   }
 
   // Save button submits the form; intercept for AJAX. Delete keeps its normal
@@ -795,12 +901,13 @@
   }
 
   onMount(() => {
+    origin = location.origin;
     createCrepe(content);
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        save({ label: "Draft saved" });
+        save({ label: published ? "Saved" : "Draft saved" });
         return;
       }
       if (mod && e.shiftKey && e.key.toLowerCase() === "f") {
@@ -809,7 +916,8 @@
         return;
       }
       // One way out of everything, innermost first.
-      if (e.key === "Escape") {
+      // The publish dialog handles its own Esc (native <dialog> cancel).
+      if (e.key === "Escape" && !publishOpen) {
         if (helpOpen) helpOpen = false;
         else if (drawerOpen) closeDrawer();
         else if (focusMode) focusMode = false;
@@ -950,9 +1058,11 @@
         </span>
       </span>
 
-      <button type="button" class="btn btn-primary btn-sm" onclick={togglePublish}>
-        {published ? "Unpublish" : "Publish"}
-      </button>
+      {#if published}
+        <button type="button" class="btn btn-primary btn-sm" onclick={() => save({ label: "Saved" })}>Update</button>
+      {:else}
+        <button type="button" class="btn btn-primary btn-sm" onclick={openPublish}>Publish…</button>
+      {/if}
     </header>
 
     <!--
@@ -1095,6 +1205,25 @@
                 A one-off price for this post alone, on top of the subscription option.
                 Leave empty to offer the subscription only.
               </p>
+            </div>
+          {/if}
+
+          {#if published && emailEnabled}
+            <div class="nbr-field">
+              <span class="nr-eyebrow">Subscribers</span>
+              {#if notifiedAt}
+                <p class="hint">
+                  Emailed to subscribers on
+                  {new Date(notifiedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.
+                </p>
+              {:else if subscriberCount > 0}
+                <p class="hint">Not emailed — this post went out quietly. It can be emailed once.</p>
+                <button type="button" class="btn btn-sm" onclick={sendNow} disabled={sendingNow}>
+                  {sendingNow ? "Sending…" : `Email ${subscriberCount} subscriber${subscriberCount === 1 ? "" : "s"} now`}
+                </button>
+              {:else}
+                <p class="hint">Not emailed. Nobody has subscribed yet — you can send it once people do.</p>
+              {/if}
             </div>
           {/if}
 
@@ -1312,13 +1441,36 @@
       </div>
 
       <div class="nbr-drawer-foot">
-        <button type="submit" class="btn btn-sm">Save draft</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick={togglePublish}>
-          {published ? "Unpublish" : "Publish now"}
-        </button>
+        <button type="submit" class="btn btn-sm">{published ? "Save" : "Save draft"}</button>
+        {#if published}
+          <button type="button" class="btn btn-sm" onclick={unpublish}>Unpublish</button>
+        {:else}
+          <button type="button" class="btn btn-primary btn-sm" onclick={openPublish}>Publish…</button>
+        {/if}
       </div>
     </aside>
   </form>
+
+  <PublishDialog
+    open={publishOpen}
+    phase={publishPhase}
+    busy={publishBusy}
+    error={saveError}
+    {kind}
+    {format}
+    {title}
+    url={publicUrl}
+    {subscriberCount}
+    {emailEnabled}
+    {notifiedAt}
+    bind:accessTier
+    bind:inFeed
+    bind:navLabel
+    bind:notify={notifyChoice}
+    emailed={justEmailed}
+    onPublish={confirmPublish}
+    onClose={closePublish}
+  />
 
   {#if focusMode}
     <p class="nbr-focus-hint" transition:fade={{ duration: 200 }}>Esc to bring everything back</p>

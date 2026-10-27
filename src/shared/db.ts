@@ -88,6 +88,23 @@ async function migrateColumns(client: Client): Promise<void> {
     }
   }
 
+  // Added together with its backfill, atomically: a post published before this
+  // column existed was already emailed under the old first-publish rule, so it
+  // must read as emailed or "Email subscribers now" would send it again. Runs
+  // only when the ALTER succeeds — a fresh database gets the column from
+  // schema.sql and has nothing to backfill.
+  try {
+    await client.batch(
+      [
+        "ALTER TABLE page ADD COLUMN notified_at TEXT",
+        "UPDATE page SET notified_at = COALESCE(updated, date) WHERE kind = 'post' AND published = 1",
+      ],
+      "write"
+    );
+  } catch {
+    // Column already exists — ignore
+  }
+
   await migrateContentViewKind(client);
 }
 

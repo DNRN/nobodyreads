@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, inArray, isNotNull, isNull } from "drizzle-orm";
 import { page, contentView } from "./schema.js";
 import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
@@ -62,6 +62,7 @@ function toPage(row: PageRow): Page {
             season: row.seasonNumber ?? null,
           }
         : null,
+    notifiedAt: row.notifiedAt ?? null,
   };
 }
 
@@ -658,6 +659,37 @@ export async function deletePage(
   tenantId: string
 ): Promise<void> {
   await db.delete(page).where(and(eq(page.pageId, pageId), eq(page.tenantId, tenantId)));
+}
+
+/**
+ * Record that subscribers are being emailed about a published post — and
+ * report whether this caller won the right to send. The conditional UPDATE is
+ * the whole guard: of two concurrent publishes or "email now" clicks, exactly
+ * one sees `true`, so a post is emailed at most once.
+ *
+ * Returns the timestamp written, or null when the post is not a published
+ * post or was already emailed.
+ */
+export async function claimNotification(
+  db: Database,
+  pageId: string,
+  tenantId: string
+): Promise<string | null> {
+  const at = new Date().toISOString();
+  const claimed = await db
+    .update(page)
+    .set({ notifiedAt: at })
+    .where(
+      and(
+        eq(page.pageId, pageId),
+        eq(page.tenantId, tenantId),
+        eq(page.kind, "post"),
+        eq(page.published, true),
+        isNull(page.notifiedAt)
+      )
+    )
+    .returning({ pageId: page.pageId });
+  return claimed.length > 0 ? at : null;
 }
 
 /** Create or update a page, keyed by its stable id + tenant. */

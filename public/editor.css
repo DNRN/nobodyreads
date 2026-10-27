@@ -448,7 +448,7 @@
 	background: var(--nr-card);
 	border: 1px solid var(--nr-border);
 	border-radius: 14px;
-	box-shadow: 0 12px 32px -16px var(--nr-shadow);
+	box-shadow: var(--nr-shadow-lg);
 }
 
 .nr-admin .nr-create-menu[hidden] {
@@ -3507,6 +3507,77 @@
 	inset: 0;
 	z-index: 300;
 	background: rgba(0, 0, 0, 0.38);
+}
+
+/* ----- Publish dialog (native <dialog>, top layer) ----- */
+.nr-admin .nbr-publish {
+	width: min(540px, calc(100vw - 32px));
+	margin: auto;
+	padding: 26px 28px 22px;
+	border: 1px solid var(--nr-border);
+	border-radius: 18px;
+	background: var(--nr-card);
+	color: var(--nr-text);
+	box-shadow: var(--nr-shadow-lg);
+}
+
+/* Same dim as the drawer scrim, for the same reason. */
+.nr-admin .nbr-publish::backdrop {
+	background: rgba(0, 0, 0, 0.38);
+}
+
+.nr-admin .nbr-publish-title {
+	font-size: 21px;
+	font-weight: 800;
+	letter-spacing: -0.015em;
+	overflow-wrap: anywhere;
+}
+
+.nr-admin .nbr-publish-type {
+	margin-top: 6px;
+	font-size: 14px;
+	color: var(--nr-muted);
+	overflow-wrap: anywhere;
+}
+
+.nr-admin .nbr-publish-section {
+	margin: 20px 0 0;
+	padding: 0;
+	border: none;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.nr-admin .nbr-publish-section .hint {
+	margin: -2px 0 2px 27px;
+}
+
+.nr-admin .nbr-publish-url {
+	font-size: 12.5px;
+	overflow-wrap: anywhere;
+}
+
+.nr-admin .nbr-publish-share {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.nr-admin .nbr-publish-error {
+	margin-top: 18px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: var(--nr-danger-soft);
+	color: var(--nr-danger);
+	font-size: 13.5px;
+}
+
+.nr-admin .nbr-publish-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 24px;
 }
 
 .nr-admin .nbr-drawer {

@@ -36,8 +36,11 @@ emailed.
 
 - One column added through the usual three-place contract (Drizzle def,
   `schema.sql`, `migrateColumns()`). Existing published posts are backfilled
-  with `notified_at = updated` so nothing already sent is ever re-sent.
-- Saves without `notify` (scripts, the no-JS form) publish **without** email —
-  a behaviour change for API callers, noted in the changelog.
+  with `notified_at = COALESCE(updated, date)` so nothing already sent is ever
+  re-sent.
+- `/editor/save` without `notify` (API callers, the no-JS form) publishes
+  **without** email — a behaviour change, documented in `docs/overview.md`.
+  The `npm run post` CLI has no dialog and keeps emailing on first publish,
+  through the same once-only claim (`notifySubscribersOnce`).
 - `onContentPublished` (host screening hook) keeps firing on the publish
   transition, independent of email.

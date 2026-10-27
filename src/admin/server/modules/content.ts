@@ -12,7 +12,9 @@ import {
 } from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
 import type { Page, PageKind, PostFormat } from "../../../content/types.js";
-import { notifySubscribers } from "../../../subscription/index.js";
+import { notifySubscribersOnce } from "../../../subscription/once.js";
+import { countSubscribers } from "../../../subscription/db.js";
+import { resolveEmailProvider } from "../../../subscription/email.js";
 import type { AdminModuleContext } from "./types.js";
 
 /**
@@ -101,6 +103,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       let existingSeo: Page["seo"] | undefined;
       let existingFormat: PostFormat = "text";
       let existingEpisode: Page["episode"] = null;
+      let existingNotifiedAt: string | null = null;
       let content = data.content;
       if (!isNew) {
         const existing = await getPageById(db, pageId, tenantId);
@@ -110,6 +113,7 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         existingSeo = existing?.seo;
         existingFormat = existing?.format ?? "text";
         existingEpisode = existing?.episode ?? null;
+        existingNotifiedAt = existing?.notifiedAt ?? null;
         if (!content && existing?.content) content = existing.content;
       }
 
@@ -232,32 +236,17 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
           .catch((err) => console.error("onContentPublished hook failed:", err));
       }
 
-      if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
-        // An episode's email says how long it is; the lookup rides on the same
-        // fire-and-forget chain so it never delays the author's save.
-        const audioMediaId = p.episode?.audioMediaId;
-        (audioMediaId ? getMediaById(db, audioMediaId, tenantId, (key) => key) : Promise.resolve(null))
-          .then((audio) =>
-            notifySubscribers(
-              db,
-              tenantId,
-              {
-                title: p.title,
-                slug: p.slug,
-                excerpt: p.excerpt,
-                format: p.format,
-                durationSeconds: audio?.durationSeconds ?? null,
-              },
-              { email: ctx.email, siteUrl: ctx.siteUrl, siteName: ctx.siteName }
-            )
-          )
-          .catch((err) => console.error("Subscriber notification error:", err));
-      }
+      // Email only when the author ticked it in the publish dialog, and only
+      // on the publish transition; `claimNotification` makes it once per post.
+      const notifiedAt =
+        data.notify === "on" && p.kind === "post" && p.published && !wasPreviouslyPublished
+          ? await emailSubscribers(p)
+          : null;
 
       // AJAX saves (editor autosave / save button) ask for JSON and stay on the
       // page; plain form posts (no-JS fallback) get the usual redirect.
       if (c.req.header("accept")?.includes("application/json")) {
-        return c.json({ ok: true, id: pageId, published: p.published });
+        return c.json({ ok: true, id: pageId, published: p.published, notifiedAt: notifiedAt ?? existingNotifiedAt });
       }
 
       return c.redirect(`${editorBase}/${pageId}`);
@@ -296,6 +285,47 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
     await deletePage(db, pageId, tenantId);
     return c.redirect(editorBase);
   });
+
+  /**
+   * "Email subscribers now" — for a published post that was never emailed
+   * (published quietly, or before anyone subscribed). Same once-only claim as
+   * publishing with the box ticked.
+   */
+  app.post("/editor/notify/:id", async (c) => {
+    const existing = await getPageById(db, c.req.param("id"), tenantId);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (existing.kind !== "post" || !existing.published) {
+      return c.json({ error: "Only published posts are emailed to subscribers." }, 400);
+    }
+    if (existing.notifiedAt) {
+      return c.json({ error: "Subscribers were already emailed about this post." }, 409);
+    }
+    if (!resolveEmailProvider(ctx.email)) {
+      return c.json({ error: "Email isn't set up for this site." }, 400);
+    }
+    if ((await countSubscribers(db, tenantId)).verified === 0) {
+      return c.json({ error: "Nobody has subscribed yet." }, 409);
+    }
+    const sent = await emailSubscribers(existing);
+    if (!sent) {
+      return c.json({ error: "Subscribers were already emailed about this post." }, 409);
+    }
+    return c.json({ ok: true, notifiedAt: sent });
+  });
+
+  /**
+   * The post's one email; the send runs on without the response waiting for
+   * the provider (`notifySubscribers` logs its own failures). Returns the
+   * claim's timestamp, or null when nothing was sent.
+   */
+  async function emailSubscribers(p: Page): Promise<string | null> {
+    const sent = await notifySubscribersOnce(db, tenantId, p, {
+      email: ctx.email,
+      siteUrl: ctx.siteUrl,
+      siteName: ctx.siteName,
+    });
+    return sent?.notifiedAt ?? null;
+  }
 
   return app;
 }

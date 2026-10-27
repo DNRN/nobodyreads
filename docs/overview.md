@@ -313,7 +313,7 @@ The host Astro app must populate this via middleware before any admin page rende
 | Module | Routes (under `/admin`) | Purpose |
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
-| `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
+| `content` | `/editor/save`, `/editor/delete`, `/editor/notify/:id` | Page CRUD; emails subscribers once per post when the publish dialog asks (`notify=on`), or later via "Email subscribers now" |
 | `views` | `/collections/save`, `/collections/delete` | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
@@ -357,9 +357,19 @@ told to validate. Subscriber emails are notification recipients only; the admin
 **Settings** page shows aggregate counts (`countSubscribers`) and never lists
 addresses.
 
-Publishing a post for the first time triggers `notifySubscribers()` (verified +
-active subscribers only) when email is enabled — both from the admin editor's
-`/editor/save` and the `npm run post` CLI (`scripts/publish.ts`).
+Subscriber email is the author's choice, made in the editor's publish dialog,
+and goes out **at most once per post** (ADR 0002): `notifySubscribersOnce()`
+claims the post's `page.notified_at` with a conditional UPDATE before sending
+to verified + active subscribers, so unpublishing and republishing, a second
+click, or a concurrent request cannot re-send. Nothing is claimed when email is
+off or nobody has subscribed — the post stays emailable later from its
+settings. A save without `notify=on` publishes quietly. The `npm run post` CLI
+(`scripts/publish.ts`) has no dialog: publishing a post from it emails, through
+the same once-only claim.
+
+Hosts that hand the admin a per-request email config (rather than
+`config/email.config.json`) set `emailEnabled` on the admin context so the
+publish dialog and Community page report email correctly.
 
 ---
 

@@ -52,6 +52,9 @@ CREATE TABLE IF NOT EXISTS page (
   audio_media_id   TEXT,
   episode_number   INTEGER,
   season_number    INTEGER,
+  -- When subscribers were emailed about this post (ISO); NULL = never. Written
+  -- only by claimNotification so a post is emailed at most once.
+  notified_at      TEXT,
   PRIMARY KEY (page_id, tenant_id),
   UNIQUE (slug, kind, tenant_id)
 );

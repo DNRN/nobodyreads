@@ -27,7 +27,7 @@ export const POST_FORMATS: readonly PostFormatSpec[] = [
     id: "text",
     label: "Text",
     createLabel: "Text post",
-    createHint: "Dated, in your feed, emailed to subscribers",
+    createHint: "Dated, in your feed, can be emailed to subscribers",
     contentType: null,
     noun: "post",
     verb: "Read post",

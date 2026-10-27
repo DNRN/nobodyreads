@@ -40,6 +40,10 @@
       "types": "./dist/shared/duration.d.ts",
       "import": "./dist/shared/duration.js"
     },
+    "./share-links": {
+      "types": "./dist/shared/share-links.d.ts",
+      "import": "./dist/shared/share-links.js"
+    },
     "./collection-template": {
       "types": "./dist/content/collection-template.d.ts",
       "import": "./dist/content/collection-template.js"

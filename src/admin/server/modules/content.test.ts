@@ -9,6 +9,8 @@ vi.mock("../../../shared/db.js", () => ({ getRawClient: () => testClient }));
 
 import { createContentRoutes } from "./content.js";
 import { getPageById, insertMedia, upsertPage } from "../../../content/db.js";
+import { addSubscriber, verifySubscriber } from "../../../subscription/db.js";
+import type { EmailMessage, EmailProvider } from "../../../subscription/email.js";
 import type { Page, PageKind } from "../../../content/types.js";
 
 /**
@@ -54,13 +56,14 @@ beforeEach(async () => {
   );
 });
 
-function mount(): Hono {
+function mount(email?: AdminModuleContext["email"]): Hono {
   const ctx = {
     db: t.db,
     tenantId: TENANT,
     urlPrefix: "",
     adminBase: "/admin",
     editorBase: "/admin/editor",
+    email,
   } satisfies AdminModuleContext;
   const app = new Hono();
   app.route("/", createContentRoutes(ctx));
@@ -192,6 +195,89 @@ describe("saving an episode", () => {
     );
 
     expect((await getPageById(t.db, id, TENANT))!.episode).toBeNull();
+  });
+});
+
+describe("emailing subscribers about a post", () => {
+  /** A provider that records instead of sending, and one verified reader. */
+  async function withSubscriber(): Promise<{ app: Hono; sent: EmailMessage[] }> {
+    const sent: EmailMessage[] = [];
+    const provider: EmailProvider = { sendEmail: async (m) => void sent.push(m) };
+    const { token } = await addSubscriber(t.db, TENANT, "reader@example.com");
+    await verifySubscriber(t.db, TENANT, token!);
+    return { app: mount(provider), sent };
+  }
+
+  // Sending happens only after `claimNotification` writes `notified_at`, so a
+  // row whose `notifiedAt` did not change proves nothing was sent — no need to
+  // wait on the fire-and-forget send to show it stayed quiet.
+  const notifiedAt = async (id: string) => (await getPageById(t.db, id, TENANT))!.notifiedAt;
+
+  it("emails once when the author ticks it on publish, and records when", async () => {
+    const { app, sent } = await withSubscriber();
+
+    const res = await save(app, { published: "on", notify: "on" });
+    const id = await savedId(res.clone());
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+
+    const reported = z.object({ notifiedAt: z.string() }).parse(await res.json()).notifiedAt;
+    expect(await notifiedAt(id)).toBe(reported);
+  });
+
+  it("publishes quietly when the box is left unticked", async () => {
+    const { app } = await withSubscriber();
+
+    const id = await savedId(await save(app, { published: "on" }));
+
+    expect(await notifiedAt(id)).toBeNull();
+  });
+
+  it("never emails a post twice, even when it is unpublished and published again", async () => {
+    const { app, sent } = await withSubscriber();
+    const id = await savedId(await save(app, { published: "on", notify: "on" }));
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    const first = await notifiedAt(id);
+
+    await savedId(await save(app, { id }));
+    await savedId(await save(app, { id, published: "on", notify: "on" }));
+
+    expect(await notifiedAt(id)).toBe(first);
+    expect(sent).toHaveLength(1);
+  });
+
+  it("does not spend the one email when nobody has subscribed yet", async () => {
+    const app = mount({ sendEmail: async () => {} });
+
+    const id = await savedId(await save(app, { published: "on", notify: "on" }));
+
+    expect(await notifiedAt(id)).toBeNull();
+  });
+
+  it("emails a quietly published post later, once", async () => {
+    const { app, sent } = await withSubscriber();
+    const id = await savedId(await save(app, { published: "on" }));
+
+    const first = await app.request(`/editor/notify/${id}`, { method: "POST" });
+    expect(first.status).toBe(200);
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    const claimed = await notifiedAt(id);
+
+    const again = await app.request(`/editor/notify/${id}`, { method: "POST" });
+    expect(again.status).toBe(409);
+    expect(await notifiedAt(id)).toBe(claimed);
+  });
+
+  it.each([
+    ["a draft", { kind: "post", slug: "draft" }],
+    ["a page", { kind: "page", slug: "about", published: "on" }],
+  ])("will not email %s", async (_label, fields: Record<string, string>) => {
+    const { app } = await withSubscriber();
+    const id = await savedId(await save(app, fields));
+
+    const res = await app.request(`/editor/notify/${id}`, { method: "POST" });
+
+    expect(res.status).toBe(400);
+    expect(await notifiedAt(id)).toBeNull();
   });
 });
 

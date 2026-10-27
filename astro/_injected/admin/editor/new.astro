@@ -2,9 +2,11 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
 import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, findPageByKind, resolveSiteName, POST_FORMATS, postFormat, type PageKind } from "nobodyreads";
+import { initDb, findPageByKind, resolveSiteName, countSubscribers, isEmailEnabled, POST_FORMATS, postFormat, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+// The publish dialog says how many people an email reaches.
+const { verified: subscriberCount } = await countSubscribers(await initDb(), ctx.tenantId);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const requested = Astro.url.searchParams.get("kind");
@@ -43,6 +45,9 @@ const newWhat = format === "text" ? kindLabel : postFormat(format).createLabel.t
     kind={kind}
     format={format}
     formats={POST_FORMATS.map(({ id, label }) => ({ id, label }))}
+    siteBase={ctx.siteBase}
+    subscriberCount={subscriberCount}
+    emailEnabled={ctx.emailEnabled ?? isEmailEnabled()}
     siteName={siteName}
   />
 </AdminLayout>

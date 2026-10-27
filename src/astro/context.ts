@@ -37,6 +37,13 @@ export interface NobodyreadsAdminContext {
    */
   paymentsEnabled?: boolean;
   /**
+   * Whether subscriber email can be sent for this site. A host that hands the
+   * package an email config per request, rather than through
+   * `config/email.config.json`, says so here; unset falls back to that file
+   * (`isEmailEnabled()`). Presentation only — sending resolves the provider.
+   */
+  emailEnabled?: boolean;
+  /**
    * Where the host manages payouts and pricing, if it does so itself.
    *
    * A platform that is merchant of record has rules the package cannot know
@@ -127,6 +134,7 @@ export function makeAdminContext(
     logoutHref: input.logoutHref,
     aiEnabled: input.aiEnabled,
     paymentsEnabled: input.paymentsEnabled,
+    emailEnabled: input.emailEnabled,
     payoutSettingsHref: input.payoutSettingsHref,
     siteName: input.siteName,
     homeUrl: input.homeUrl ?? adminBase,

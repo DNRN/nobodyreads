@@ -1,4 +1,6 @@
 ---
+import { shareIntentUrls } from "nobodyreads/share-links";
+
 interface Props {
   url: string;
   title: string;
@@ -6,9 +8,7 @@ interface Props {
 }
 
 const { url, title, excerpt } = Astro.props;
-const encodedUrl = encodeURIComponent(url);
-const encodedText = encodeURIComponent(title);
-const blueskyText = encodeURIComponent(`${title} ${url}`);
+const intents = shareIntentUrls(url, title);
 ---
 
 <div class="share-bar">
@@ -25,7 +25,7 @@ const blueskyText = encodeURIComponent(`${title} ${url}`);
     </button>
     <a
       class="share-bar__btn"
-      href={`https://x.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`}
+      href={intents.x}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Share on X"
@@ -35,7 +35,7 @@ const blueskyText = encodeURIComponent(`${title} ${url}`);
     </a>
     <a
       class="share-bar__btn"
-      href={`https://bsky.app/intent/compose?text=${blueskyText}`}
+      href={intents.bluesky}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Share on Bluesky"
@@ -54,7 +54,7 @@ const blueskyText = encodeURIComponent(`${title} ${url}`);
     </button>
     <a
       class="share-bar__btn"
-      href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`}
+      href={intents.facebook}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Share on Facebook"
@@ -64,7 +64,7 @@ const blueskyText = encodeURIComponent(`${title} ${url}`);
     </a>
     <a
       class="share-bar__btn"
-      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
+      href={intents.linkedin}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Share on LinkedIn"

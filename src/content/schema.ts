@@ -47,6 +47,12 @@ export const page = sqliteTable(
     audioMediaId: text("audio_media_id"),
     episodeNumber: integer("episode_number"),
     seasonNumber: integer("season_number"),
+    /**
+     * When subscribers were emailed about this post; NULL = never. Set only
+     * by `claimNotification`, never by `upsertPage`, so no save path can
+     * reset it and re-send. A post is emailed at most once.
+     */
+    notifiedAt: text("notified_at"),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),

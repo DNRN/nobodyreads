@@ -85,4 +85,20 @@ describe("new-post notification payload", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].html).toContain("Untitled thoughts");
   });
+
+  it("announces an episode as one, with its length on the call to action", async () => {
+    const { provider, sent } = captureProvider();
+
+    await sendNewPostNotification(
+      provider,
+      "https://example.com",
+      "Example",
+      { title: "Episode one", slug: "episode-one", excerpt: "", format: "audio", durationSeconds: 2700 },
+      subscribers,
+    );
+
+    expect(sent[0].subject).toBe("New episode: Episode one");
+    expect(sent[0].html).toContain("Listen · 45 min");
+    expect(sent[0].text).toContain("Listen · 45 min: https://example.com/posts/episode-one");
+  });
 });

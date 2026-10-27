@@ -9,7 +9,7 @@ vi.mock("../shared/db.js", () => ({
 
 import { resolvePageView } from "./page.js";
 import type { SiteContext, Viewer } from "./context.js";
-import { upsertPage, upsertContentView, insertMedia, deleteMediaRecord } from "../content/db.js";
+import { upsertPage, upsertContentView, insertMedia, deleteMediaRecord, recordRedirect, getPageById } from "../content/db.js";
 import { DEFAULT_TEMPLATE } from "../template/defaults.js";
 
 const TENANT = "_default";
@@ -176,6 +176,41 @@ describe("resolvePageView", () => {
     // Still the site's own chrome: a 404 on a plot is not a 404 on the engine.
     expect(view.layout.siteName).toBe("Alice's plot");
     expect(view.layout.menuHeader).toBe("@alice");
+  });
+});
+
+describe("an address whose content moved", () => {
+  const target = { kind: "post", slug: "old-name" } as const;
+
+  it("resolves to the item's current URL, under the context's prefix", async () => {
+    await recordRedirect(t.db, TENANT, "/posts/old-name", "p1");
+
+    expect((await resolvePageView(t.db, context(), reader, target, null)).redirectTo).toBe("/posts/a-post");
+    expect(
+      (await resolvePageView(t.db, context({ urlPrefix: "/alice" }), reader, target, null)).redirectTo,
+    ).toBe("/alice/posts/a-post");
+  });
+
+  it("follows the item, not the path: one hop however often it moved", async () => {
+    await recordRedirect(t.db, TENANT, "/posts/old-name", "p1");
+    await upsertPage(t.db, { ...(await getPageById(t.db, "p1", TENANT))!, kind: "page", slug: "moved" }, TENANT);
+
+    expect((await resolvePageView(t.db, context(), reader, target, null)).redirectTo).toBe("/moved");
+  });
+
+  it("is a plain 404 once the item is unpublished", async () => {
+    await recordRedirect(t.db, TENANT, "/posts/old-name", "p1");
+    await upsertPage(t.db, { ...(await getPageById(t.db, "p1", TENANT))!, published: false }, TENANT);
+
+    const view = await resolvePageView(t.db, context(), reader, target, null);
+    expect(view.redirectTo).toBeNull();
+    expect(view.page).toBeNull();
+  });
+
+  it("never redirects another site's visitors", async () => {
+    await recordRedirect(t.db, "someone-else", "/posts/old-name", "p1");
+
+    expect((await resolvePageView(t.db, context(), reader, target, null)).redirectTo).toBeNull();
   });
 });
 

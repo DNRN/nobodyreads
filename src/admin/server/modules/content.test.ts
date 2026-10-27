@@ -9,6 +9,8 @@ vi.mock("../../../shared/db.js", () => ({ getRawClient: () => testClient }));
 
 import { createContentRoutes } from "./content.js";
 import { getPageById, insertMedia, upsertPage } from "../../../content/db.js";
+import { addSubscriber, verifySubscriber } from "../../../subscription/db.js";
+import type { EmailMessage, EmailProvider } from "../../../subscription/email.js";
 import type { Page, PageKind } from "../../../content/types.js";
 
 /**
@@ -54,13 +56,14 @@ beforeEach(async () => {
   );
 });
 
-function mount(): Hono {
+function mount(email?: AdminModuleContext["email"]): Hono {
   const ctx = {
     db: t.db,
     tenantId: TENANT,
     urlPrefix: "",
     adminBase: "/admin",
     editorBase: "/admin/editor",
+    email,
   } satisfies AdminModuleContext;
   const app = new Hono();
   app.route("/", createContentRoutes(ctx));
@@ -117,7 +120,6 @@ describe("saving an episode", () => {
   });
 
   it.each([
-    ["no audio chosen", ""],
     ["audio that does not exist", "m-missing"],
     ["an image", "m-image"],
     ["audio without a known duration", "m-untimed"],
@@ -127,6 +129,39 @@ describe("saving an episode", () => {
 
     expect(res.status).toBe(400);
     expect(Failed.parse(await res.json()).error).toMatch(/audio/i);
+  });
+
+  it("keeps an audio draft's format while its file is still to come", async () => {
+    const id = await savedId(await save(mount(), { content_type: "audio", audio_media_id: "" }));
+
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page.format).toBe("audio");
+    expect(page.episode).toBeNull();
+  });
+
+  it("refuses to publish an audio post until its audio is attached", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "audio", audio_media_id: "" }));
+
+    const refused = await save(app, { id, content_type: "audio", audio_media_id: "", published: "on" });
+    expect(refused.status).toBe(400);
+    expect(Failed.parse(await refused.json()).error).toMatch(/audio/i);
+    expect((await getPageById(t.db, id, TENANT))!.published).toBe(false);
+
+    await savedId(await save(app, { id, content_type: "audio", audio_media_id: "m-audio", published: "on" }));
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page.published).toBe(true);
+    expect(page.episode?.audioMediaId).toBe("m-audio");
+  });
+
+  it("lets a live post switched to audio keep saving before its file exists", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "post", published: "on" }));
+
+    await savedId(await save(app, { id, content_type: "audio", audio_media_id: "", published: "on" }));
+
+    const page = (await getPageById(t.db, id, TENANT))!;
+    expect(page).toMatchObject({ published: true, format: "audio", episode: null });
   });
 
   it("keeps an existing episode when the form has no audio control", async () => {
@@ -160,6 +195,171 @@ describe("saving an episode", () => {
     );
 
     expect((await getPageById(t.db, id, TENANT))!.episode).toBeNull();
+  });
+});
+
+describe("moving published content", () => {
+  const redirects = async () =>
+    (await t.client.execute("SELECT from_path, page_id FROM page_redirect ORDER BY from_path")).rows.map(
+      (r) => [r.from_path, r.page_id],
+    );
+
+  it("leaves the old address of a post that became a page", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("page");
+    expect(await redirects()).toEqual([["/posts/hello", id]]);
+  });
+
+  it("records nothing for a draft — nobody holds its address yet", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello" }));
+
+    await savedId(await save(app, { id, slug: "renamed", kind: "page" }));
+
+    expect(await redirects()).toEqual([]);
+  });
+
+  it("stops redirecting an address that live content answers at again", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    // Back to a post: /posts/hello is live again, and /hello now redirects.
+    await savedId(await save(app, { id, slug: "hello", kind: "post", published: "on" }));
+
+    expect(await redirects()).toEqual([["/hello", id]]);
+  });
+
+  it("refuses an address another page holds, naming it, and changes nothing", async () => {
+    const app = mount();
+    await savedId(await save(app, { title: "About me", slug: "about", kind: "page", published: "on" }));
+    const id = await savedId(await save(app, { title: "About", slug: "about", published: "on" }));
+
+    const res = await save(app, { id, title: "About", slug: "about", kind: "page", published: "on" });
+
+    expect(res.status).toBe(409);
+    expect(Failed.parse(await res.json()).error).toContain("About me");
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("post");
+    expect(await redirects()).toEqual([]);
+  });
+
+  it("keeps an episode a post until it is switched to text", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { content_type: "audio", audio_media_id: "m-audio", published: "on" }));
+
+    const refused = await save(app, { id, kind: "page", published: "on" });
+    expect(refused.status).toBe(400);
+
+    await savedId(await save(app, { id, content_type: "post", published: "on" }));
+    await savedId(await save(app, { id, kind: "page", published: "on" }));
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("page");
+  });
+
+  it("never turns the home page into a post", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "home", kind: "home", published: "on" }));
+
+    const res = await save(app, { id, slug: "home", kind: "post", published: "on" });
+
+    expect(res.status).toBe(400);
+    expect((await getPageById(t.db, id, TENANT))!.kind).toBe("home");
+  });
+
+  it("takes a page's redirects with it when it is deleted", async () => {
+    const app = mount();
+    const id = await savedId(await save(app, { slug: "hello", published: "on" }));
+    await savedId(await save(app, { id, slug: "hello", kind: "page", published: "on" }));
+
+    await app.request(`/editor/delete/${id}`, { method: "POST" });
+
+    expect(await redirects()).toEqual([]);
+  });
+});
+
+describe("emailing subscribers about a post", () => {
+  /** A provider that records instead of sending, and one verified reader. */
+  async function withSubscriber(): Promise<{ app: Hono; sent: EmailMessage[] }> {
+    const sent: EmailMessage[] = [];
+    const provider: EmailProvider = { sendEmail: async (m) => void sent.push(m) };
+    const { token } = await addSubscriber(t.db, TENANT, "reader@example.com");
+    await verifySubscriber(t.db, TENANT, token!);
+    return { app: mount(provider), sent };
+  }
+
+  // Sending happens only after `claimNotification` writes `notified_at`, so a
+  // row whose `notifiedAt` did not change proves nothing was sent — no need to
+  // wait on the fire-and-forget send to show it stayed quiet.
+  const notifiedAt = async (id: string) => (await getPageById(t.db, id, TENANT))!.notifiedAt;
+
+  it("emails once when the author ticks it on publish, and records when", async () => {
+    const { app, sent } = await withSubscriber();
+
+    const res = await save(app, { published: "on", notify: "on" });
+    const id = await savedId(res.clone());
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+
+    const reported = z.object({ notifiedAt: z.string() }).parse(await res.json()).notifiedAt;
+    expect(await notifiedAt(id)).toBe(reported);
+  });
+
+  it("publishes quietly when the box is left unticked", async () => {
+    const { app } = await withSubscriber();
+
+    const id = await savedId(await save(app, { published: "on" }));
+
+    expect(await notifiedAt(id)).toBeNull();
+  });
+
+  it("never emails a post twice, even when it is unpublished and published again", async () => {
+    const { app, sent } = await withSubscriber();
+    const id = await savedId(await save(app, { published: "on", notify: "on" }));
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    const first = await notifiedAt(id);
+
+    await savedId(await save(app, { id }));
+    await savedId(await save(app, { id, published: "on", notify: "on" }));
+
+    expect(await notifiedAt(id)).toBe(first);
+    expect(sent).toHaveLength(1);
+  });
+
+  it("does not spend the one email when nobody has subscribed yet", async () => {
+    const app = mount({ sendEmail: async () => {} });
+
+    const id = await savedId(await save(app, { published: "on", notify: "on" }));
+
+    expect(await notifiedAt(id)).toBeNull();
+  });
+
+  it("emails a quietly published post later, once", async () => {
+    const { app, sent } = await withSubscriber();
+    const id = await savedId(await save(app, { published: "on" }));
+
+    const first = await app.request(`/editor/notify/${id}`, { method: "POST" });
+    expect(first.status).toBe(200);
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    const claimed = await notifiedAt(id);
+
+    const again = await app.request(`/editor/notify/${id}`, { method: "POST" });
+    expect(again.status).toBe(409);
+    expect(await notifiedAt(id)).toBe(claimed);
+  });
+
+  it.each([
+    ["a draft", { kind: "post", slug: "draft" }],
+    ["a page", { kind: "page", slug: "about", published: "on" }],
+  ])("will not email %s", async (_label, fields: Record<string, string>) => {
+    const { app } = await withSubscriber();
+    const id = await savedId(await save(app, fields));
+
+    const res = await app.request(`/editor/notify/${id}`, { method: "POST" });
+
+    expect(res.status).toBe(400);
+    expect(await notifiedAt(id)).toBeNull();
   });
 });
 

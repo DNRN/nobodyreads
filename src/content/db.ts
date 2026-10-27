@@ -1,8 +1,9 @@
-import { eq, and, desc, asc, inArray, isNotNull } from "drizzle-orm";
-import { page, contentView } from "./schema.js";
+import { eq, and, desc, asc, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { page, pageRedirect, contentView } from "./schema.js";
 import { media } from "../media/schema.js";
 import { getRawClient } from "../shared/db.js";
 import { validateCustomQuery } from "./custom-view-sql.js";
+import { formatFromContentType, postFormat } from "./formats.js";
 import type { Database } from "../db/index.js";
 import type {
   Page,
@@ -49,8 +50,10 @@ function toPage(row: PageRow): Page {
     // itself separately fails closed to a teaser.
     accessTier: normalizeAccessTier(row.accessTier),
     priceAmount: row.priceAmount ?? null,
-    // Both halves or nothing: a row marked audio without its file (or a file
-    // id left on a plain post) reads as a plain post, never as a broken player.
+    format: formatFromContentType(row.contentType),
+    // Both halves or nothing: a row marked audio without its file (an audio
+    // draft still uploading, or a file id left on a text post) carries no
+    // episode, never a broken player.
     episode:
       row.contentType === "audio" && row.audioMediaId
         ? {
@@ -59,6 +62,7 @@ function toPage(row: PageRow): Page {
             season: row.seasonNumber ?? null,
           }
         : null,
+    notifiedAt: row.notifiedAt ?? null,
   };
 }
 
@@ -648,13 +652,112 @@ export async function getPageById(
   return rows.length > 0 ? toPage(rows[0]) : null;
 }
 
-/** Delete a page by its stable page_id. */
+/** Delete a page by its stable page_id, with the redirects that lead to it. */
 export async function deletePage(
   db: Database,
   pageId: string,
   tenantId: string
 ): Promise<void> {
-  await db.delete(page).where(and(eq(page.pageId, pageId), eq(page.tenantId, tenantId)));
+  await db.batch([
+    db.delete(pageRedirect).where(and(eq(pageRedirect.pageId, pageId), eq(pageRedirect.tenantId, tenantId))),
+    db.delete(page).where(and(eq(page.pageId, pageId), eq(page.tenantId, tenantId))),
+  ]);
+}
+
+// --- Redirects (ADR 0003) ---
+
+/**
+ * Keep `fromPath` (an in-site path, no URL prefix) leading to `pageId`. A path
+ * that already redirected elsewhere now points here: the newest move wins.
+ */
+export async function recordRedirect(
+  db: Database,
+  tenantId: string,
+  fromPath: string,
+  pageId: string
+): Promise<void> {
+  await db
+    .insert(pageRedirect)
+    .values({ tenantId, fromPath, pageId })
+    .onConflictDoUpdate({ target: [pageRedirect.tenantId, pageRedirect.fromPath], set: { pageId } });
+}
+
+/** Live content now answers at `path`, so it no longer redirects anywhere. */
+export async function releaseRedirect(db: Database, tenantId: string, path: string): Promise<void> {
+  await db
+    .delete(pageRedirect)
+    .where(and(eq(pageRedirect.tenantId, tenantId), eq(pageRedirect.fromPath, path)));
+}
+
+/**
+ * The published page an old path now leads to, or null — no redirect, or its
+ * page was unpublished. Callers build the URL from the page's current kind and
+ * slug, so the answer is always one hop.
+ */
+export async function findRedirectTarget(
+  db: Database,
+  tenantId: string,
+  fromPath: string
+): Promise<Pick<Page, "kind" | "slug"> | null> {
+  const rows = await db
+    .select({ kind: page.kind, slug: page.slug })
+    .from(pageRedirect)
+    .innerJoin(page, and(eq(page.pageId, pageRedirect.pageId), eq(page.tenantId, pageRedirect.tenantId)))
+    .where(
+      and(eq(pageRedirect.tenantId, tenantId), eq(pageRedirect.fromPath, fromPath), eq(page.published, true))
+    )
+    .limit(1);
+  return rows.length > 0 ? { kind: rows[0].kind as PageKind, slug: rows[0].slug } : null;
+}
+
+/**
+ * Another page already holding `slug` for `kind` in this tenant — the
+ * `UNIQUE(slug, kind, tenant_id)` collision a save would hit — or null.
+ */
+export async function findSlugConflict(
+  db: Database,
+  tenantId: string,
+  slug: string,
+  kind: PageKind,
+  exceptPageId: string
+): Promise<Pick<Page, "id" | "title"> | null> {
+  const rows = await db
+    .select({ id: page.pageId, title: page.title })
+    .from(page)
+    .where(and(eq(page.tenantId, tenantId), eq(page.slug, slug), eq(page.kind, kind), ne(page.pageId, exceptPageId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Record that subscribers are being emailed about a published post — and
+ * report whether this caller won the right to send. The conditional UPDATE is
+ * the whole guard: of two concurrent publishes or "email now" clicks, exactly
+ * one sees `true`, so a post is emailed at most once.
+ *
+ * Returns the timestamp written, or null when the post is not a published
+ * post or was already emailed.
+ */
+export async function claimNotification(
+  db: Database,
+  pageId: string,
+  tenantId: string
+): Promise<string | null> {
+  const at = new Date().toISOString();
+  const claimed = await db
+    .update(page)
+    .set({ notifiedAt: at })
+    .where(
+      and(
+        eq(page.pageId, pageId),
+        eq(page.tenantId, tenantId),
+        eq(page.kind, "post"),
+        eq(page.published, true),
+        isNull(page.notifiedAt)
+      )
+    )
+    .returning({ pageId: page.pageId });
+  return claimed.length > 0 ? at : null;
 }
 
 /** Create or update a page, keyed by its stable id + tenant. */
@@ -663,10 +766,11 @@ export async function upsertPage(
   p: Page,
   tenantId: string
 ): Promise<void> {
-  // Written from `p.episode` in one place so the insert and update lists below
-  // cannot disagree about what an episode is.
+  // Written in one place so the insert and update lists below cannot disagree
+  // about what an episode is. An episode implies audio even when the caller
+  // built the Page without a `format`.
   const episodeColumns = {
-    contentType: p.episode ? "audio" : null,
+    contentType: postFormat(p.episode ? "audio" : p.format).contentType,
     audioMediaId: p.episode?.audioMediaId ?? null,
     episodeNumber: p.episode?.number ?? null,
     seasonNumber: p.episode?.season ?? null,

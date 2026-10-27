@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { sqliteTable, text, integer, primaryKey, unique } from "drizzle-orm/sqlite-core";
 import type { PageMeta } from "./types.js";
 
@@ -47,11 +48,35 @@ export const page = sqliteTable(
     audioMediaId: text("audio_media_id"),
     episodeNumber: integer("episode_number"),
     seasonNumber: integer("season_number"),
+    /**
+     * When subscribers were emailed about this post; NULL = never. Set only
+     * by `claimNotification`, never by `upsertPage`, so no save path can
+     * reset it and re-send. A post is emailed at most once.
+     */
+    notifiedAt: text("notified_at"),
   },
   (table) => [
     primaryKey({ columns: [table.pageId, table.tenantId] }),
     unique().on(table.slug, table.kind, table.tenantId),
   ]
+);
+
+/**
+ * Old public paths of published content that moved (ADR 0003). The target is
+ * a page id, never a path, so the current URL is resolved at request time and
+ * a chain of moves stays one hop. No FK, like every table here: `deletePage`
+ * removes a page's redirects itself.
+ */
+export const pageRedirect = sqliteTable(
+  "page_redirect",
+  {
+    tenantId: text("tenant_id").notNull().default("_default"),
+    /** In-site path without any URL prefix: "/posts/hello" or "/hello". */
+    fromPath: text("from_path").notNull(),
+    pageId: text("page_id").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.fromPath] })]
 );
 
 // --- Content views (embeddable via {{collection:slug}}) ---

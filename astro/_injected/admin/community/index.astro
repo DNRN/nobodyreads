@@ -7,7 +7,7 @@ const ctx = requireAdminContext(Astro.locals);
 
 const db = await initDb();
 const counts = await countSubscribers(db, ctx.tenantId);
-const emailEnabled = isEmailEnabled();
+const emailEnabled = ctx.emailEnabled ?? isEmailEnabled();
 ---
 <AdminLayout title="Community — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">

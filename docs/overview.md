@@ -155,6 +155,23 @@ All content tables carry a `tenant_id` column (default `_default`) so the same s
 
 Navigation is optional per page via `nav_label` and `nav_order` columns (set from frontmatter `nav:` block or the admin editor).
 
+#### Moving content
+
+A post and a page can trade places at any time (the editor's **Type** switch, or
+the publish dialog for a draft); the home page cannot, and an episode must be
+switched to text first (pages are text-only). When a **published** item's public
+path changes — kind switch or slug rename — `/editor/save` records the old path in
+`page_redirect(tenant_id, from_path, page_id)` (paths without any URL prefix, e.g.
+`/posts/hello`). `resolvePageView` consults it only on a miss and returns
+`redirectTo` — the item's *current* URL under the context's prefix — which the
+public `[slug]` routes answer with a 301. Because the target is a page id, a chain
+of moves is one hop; an unpublished target is a plain 404; publishing live content
+at a redirected path removes that redirect; `deletePage` removes a page's
+redirects. A save that would collide on `UNIQUE(slug, kind, tenant_id)` gets a 409
+naming the page that holds the address. See ADR 0003. Hosts that render their own
+public routes must handle `view.redirectTo` the same way, and a host that deletes a
+tenant's rows must clear `page_redirect` too.
+
 #### Titles
 
 `post` and `page` render their `title` as the document's `<h1>`, and `renderMarkdown`
@@ -313,7 +330,7 @@ The host Astro app must populate this via middleware before any admin page rende
 | Module | Routes (under `/admin`) | Purpose |
 |--------|-------------------------|---------|
 | `auth-routes` | login/logout | Password session when `EDITOR_PASSWORD` is set |
-| `content` | `/editor/save`, `/editor/delete` | Page CRUD; triggers subscriber notification on first publish |
+| `content` | `/editor/save`, `/editor/delete`, `/editor/notify/:id` | Page CRUD; emails subscribers once per post when the publish dialog asks (`notify=on`), or later via "Email subscribers now" |
 | `views` | `/collections/save`, `/collections/delete` | Collection CRUD |
 | `theme` | `/layout/*`, `/settings/*` | Template revisions, site settings |
 | `media` | `/media/upload`, `/media/delete`, etc. | File uploads via `busboy` |
@@ -357,9 +374,19 @@ told to validate. Subscriber emails are notification recipients only; the admin
 **Settings** page shows aggregate counts (`countSubscribers`) and never lists
 addresses.
 
-Publishing a post for the first time triggers `notifySubscribers()` (verified +
-active subscribers only) when email is enabled — both from the admin editor's
-`/editor/save` and the `npm run post` CLI (`scripts/publish.ts`).
+Subscriber email is the author's choice, made in the editor's publish dialog,
+and goes out **at most once per post** (ADR 0002): `notifySubscribersOnce()`
+claims the post's `page.notified_at` with a conditional UPDATE before sending
+to verified + active subscribers, so unpublishing and republishing, a second
+click, or a concurrent request cannot re-send. Nothing is claimed when email is
+off or nobody has subscribed — the post stays emailable later from its
+settings. A save without `notify=on` publishes quietly. The `npm run post` CLI
+(`scripts/publish.ts`) has no dialog: publishing a post from it emails, through
+the same once-only claim.
+
+Hosts that hand the admin a per-request email config (rather than
+`config/email.config.json`) set `emailEnabled` on the admin context so the
+publish dialog and Community page report email correctly.
 
 ---
 
@@ -621,6 +648,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
 ```
 
 Admin pages **must not** perform auth themselves — by convention they trust that middleware has already approved the request and set the context.
+
+**Host pages inside the admin.** A host that serves its own owner pages (account, billing) can list them in the admin sidebar and render them with the same chrome:
+
+```ts
+makeAdminContext({
+  // …as above
+  hostNav: [
+    { group: "settings", label: "Account", href: `/${nickname}/admin/account` },
+  ],
+});
+```
+
+```astro
+---
+// a host page, e.g. astro/pages/[nickname]/admin/account.astro
+import AdminLayout from "nobodyreads/astro/AdminLayout";
+import { requireAdminContext } from "nobodyreads/astro/context";
+const ctx = requireAdminContext(Astro.locals);
+---
+<AdminLayout title="Account" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>…</AdminLayout>
+```
+
+`hostNav` items join the named sidebar group (`audience` or `settings`) after the engine's own. The engine only links to them; the host's middleware authorizes those paths like any other admin path. See [ADR 0005](adr/0005-hosts-extend-the-admin-shell-through-context.md).
 
 ### 6. Dev mode (HMR proxy)
 

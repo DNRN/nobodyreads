@@ -25,7 +25,7 @@ import type { CustomToken } from "nobodyreads";
 import { createMediaStorage } from "nobodyreads/storage";
 
 const ctx = requireAdminContext(Astro.locals);
-const emailEnabled = isEmailEnabled();
+const emailEnabled = ctx.emailEnabled ?? isEmailEnabled();
 
 const db = await initDb();
 const storage = createMediaStorage();

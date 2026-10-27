@@ -1,15 +1,20 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
-import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, findPageByKind, resolveSiteName, type PageKind } from "nobodyreads";
+import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, findPageByKind, resolveSiteName, countSubscribers, isEmailEnabled, POST_FORMATS, postFormat, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+// The publish dialog says how many people an email reaches.
+const { verified: subscriberCount } = await countSubscribers(await initDb(), ctx.tenantId);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const requested = Astro.url.searchParams.get("kind");
 const kind: PageKind =
   requested === "home" || requested === "page" || requested === "post" ? requested : "post";
+// The create menu's format entries land here: `?format=audio` starts an audio
+// episode. Formats are posts-only; unknown values read as text.
+const format = kind === "post" ? postFormat(Astro.url.searchParams.get("format")).id : "text";
 
 const db = await initDb();
 
@@ -24,11 +29,13 @@ if (kind === "home") {
 const siteName = await resolveSiteName(db, ctx.tenantId, ctx.siteName);
 
 const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
+const newWhat = format === "text" ? kindLabel : postFormat(format).createLabel.toLowerCase();
 ---
 <AdminLayout
-  title={`New ${kindLabel} — Admin`}
+  title={`New ${newWhat} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
+  activeHref={contentListHref(ctx.adminBase, kind === "post" ? "post" : "page")}
 >
   <PageEditor
     client:load
@@ -36,6 +43,11 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
     adminBase={ctx.adminBase}
     previewBase={previewBase}
     kind={kind}
+    format={format}
+    formats={POST_FORMATS.map(({ id, label }) => ({ id, label }))}
+    siteBase={ctx.siteBase}
+    subscriberCount={subscriberCount}
+    emailEnabled={ctx.emailEnabled ?? isEmailEnabled()}
     siteName={siteName}
   />
 </AdminLayout>

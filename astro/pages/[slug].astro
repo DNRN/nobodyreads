@@ -20,6 +20,8 @@ const view = await resolvePageView(
   Astro.response,
 );
 
+// Content that moved (post <-> page, renamed) leaves its old address behind.
+if (view.redirectTo) return Astro.redirect(view.redirectTo, 301);
 if (!view.page) Astro.response.status = 404;
 ---
 <SiteLayout options={view.layout} templateOverride={view.template}>

@@ -1,10 +1,12 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
-import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, getPageById, resolveSiteName } from "nobodyreads";
+import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
+import { initDb, getPageById, resolveSiteName, countSubscribers, isEmailEnabled, POST_FORMATS } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
+// The publish dialog says how many people an email reaches.
+const { verified: subscriberCount } = await countSubscribers(await initDb(), ctx.tenantId);
 const previewBase = `${ctx.siteBase.replace(/\/$/, "")}/preview`;
 
 const { id } = Astro.params;
@@ -27,6 +29,7 @@ const editorTitle = page.kind === "home" ? siteName : page.title;
   title={`Edit: ${editorTitle} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
+  activeHref={contentListHref(ctx.adminBase, page.kind === "post" ? "post" : "page")}
 >
   <PageEditor
     client:load
@@ -35,5 +38,9 @@ const editorTitle = page.kind === "home" ? siteName : page.title;
     adminBase={ctx.adminBase}
     previewBase={previewBase}
     siteName={siteName}
+    formats={POST_FORMATS.map(({ id, label }) => ({ id, label }))}
+    siteBase={ctx.siteBase}
+    subscriberCount={subscriberCount}
+    emailEnabled={ctx.emailEnabled ?? isEmailEnabled()}
   />
 </AdminLayout>

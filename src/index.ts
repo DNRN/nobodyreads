@@ -181,6 +181,7 @@ export type { Database } from "./db/index.js";
 export {
   tenant,
   page,
+  pageRedirect,
   contentView,
   siteTemplate,
   siteTemplateRevision,
@@ -245,6 +246,7 @@ export type {
   EmailProviderFactory,
   EmailConfig,
   EmailResolvable,
+  NewPostNotice,
 } from "./subscription/email.js";
 
 // Validation schemas
@@ -426,8 +428,11 @@ export type {
   PageMeta,
   PageKind,
   PageNav,
+  PostFormat,
   FaqItem,
 } from "./content/types.js";
+export { POST_FORMATS, postFormat } from "./content/formats.js";
+export type { PostFormatSpec } from "./content/formats.js";
 export { DEFAULT_TENANT_ID, PLATFORM_TENANT_ID } from "./shared/types.js";
 export type { Tenant } from "./shared/types.js";
 

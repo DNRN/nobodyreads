@@ -4,7 +4,7 @@ import { initDb, getDb } from "../src/shared/db.js";
 import { upsertPage, getPageById } from "../src/content/db.js";
 import type { Page, PageMeta, PageKind, PageNav } from "../src/content/types.js";
 import { DEFAULT_TENANT_ID } from "../src/shared/types.js";
-import { notifySubscribers } from "../src/subscription/index.js";
+import { notifySubscribersOnce } from "../src/subscription/once.js";
 
 const TENANT_ID = process.env.TENANT_ID ?? DEFAULT_TENANT_ID;
 
@@ -120,8 +120,9 @@ for (const file of files) {
     nav: parseNav(data.nav),
   };
 
-  // Detect the draft -> published transition so subscribers are only notified
-  // once per post, mirroring the admin editor's save behavior.
+  // Detect the draft -> published transition, mirroring the admin editor. The
+  // CLI has no dialog, so publishing a post from it still emails — but through
+  // the same once-only claim, so re-running it never re-sends.
   const existing = await getPageById(db, id, TENANT_ID);
   const wasPreviouslyPublished = existing?.published ?? false;
 
@@ -136,11 +137,8 @@ for (const file of files) {
   console.log(`[${flags.join(", ")}] ${page.id} \u2014 ${page.title} (tenant: ${TENANT_ID})`);
 
   if (page.kind === "post" && page.published && !wasPreviouslyPublished) {
-    await notifySubscribers(db, TENANT_ID, {
-      title: page.title,
-      slug: page.slug,
-      excerpt: page.excerpt,
-    });
+    const sent = await notifySubscribersOnce(db, TENANT_ID, page);
+    await sent?.sending;
   }
 }
 

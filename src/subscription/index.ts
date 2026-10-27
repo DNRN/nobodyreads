@@ -18,7 +18,7 @@ import {
   sendVerificationEmail,
   sendNewPostNotification,
 } from "./email.js";
-import type { EmailResolvable } from "./email.js";
+import type { EmailResolvable, NewPostNotice } from "./email.js";
 
 export interface SubscriptionRouterOptions {
   db: Database;
@@ -244,7 +244,7 @@ export function createSubscriptionAdminRoutes(
 export async function notifySubscribers(
   db: Database,
   tenantId: string,
-  post: { title: string; slug: string; excerpt: string },
+  post: NewPostNotice,
   options: NotifyOptions = {}
 ): Promise<void> {
   try {

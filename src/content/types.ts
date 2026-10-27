@@ -31,6 +31,12 @@ export interface PageMeta {
 export type PageKind = "home" | "page" | "post";
 
 /**
+ * What a post is made of — its main content. Stored in `content_type`
+ * (NULL = text). See `content/formats.ts` for what each one means in the UI.
+ */
+export type PostFormat = "text" | "audio";
+
+/**
  * How comments on a post are AI-moderated: inherit the space ruleset, use
  * custom rules attached to this post, or skip moderation entirely.
  */
@@ -97,10 +103,24 @@ export interface Page {
   /** One-off purchase price in minor units. NULL/undefined = not sold separately. */
   priceAmount?: number | null;
   /**
+   * The post's format. Survives on a draft before its media exists, so an
+   * author who starts an audio episode keeps an audio episode while the upload
+   * is pending. Always "text" for pages and home. Optional on input — a Page
+   * built without it is a text post unless it carries an `episode`.
+   */
+  format?: PostFormat;
+  /**
    * Present when this post is an episode: its primary content is one audio
-   * file. Null/undefined = a plain post. Only posts carry one.
+   * file. Null/undefined = no audio attached (a text post, or an audio draft
+   * still waiting for its file). Only posts carry one.
    */
   episode?: Episode | null;
+  /**
+   * When subscribers were emailed about this post (ISO timestamp); null =
+   * never. Read-only here: `upsertPage` ignores it, and only
+   * `claimNotification` sets it.
+   */
+  notifiedAt?: string | null;
 }
 
 /**

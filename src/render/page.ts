@@ -8,6 +8,7 @@ import {
   getNavItems,
   getPostStats,
   getMediaById,
+  findRedirectTarget,
 } from "../content/db.js";
 import { renderContent } from "../content/render.js";
 import { heroMetaLine } from "../content/templates.js";
@@ -52,6 +53,12 @@ export interface PageView {
   isOwner: boolean;
   /** The player for an episode the viewer may hear; null for everything else. */
   episode: EpisodeView | null;
+  /**
+   * Set when nothing lives at the requested address but published content
+   * did and moved (ADR 0003): its current URL under this context's prefix. A
+   * public route answers it with a 301 instead of rendering the 404.
+   */
+  redirectTo: string | null;
 }
 
 /** What the episode player needs, with media references already turned into URLs. */
@@ -101,6 +108,9 @@ export async function resolvePageView(
   const menu = ctx.buildMenu(viewer);
 
   if (!rawPage) {
+    // Only a miss pays for this lookup; the home page never moves.
+    const moved =
+      target.kind === "home" ? null : await findRedirectTarget(db, ctx.tenantId, pagePath(target, ""));
     return {
       page: null,
       kind: target.kind,
@@ -112,6 +122,7 @@ export async function resolvePageView(
       signedIn: viewer.member !== null,
       isOwner: viewer.isOwner,
       episode: null,
+      redirectTo: moved ? pagePath(moved, ctx.urlPrefix) : null,
       layout: {
         title: `Not found — ${ctx.siteName}`,
         navItems,
@@ -204,6 +215,7 @@ export async function resolvePageView(
     signedIn: viewer.member !== null,
     isOwner: viewer.isOwner,
     episode,
+    redirectTo: null,
     layout: {
       // A home page has no title of its own — the site's name is its name, and
       // taking it from the context keeps the browser tab agreeing with the

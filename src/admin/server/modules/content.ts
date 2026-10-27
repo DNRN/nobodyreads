@@ -9,10 +9,16 @@ import {
   upsertPage,
   getMediaById,
   listLinkTargets,
+  findSlugConflict,
+  recordRedirect,
+  releaseRedirect,
 } from "../../../content/db.js";
 import { renderContent, listUnresolvedViews } from "../../../content/render.js";
-import type { Page, PageKind } from "../../../content/types.js";
-import { notifySubscribers } from "../../../subscription/index.js";
+import { pagePath } from "../../../render/context.js";
+import type { Page, PageKind, PostFormat } from "../../../content/types.js";
+import { notifySubscribersOnce } from "../../../subscription/once.js";
+import { countSubscribers } from "../../../subscription/db.js";
+import { resolveEmailProvider } from "../../../subscription/email.js";
 import type { AdminModuleContext } from "./types.js";
 
 /**
@@ -95,20 +101,54 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         }
       }
 
+      let before: Page | null = null;
       let wasPreviouslyPublished = false;
       let existingCommentsEnabled: boolean | undefined;
       let existingInFeed: boolean | undefined;
       let existingSeo: Page["seo"] | undefined;
+      let existingFormat: PostFormat = "text";
       let existingEpisode: Page["episode"] = null;
+      let existingNotifiedAt: string | null = null;
       let content = data.content;
       if (!isNew) {
-        const existing = await getPageById(db, pageId, tenantId);
-        wasPreviouslyPublished = existing?.published ?? false;
-        existingCommentsEnabled = existing?.commentsEnabled;
-        existingInFeed = existing?.inFeed;
-        existingSeo = existing?.seo;
-        existingEpisode = existing?.episode ?? null;
-        if (!content && existing?.content) content = existing.content;
+        before = await getPageById(db, pageId, tenantId);
+        wasPreviouslyPublished = before?.published ?? false;
+        existingCommentsEnabled = before?.commentsEnabled;
+        existingInFeed = before?.inFeed;
+        existingSeo = before?.seo;
+        existingFormat = before?.format ?? "text";
+        existingEpisode = before?.episode ?? null;
+        existingNotifiedAt = before?.notifiedAt ?? null;
+        if (!content && before?.content) content = before.content;
+      }
+
+      // Posts and pages can trade places (ADR 0003); the home page is neither
+      // and nothing becomes it. Pages are text-only (ADR 0004), so an episode
+      // has to become a text post before it can become a page — dropping its
+      // audio here would lose it without the author asking.
+      if (before && before.kind !== data.kind) {
+        if (before.kind === "home" || data.kind === "home") {
+          return c.json({ error: "The home page can't become a post or a page." }, 400);
+        }
+        if (before.format === "audio") {
+          return c.json({ error: "Switch the episode to text before making it a page." }, 400);
+        }
+      }
+
+      // The database would refuse this with a constraint error; say which page
+      // holds the address instead.
+      if (data.kind !== "home") {
+        const conflict = await findSlugConflict(db, tenantId, data.slug, data.kind as PageKind, pageId);
+        if (conflict) {
+          return c.json(
+            {
+              error: `“${conflict.title}” already uses this address. Choose another one.`,
+              field: "slug",
+              id: conflict.id,
+            },
+            409
+          );
+        }
       }
 
       // Merge per-post social fields into the existing seo JSON, preserving
@@ -126,31 +166,45 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
       }
       const seo = Object.keys(seoUpdate).length > 0 ? seoUpdate : undefined;
 
-      // Only posts are episodes. A form without the control keeps what the post
-      // already is; an explicit "audio" must name audio this tenant owns, with a
-      // known duration — the podcast feed cannot list an episode without one.
+      // Only posts have a format. A form without the control keeps what the
+      // post already is. "audio" without a file is an audio draft — the format
+      // is the author's intent and survives while the upload is pending; a
+      // file, when named, must be audio this tenant owns with a known
+      // duration, since the podcast feed cannot list an episode without one.
+      let format: PostFormat = "text";
       let episode: Page["episode"] = null;
       if (data.kind === "post") {
         if (data.content_type === undefined) {
+          format = existingFormat;
           episode = existingEpisode;
         } else if (data.content_type === "audio") {
+          format = "audio";
           const audioMediaId = data.audio_media_id ?? "";
-          const audio = audioMediaId
-            ? await getMediaById(db, audioMediaId, tenantId, (key) => key)
-            : null;
-          if (!audio?.mimeType.startsWith("audio/") || audio.durationSeconds === null) {
-            return c.json(
-              { error: "An episode needs an uploaded audio file — choose or upload one." },
-              400
-            );
+          if (audioMediaId) {
+            const audio = await getMediaById(db, audioMediaId, tenantId, (key) => key);
+            if (!audio?.mimeType.startsWith("audio/") || audio.durationSeconds === null) {
+              return c.json(
+                { error: "That file can't be an episode's audio — choose or upload another." },
+                400
+              );
+            }
+            episode = {
+              audioMediaId,
+              // Blank or 0 means "unnumbered"; feeds omit the tag rather than say 0.
+              number: Number(data.episode_number) || null,
+              season: Number(data.season_number) || null,
+            };
           }
-          episode = {
-            audioMediaId,
-            // Blank or 0 means "unnumbered"; feeds omit the tag rather than say 0.
-            number: Number(data.episode_number) || null,
-            season: Number(data.season_number) || null,
-          };
         }
+      }
+      // The publish transition is the gate, not every save: a live post
+      // switched to audio keeps saving while its file uploads, and reads as text
+      // to the public until the file exists (see `toPage`).
+      if (data.published === "on" && !wasPreviouslyPublished && format === "audio" && !episode) {
+        return c.json(
+          { error: "Add the episode's audio before publishing — or switch the post to text." },
+          400
+        );
       }
 
       const p: Page = {
@@ -190,10 +244,21 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
         priceAmount:
           data.access_tier === "paid" ? parseMinorUnits(data.price_amount) : null,
         seo,
+        format,
         episode,
       };
 
       await upsertPage(db, p, tenantId);
+
+      // Readers, inboxes and feed readers hold the old URL of anything that
+      // was live, so a move leaves a redirect behind; and an address that live
+      // content answers at again stops redirecting (ADR 0003).
+      if (before?.published && pagePath(before, "") !== pagePath(p, "")) {
+        await recordRedirect(db, tenantId, pagePath(before, ""), pageId);
+      }
+      if (p.published && p.kind !== "home") {
+        await releaseRedirect(db, tenantId, pagePath(p, ""));
+      }
 
       // The publish transition, not every save. Screening and notification hang
       // off the same moment for the same reason: this is when the content stops
@@ -215,23 +280,17 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
           .catch((err) => console.error("onContentPublished hook failed:", err));
       }
 
-      if (p.kind === "post" && p.published && !wasPreviouslyPublished) {
-        notifySubscribers(
-          db,
-          tenantId,
-          {
-            title: p.title,
-            slug: p.slug,
-            excerpt: p.excerpt,
-          },
-          { email: ctx.email, siteUrl: ctx.siteUrl, siteName: ctx.siteName }
-        ).catch((err) => console.error("Subscriber notification error:", err));
-      }
+      // Email only when the author ticked it in the publish dialog, and only
+      // on the publish transition; `claimNotification` makes it once per post.
+      const notifiedAt =
+        data.notify === "on" && p.kind === "post" && p.published && !wasPreviouslyPublished
+          ? await emailSubscribers(p)
+          : null;
 
       // AJAX saves (editor autosave / save button) ask for JSON and stay on the
       // page; plain form posts (no-JS fallback) get the usual redirect.
       if (c.req.header("accept")?.includes("application/json")) {
-        return c.json({ ok: true, id: pageId, published: p.published });
+        return c.json({ ok: true, id: pageId, published: p.published, notifiedAt: notifiedAt ?? existingNotifiedAt });
       }
 
       return c.redirect(`${editorBase}/${pageId}`);
@@ -270,6 +329,47 @@ export function createContentRoutes(ctx: AdminModuleContext): Hono {
     await deletePage(db, pageId, tenantId);
     return c.redirect(editorBase);
   });
+
+  /**
+   * "Email subscribers now" — for a published post that was never emailed
+   * (published quietly, or before anyone subscribed). Same once-only claim as
+   * publishing with the box ticked.
+   */
+  app.post("/editor/notify/:id", async (c) => {
+    const existing = await getPageById(db, c.req.param("id"), tenantId);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (existing.kind !== "post" || !existing.published) {
+      return c.json({ error: "Only published posts are emailed to subscribers." }, 400);
+    }
+    if (existing.notifiedAt) {
+      return c.json({ error: "Subscribers were already emailed about this post." }, 409);
+    }
+    if (!resolveEmailProvider(ctx.email)) {
+      return c.json({ error: "Email isn't set up for this site." }, 400);
+    }
+    if ((await countSubscribers(db, tenantId)).verified === 0) {
+      return c.json({ error: "Nobody has subscribed yet." }, 409);
+    }
+    const sent = await emailSubscribers(existing);
+    if (!sent) {
+      return c.json({ error: "Subscribers were already emailed about this post." }, 409);
+    }
+    return c.json({ ok: true, notifiedAt: sent });
+  });
+
+  /**
+   * The post's one email; the send runs on without the response waiting for
+   * the provider (`notifySubscribers` logs its own failures). Returns the
+   * claim's timestamp, or null when nothing was sent.
+   */
+  async function emailSubscribers(p: Page): Promise<string | null> {
+    const sent = await notifySubscribersOnce(db, tenantId, p, {
+      email: ctx.email,
+      siteUrl: ctx.siteUrl,
+      siteName: ctx.siteName,
+    });
+    return sent?.notifiedAt ?? null;
+  }
 
   return app;
 }

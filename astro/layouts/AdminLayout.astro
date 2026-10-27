@@ -1,5 +1,5 @@
 ---
-import { getAdminContext } from "nobodyreads/astro/context";
+import { buildAdminNav, buildCreateMenu, getAdminContext } from "nobodyreads/astro/context";
 
 const {
   title = "Admin",
@@ -8,6 +8,7 @@ const {
   scripts = "",
   fullWidth = false,
   chrome = true,
+  activeHref,
 } = Astro.props as {
   title?: string;
   adminBase?: string;
@@ -15,101 +16,63 @@ const {
   scripts?: string;
   fullWidth?: boolean;
   chrome?: boolean;
+  /** Nav item to highlight when the URL alone cannot tell (see `AdminNavLocation`). */
+  activeHref?: string;
 };
 
-// AI theming is only offered when the host has configured a provider. Read the
-// flag from the admin context so no per-page prop threading is required.
-const aiEnabled = getAdminContext(Astro.locals)?.aiEnabled ?? false;
-// Same pattern: the Payments panel only appears once a host can actually
-// take money. Hiding it is presentation, never a gate.
-const paymentsEnabled = getAdminContext(Astro.locals)?.paymentsEnabled ?? false;
+const adminCtx = getAdminContext(Astro.locals);
 // A host with its own session (e.g. a platform-wide cookie) overrides where
 // "Sign out" posts; otherwise fall back to the package's own EDITOR_PASSWORD
 // logout endpoint.
-const logoutHref = getAdminContext(Astro.locals)?.logoutHref ?? `${adminBase}/logout`;
+const logoutHref = adminCtx?.logoutHref ?? `${adminBase}/logout`;
 // A multi-tenant host points the wordmark at its own apex — a "back to the
-// central hub" link distinct from "Home", which goes to this plot's own site
-// (siteBase). A self-hosted, single-tenant deployment has no wider hub, so it
-// falls back to the dashboard's own root.
-const homeUrl = getAdminContext(Astro.locals)?.homeUrl ?? adminBase;
+// central hub" link. A self-hosted, single-tenant deployment has no wider hub,
+// so it falls back to the dashboard's own root.
+const homeUrl = adminCtx?.homeUrl ?? adminBase;
+
+// AI and payments flags come from the admin context so no per-page prop
+// threading is required; hiding Earnings is presentation, never a gate.
+const navGroups = buildAdminNav(
+  {
+    adminBase,
+    aiEnabled: adminCtx?.aiEnabled,
+    paymentsEnabled: adminCtx?.paymentsEnabled,
+    hostNav: adminCtx?.hostNav,
+  },
+  { pathname: Astro.url.pathname, search: Astro.url.search, activeHref }
+);
+const createMenu = buildCreateMenu({
+  adminBase,
+  editorBase: adminCtx?.editorBase ?? `${adminBase}/editor`,
+});
 
 const devReload = import.meta.env.DEV
   ? `  <script>new EventSource("/__reload").onmessage = e => { if (e.data === "reload") location.reload(); };</script>`
   : "";
 
-const currentPath = Astro.url.pathname;
-
-function isActive(href: string): boolean {
-  // Only hrefs inside the admin app itself can be "active" — the Home nav item
-  // now points at siteBase, which is a prefix of every path and would
-  // otherwise always match.
-  if (!href.startsWith(adminBase)) return false;
-  if (href === adminBase) return currentPath === adminBase || currentPath === adminBase + "/";
-  return currentPath.startsWith(href);
-}
-
-// Simple 17px line icons (stroke currentColor, width 1.8), keyed by nav label.
+// Simple 17px line icons (stroke currentColor, width 1.8), keyed by nav item id.
 // Inlined so the engine keeps no icon dependency.
 const navIcons: Record<string, string> = {
-  Home: `<path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/>`,
-  Content: `<rect x="5" y="3" width="14" height="18" rx="2.4"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5"/>`,
-  Media: `<rect x="4" y="5" width="16" height="14" rx="2.4"/><circle cx="9" cy="10" r="1.7"/><path d="m5 17 4.5-4 4 3.5L17 12l3 3"/>`,
-  Design: `<path d="M14 4l6 6-8.5 8.5L5 20l1.5-6.5z"/><path d="M11 7l6 6"/>`,
+  dashboard: `<path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/>`,
+  posts: `<rect x="5" y="3" width="14" height="18" rx="2.4"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5"/>`,
+  // A dog-eared sheet: one standalone page.
+  pages: `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>`,
+  media: `<rect x="4" y="5" width="16" height="14" rx="2.4"/><circle cx="9" cy="10" r="1.7"/><path d="m5 17 4.5-4 4 3.5L17 12l3 3"/>`,
+  design: `<path d="M14 4l6 6-8.5 8.5L5 20l1.5-6.5z"/><path d="M11 7l6 6"/>`,
   // Stacked cards: a collection is a set of posts, not something you "look at".
-  Collections: `<rect x="3" y="8.5" width="13" height="12" rx="2.2"/><path d="M7 5.5h11a2 2 0 0 1 2 2v9"/>`,
-  Community: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M16 5.6a3 3 0 0 1 0 5.8"/><path d="M21 20c0-2.4-1.3-4-3.4-4.6"/>`,
-  Moderation: `<path d="M12 3l7 3v5c0 4.4-2.8 8.4-7 10-4.2-1.6-7-5.6-7-10V6z"/><path d="m9 12 2 2 4-4"/>`,
-  Payments: `<rect x="2.5" y="5.5" width="19" height="13" rx="2.4"/><path d="M2.5 10h19"/><path d="M6 14.5h3.5"/>`,
-  Settings: `<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>`,
-  // Document flowing into a page: an import lands as drafts.
-  Import: `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6"/><path d="m9.5 14.5 2.5 2.5 2.5-2.5"/>`,
+  collections: `<rect x="3" y="8.5" width="13" height="12" rx="2.2"/><path d="M7 5.5h11a2 2 0 0 1 2 2v9"/>`,
+  subscribers: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M16 5.6a3 3 0 0 1 0 5.8"/><path d="M21 20c0-2.4-1.3-4-3.4-4.6"/>`,
+  comments: `<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M8.5 9h7M8.5 12.5h4.5"/>`,
+  earnings: `<rect x="2.5" y="5.5" width="19" height="13" rx="2.4"/><path d="M2.5 10h19"/><path d="M6 14.5h3.5"/>`,
+  site: `<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>`,
+  // Host items without an icon of their own.
+  generic: `<circle cx="12" cy="12" r="3.5"/>`,
 };
 
-function navIcon(label: string): string {
-  const body = navIcons[label] ?? "";
+function navIcon(item: { id: string; icon?: string }): string {
+  const body = item.icon ?? navIcons[item.id] ?? navIcons.generic;
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
-
-interface NavItem {
-  href: string;
-  label: string;
-  /** Small pill after the label, e.g. "AI" on Design. */
-  badge?: string;
-}
-
-// Grouped navigation: a small hierarchy beats six flat items. Each group has a
-// clear job and room to grow (Audience → comments, Manage → domains/export).
-const navGroups: { label: string; items: NavItem[] }[] = [
-  {
-    label: "Create",
-    items: [
-      { href: siteBase, label: "Home" },
-      { href: `${adminBase}/editor`, label: "Content" },
-      { href: `${adminBase}/media`, label: "Media" },
-      { href: `${adminBase}/import`, label: "Import" },
-    ],
-  },
-  {
-    label: "Customize",
-    items: [
-      // AI is no longer a destination of its own: it only ever produced a theme
-      // that landed in Design, so it is Design's first tab and shows as a badge
-      // on this row. (The standalone /ai page still exists until Design grows
-      // its tab bar; Design links to it.)
-      { href: `${adminBase}/layout`, label: "Design", badge: aiEnabled ? "AI" : undefined },
-      { href: `${adminBase}/collections`, label: "Collections" },
-    ],
-  },
-  {
-    label: "Manage",
-    items: [
-      { href: `${adminBase}/community`, label: "Community" },
-      { href: `${adminBase}/moderation`, label: "Moderation" },
-      ...(paymentsEnabled ? [{ href: `${adminBase}/payments`, label: "Payments" }] : []),
-      { href: `${adminBase}/settings`, label: "Settings" },
-    ],
-  },
-];
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -185,15 +148,43 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       <div class="nr-admin-body">
         <div class="nr-admin-sidebar-overlay" id="sidebar-overlay"></div>
         <aside class="nr-admin-sidebar" id="admin-sidebar">
+          <div class="nr-create" data-create-menu>
+            <a class="nr-create-main" href={createMenu.primary.href}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              New post
+            </a>
+            <button
+              type="button"
+              class="nr-create-toggle"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="nr-create-menu"
+              aria-label="More to create"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="nr-create-menu" id="nr-create-menu" role="menu" aria-label="Create" hidden>
+              {createMenu.items.map((item) => (
+                <>
+                  {item.separatorBefore && <div class="nr-create-sep" role="separator"></div>}
+                  <a class="nr-create-item" role="menuitem" href={item.href} tabindex="-1">
+                    <span class="nr-create-item-label">{item.label}</span>
+                    <span class="nr-create-item-hint">{item.hint}</span>
+                  </a>
+                </>
+              ))}
+            </div>
+          </div>
           {navGroups.map((group) => (
             <>
-              <div class="nr-admin-nav-section">{group.label}</div>
+              {group.label && <div class="nr-admin-nav-section">{group.label}</div>}
               {group.items.map((item) => (
                 <a
                   href={item.href}
-                  class:list={["nr-admin-nav-link", { active: isActive(item.href) }]}
+                  class:list={["nr-admin-nav-link", { active: item.active }]}
+                  aria-current={item.active ? "page" : undefined}
                 >
-                  <Fragment set:html={navIcon(item.label)} />
+                  <Fragment set:html={navIcon(item)} />
                   {item.label}
                   {item.badge && <span class="nr-admin-nav-badge">{item.badge}</span>}
                 </a>
@@ -237,6 +228,45 @@ const navGroups: { label: string; items: NavItem[] }[] = [
           else openSidebar();
         });
         overlay.addEventListener("click", closeSidebar);
+      })();
+      // "New post" split button: the ▾ opens a menu (WAI-ARIA menu button).
+      (function () {
+        var root = document.querySelector("[data-create-menu]");
+        if (!root) return;
+        var toggle = root.querySelector(".nr-create-toggle");
+        var menu = root.querySelector(".nr-create-menu");
+        var items = Array.prototype.slice.call(menu.querySelectorAll("[role=menuitem]"));
+        function open(focusIndex) {
+          menu.hidden = false;
+          toggle.setAttribute("aria-expanded", "true");
+          items[focusIndex].focus();
+        }
+        function close(refocus) {
+          if (menu.hidden) return;
+          menu.hidden = true;
+          toggle.setAttribute("aria-expanded", "false");
+          if (refocus) toggle.focus();
+        }
+        toggle.addEventListener("click", function () {
+          if (menu.hidden) open(0);
+          else close(false);
+        });
+        toggle.addEventListener("keydown", function (e) {
+          if (e.key === "ArrowDown") { e.preventDefault(); open(0); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); open(items.length - 1); }
+        });
+        menu.addEventListener("keydown", function (e) {
+          var i = items.indexOf(document.activeElement);
+          if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+          else if (e.key === "Home") { e.preventDefault(); items[0].focus(); }
+          else if (e.key === "End") { e.preventDefault(); items[items.length - 1].focus(); }
+          else if (e.key === "Escape") { e.preventDefault(); close(true); }
+          else if (e.key === "Tab") close(false);
+        });
+        document.addEventListener("click", function (e) {
+          if (!root.contains(e.target)) close(false);
+        });
       })();
     </script>
   </body>

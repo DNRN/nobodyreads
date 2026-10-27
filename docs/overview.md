@@ -622,6 +622,29 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 Admin pages **must not** perform auth themselves — by convention they trust that middleware has already approved the request and set the context.
 
+**Host pages inside the admin.** A host that serves its own owner pages (account, billing) can list them in the admin sidebar and render them with the same chrome:
+
+```ts
+makeAdminContext({
+  // …as above
+  hostNav: [
+    { group: "settings", label: "Account", href: `/${nickname}/admin/account` },
+  ],
+});
+```
+
+```astro
+---
+// a host page, e.g. astro/pages/[nickname]/admin/account.astro
+import AdminLayout from "nobodyreads/astro/AdminLayout";
+import { requireAdminContext } from "nobodyreads/astro/context";
+const ctx = requireAdminContext(Astro.locals);
+---
+<AdminLayout title="Account" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>…</AdminLayout>
+```
+
+`hostNav` items join the named sidebar group (`audience` or `settings`) after the engine's own. The engine only links to them; the host's middleware authorizes those paths like any other admin path. See [ADR 0005](adr/0005-hosts-extend-the-admin-shell-through-context.md).
+
 ### 6. Dev mode (HMR proxy)
 
 When proxying to the Astro dev server, also proxy WebSocket upgrade requests so Astro HMR works:

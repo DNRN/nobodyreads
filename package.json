@@ -61,6 +61,7 @@
       "types": "./dist/astro/context.d.ts",
       "import": "./dist/astro/context.js"
     },
+    "./astro/AdminLayout": "./astro/layouts/AdminLayout.astro",
     "./astro/SiteLayout": "./astro/layouts/SiteLayout.astro",
     "./astro/ShareBar": "./astro/components/ShareBar.astro",
     "./astro/Paywall": "./astro/components/Paywall.astro",

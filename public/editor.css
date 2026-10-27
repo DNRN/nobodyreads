@@ -132,7 +132,7 @@
 .nr-admin-header,
 .nr-admin-sidebar,
 .nr-admin .card,
-.nr-admin .dashboard-card,
+.nr-admin .home-stat,
 .nr-admin .dashboard-stat,
 .nr-admin .editor-home,
 .nr-admin .editor-list-section,
@@ -373,6 +373,120 @@
 	color: var(--nr-chip-text);
 	background: var(--nr-accent-soft);
 	font-weight: 600;
+}
+
+/* "New post" split button at the top of the sidebar, with its ▾ menu. */
+.nr-admin .nr-create {
+	position: relative;
+	display: flex;
+	margin: 0 0 12px;
+}
+
+.nr-admin .nr-create-main,
+.nr-admin .nr-create-toggle {
+	display: flex;
+	align-items: center;
+	background: var(--nr-accent-strong);
+	color: var(--nr-accent-text);
+	border: none;
+	cursor: pointer;
+}
+
+.nr-admin .nr-create-main {
+	flex: 1;
+	gap: 9px;
+	padding: 11px 14px;
+	font-size: 14.5px;
+	font-weight: 700;
+	border-radius: 12px 0 0 12px;
+	text-decoration: none;
+}
+
+.nr-admin .nr-create-toggle {
+	justify-content: center;
+	width: 40px;
+	border-left: 1px solid var(--nr-accent-soft);
+	border-radius: 0 12px 12px 0;
+}
+
+.nr-admin .nr-create-main:hover,
+.nr-admin .nr-create-toggle:hover {
+	filter: brightness(0.96);
+	color: var(--nr-accent-text);
+	text-decoration: none;
+}
+
+.nr-admin .nr-create-main:focus-visible,
+.nr-admin .nr-create-toggle:focus-visible {
+	outline: 2px solid var(--nr-accent);
+	outline-offset: 2px;
+}
+
+.nr-admin .nr-create-main svg,
+.nr-admin .nr-create-toggle svg {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+.nr-admin .nr-create-toggle svg {
+	transition: transform 0.15s;
+}
+
+.nr-admin .nr-create-toggle[aria-expanded="true"] svg {
+	transform: rotate(180deg);
+}
+
+/* Full sidebar width: the sidebar scrolls, so anything wider would be clipped. */
+.nr-admin .nr-create-menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 0;
+	right: 0;
+	z-index: 30;
+	padding: 6px;
+	background: var(--nr-card);
+	border: 1px solid var(--nr-border);
+	border-radius: 14px;
+	box-shadow: 0 12px 32px -16px var(--nr-shadow);
+}
+
+.nr-admin .nr-create-menu[hidden] {
+	display: none;
+}
+
+.nr-admin .nr-create-item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 9px 10px;
+	border-radius: 10px;
+	color: var(--nr-text);
+	text-decoration: none;
+}
+
+.nr-admin .nr-create-item:hover,
+.nr-admin .nr-create-item:focus {
+	background: var(--nr-accent-soft);
+	outline: none;
+	text-decoration: none;
+}
+
+.nr-admin .nr-create-item-label {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.nr-admin .nr-create-item-hint {
+	font-size: 12.5px;
+	line-height: 1.35;
+	color: var(--nr-muted);
+}
+
+.nr-admin .nr-create-sep {
+	height: 1px;
+	margin: 5px 4px;
+	background: var(--nr-border);
 }
 
 /* Quote card pinned to the bottom of the sidebar. */
@@ -709,56 +823,6 @@
 	font-size: 15px;
 }
 
-.nr-admin .dashboard-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-	gap: 12px;
-}
-
-.nr-admin .dashboard-card {
-	display: flex;
-	flex-direction: column;
-	gap: 0.2rem;
-	padding: 16px 18px;
-	border: 1px solid var(--nr-border);
-	border-radius: 16px;
-	background: var(--nr-card);
-	text-decoration: none;
-	color: var(--nr-text);
-	transition:
-		border-color 0.15s,
-		box-shadow 0.15s;
-}
-
-.nr-admin .dashboard-card:hover {
-	border-color: var(--nr-accent);
-	text-decoration: none;
-}
-
-.nr-admin .dashboard-card-icon {
-	width: 36px;
-	height: 36px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 8px;
-	background: var(--nr-accent-soft);
-	color: var(--nr-accent);
-	font-size: 1rem;
-	flex-shrink: 0;
-}
-
-.nr-admin .dashboard-card h3 {
-	font-size: 14px;
-	font-weight: 600;
-}
-
-.nr-admin .dashboard-card p {
-	font-size: 12.5px;
-	color: var(--nr-muted);
-	line-height: 1.4;
-}
-
 /* Home: quick stats */
 .nr-admin .dashboard-stats {
 	display: grid;
@@ -899,48 +963,6 @@
 	font-size: 0.78rem;
 	color: var(--nr-muted);
 	white-space: nowrap;
-}
-
-/* Create-content cards (overview of content kinds) */
-.nr-admin .editor-create {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 14px;
-	margin-bottom: 2.25rem;
-}
-
-.nr-admin .editor-create-card {
-	display: flex;
-	flex-direction: column;
-	gap: 0.4rem;
-	padding: 22px 24px;
-	border: 1px solid var(--nr-border);
-	border-radius: 18px;
-	background: var(--nr-card);
-	text-decoration: none;
-	color: var(--nr-text);
-	transition: border-color 0.1s;
-}
-
-.nr-admin .editor-create-card:hover {
-	border-color: var(--nr-accent);
-}
-
-.nr-admin .editor-create-title {
-	font-size: 16px;
-	font-weight: 700;
-}
-
-.nr-admin .editor-create-desc {
-	font-size: 13.5px;
-	color: var(--nr-muted);
-	line-height: 1.5;
-	flex: 1;
-}
-
-.nr-admin .editor-create-cta {
-	align-self: flex-start;
-	margin-top: 0.35rem;
 }
 
 .nr-admin .editor-list-section {
@@ -2378,11 +2400,6 @@
 		border-right: none;
 		border-bottom: 1px solid var(--nr-border);
 	}
-
-	/* Dashboard grid */
-	.nr-admin .dashboard-grid {
-		grid-template-columns: 1fr;
-	}
 }
 
 /* ========================================
@@ -2588,12 +2605,33 @@
 	margin-top: 8px;
 }
 
-/* Action row: New post (accent pill) + New page (outline pill). */
-.nr-admin .home-actions {
-	display: flex;
+/* Three numbers under the greeting: drafts, published, subscribers. */
+.nr-admin .home-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 	gap: 12px;
-	margin: 28px 0 34px;
-	flex-wrap: wrap;
+	margin: 26px 0 30px;
+}
+
+.nr-admin .home-stat {
+	padding: 16px 18px;
+	border: 1px solid var(--nr-border);
+	border-radius: 16px;
+	background: var(--nr-card);
+}
+
+.nr-admin .home-stat-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--nr-muted);
+}
+
+.nr-admin .home-stat-value {
+	margin-top: 6px;
+	font-size: 28px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: var(--nr-text);
 }
 
 /* Setup nudge card + progress bar. */
@@ -2654,6 +2692,54 @@
 	background: var(--nr-accent);
 	border-radius: 999px;
 	transition: width 0.4s ease;
+}
+
+/* Getting-started steps inside the setup card. */
+.nr-admin .setup-steps {
+	list-style: none;
+	margin: 16px 0 0;
+	padding: 0;
+}
+
+.nr-admin .setup-step {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 12px 0;
+	border-top: 1px solid var(--nr-border);
+}
+
+.nr-admin .setup-step-mark {
+	display: inline-flex;
+	width: 22px;
+	height: 22px;
+	border-radius: 999px;
+	border: 1.5px solid var(--nr-border);
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	flex-shrink: 0;
+}
+
+.nr-admin .setup-step.is-done .setup-step-mark {
+	background: var(--nr-accent);
+	border-color: var(--nr-accent);
+	color: var(--nr-accent-text);
+}
+
+.nr-admin .setup-step-title {
+	font-size: 14.5px;
+	font-weight: 600;
+	color: var(--nr-text);
+}
+
+.nr-admin .setup-step.is-done .setup-step-title {
+	color: var(--nr-muted);
+}
+
+.nr-admin .setup-step-state {
+	font-size: 13px;
+	color: var(--nr-muted);
 }
 
 /* "You're all set up." confirmation. */

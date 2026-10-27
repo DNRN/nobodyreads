@@ -1,13 +1,14 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import { requireAdminContext } from "nobodyreads/astro/context";
-import { initDb, listAllPages, countPendingFlags } from "nobodyreads";
+import { initDb, listAllPages, countPendingFlags, countSubscribers } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
 
 const db = await initDb();
 const pages = await listAllPages(db, ctx.tenantId);
 const pendingFlags = await countPendingFlags(db, ctx.tenantId);
+const subscribers = await countSubscribers(db, ctx.tenantId);
 
 const posts = pages.filter((p) => p.kind === "post");
 const staticPages = pages.filter((p) => p.kind === "page");
@@ -33,39 +34,70 @@ const today = new Date().toLocaleDateString("en-GB", {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const substat = `${plural(publishedPosts, "post")} out in the world · ${plural(drafts, "draft")} waiting · ${plural(staticPages.length, "page")}`;
 
-// First-run checklist — nudges a brand-new site toward a real first post. Hidden
-// once every step is done so it doesn't clutter an established site. A fresh site
+// First-run checklist — the three things that take a new site from empty to
+// read: make it look like yours, publish something, and tell people. Hidden once
+// every step is done so it doesn't clutter an established site. A fresh site
 // ships with a starter home page, so step one is about making it yours rather
 // than creating one: it's "done" once the page has been saved at least once
 // (the editor stamps `updated` on every edit).
 const homePersonalized = !!homePage?.updated;
-const checklist = [
+const latestDraft = recent.find((p) => !p.published);
+const checklist: {
+  done: boolean;
+  label: string;
+  sub: string;
+  action: string;
+  href?: string;
+  /** Copy this (site-relative) URL instead of navigating. */
+  copyUrl?: string;
+}[] = [
   {
     done: homePersonalized,
     label: "Make the home page yours",
+    sub: "It's the first thing a reader sees.",
+    action: "Edit home",
     href: homePage ? `${ctx.editorBase}/${homePage.id}` : `${ctx.editorBase}/new?kind=home`,
   },
-  { done: posts.length > 0, label: "Write your first post", href: `${ctx.editorBase}/new?kind=post` },
-  { done: publishedPosts > 0, label: "Publish a post", href: ctx.editorBase },
+  {
+    done: publishedPosts > 0,
+    label: "Publish your first post",
+    sub: "Publishing puts it on your site and emails your subscribers.",
+    action: latestDraft ? "Keep writing" : "Start writing",
+    href: latestDraft ? `${ctx.editorBase}/${latestDraft.id}` : `${ctx.editorBase}/new`,
+  },
+  {
+    done: subscribers.verified > 0,
+    label: "Share your site",
+    sub: "Anyone who subscribes gets every new post by email.",
+    action: "Copy link",
+    copyUrl: ctx.siteBase,
+  },
 ];
 const setupTotal = checklist.length;
 const setupDone = checklist.filter((c) => c.done).length;
 const setupComplete = setupDone >= setupTotal;
 const nextStep = checklist.find((c) => !c.done);
 const setupPct = Math.round((setupDone / setupTotal) * 100);
+
+const stats = [
+  { label: "Drafts", value: drafts },
+  { label: "Published posts", value: publishedPosts },
+  { label: "Subscribers", value: subscribers.verified },
+];
 ---
-<AdminLayout title="Home — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
+<AdminLayout title="Dashboard — Admin" adminBase={ctx.adminBase} siteBase={ctx.siteBase}>
   <main class="container">
     <div class="home-eyebrow">{today}</div>
     <h1 class="home-greeting">A quiet day to write.</h1>
     <p class="home-substat">{substat}</p>
 
-    <div class="home-actions">
-      <a href={`${ctx.editorBase}/new?kind=post`} class="btn btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        New post
-      </a>
-      <a href={`${ctx.editorBase}/new?kind=page`} class="btn">New page</a>
+    <div class="home-stats">
+      {stats.map((s) => (
+        <div class="home-stat">
+          <div class="home-stat-label">{s.label}</div>
+          <div class="home-stat-value">{s.value}</div>
+        </div>
+      ))}
     </div>
 
     {pendingFlags > 0 && (
@@ -90,19 +122,44 @@ const setupPct = Math.round((setupDone / setupTotal) * 100);
         </div>
       </div>
     ) : (
-      <div class="setup-card">
+      <section class="setup-card" aria-label="Getting started">
         <div class="setup-card-row">
           <span class="setup-icon">✎</span>
           <div class="setup-card-body">
-            <div class="setup-card-title">One thing left — {nextStep?.label.toLowerCase()}</div>
-            <div class="setup-card-sub">{setupDone} of {setupTotal} setup steps done.</div>
+            <div class="setup-card-title">Getting started</div>
+            <div class="setup-card-sub">{setupDone} of {setupTotal} steps done.</div>
           </div>
-          <a href={nextStep?.href} class="btn btn-primary btn-sm">Finish</a>
         </div>
         <div class="setup-progress">
           <div class="setup-progress-fill" style={`width:${setupPct}%`}></div>
         </div>
-      </div>
+        <ol class="setup-steps">
+          {checklist.map((step) => (
+            <li class:list={["setup-step", { "is-done": step.done }]}>
+              <span class="setup-step-mark" aria-hidden="true">{step.done ? "✓" : ""}</span>
+              <div class="setup-card-body">
+                <div class="setup-step-title">{step.label}</div>
+                <div class="setup-card-sub">{step.sub}</div>
+              </div>
+              {step.done ? (
+                <span class="setup-step-state">Done</span>
+              ) : step.copyUrl ? (
+                <button
+                  type="button"
+                  class:list={["btn btn-sm", { "btn-primary": step === nextStep }]}
+                  data-copy-url={step.copyUrl}
+                >
+                  {step.action}
+                </button>
+              ) : (
+                <a href={step.href} class:list={["btn btn-sm", { "btn-primary": step === nextStep }]}>
+                  {step.action}
+                </a>
+              )}
+            </li>
+          ))}
+        </ol>
+      </section>
     )}
 
     {resumePost ? (
@@ -122,20 +179,18 @@ const setupPct = Math.round((setupDone / setupTotal) * 100);
         </a>
       </>
     ) : null}
-
-    <div class="dashboard-grid">
-      <a href={`${ctx.adminBase}/layout`} class="dashboard-card">
-        <h3>Design</h3>
-        <p>Template &amp; colors</p>
-      </a>
-      <a href={`${ctx.adminBase}/media`} class="dashboard-card">
-        <h3>Media</h3>
-        <p>Images &amp; files</p>
-      </a>
-      <a href={`${ctx.adminBase}/settings`} class="dashboard-card">
-        <h3>Settings</h3>
-        <p>Identity &amp; email</p>
-      </a>
-    </div>
+    <script is:inline>
+      // "Copy link" resolves the site-relative URL against this origin, so the
+      // author gets the address readers will actually use.
+      document.querySelectorAll("[data-copy-url]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          var url = new URL(button.getAttribute("data-copy-url"), location.origin).href;
+          navigator.clipboard.writeText(url).then(
+            function () { button.textContent = "Copied"; },
+            function () { window.prompt("Copy your site's address:", url); }
+          );
+        });
+      });
+    </script>
   </main>
 </AdminLayout>

@@ -1,7 +1,7 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import PageEditor from "../../../components/admin/PageEditor.svelte";
-import { requireAdminContext } from "nobodyreads/astro/context";
+import { contentListHref, requireAdminContext } from "nobodyreads/astro/context";
 import { initDb, findPageByKind, resolveSiteName, type PageKind } from "nobodyreads";
 
 const ctx = requireAdminContext(Astro.locals);
@@ -29,6 +29,7 @@ const kindLabel = kind === "home" ? "Home" : kind === "page" ? "Page" : "Post";
   title={`New ${kindLabel} — Admin`}
   adminBase={ctx.adminBase}
   siteBase={ctx.siteBase}
+  activeHref={contentListHref(ctx.adminBase, kind === "post" ? "post" : "page")}
 >
   <PageEditor
     client:load
